@@ -1,19 +1,18 @@
-# Through the Bible — Week 03 Wrap-Up Deployment Build
+# Through the Bible — Week 03 APPROVED FINAL Deployment
 
-This is the locked visual-fidelity pass before scaling to the full 10-week app.
+This build uses the approved cinematic visual identity and preserves the working interaction system.
 
-## Locked direction
-- Light/ivory editorial learning surfaces remain the default.
-- Dark cinematic treatment is reserved for immersive story, Place, Connect, Unlock, and completion moments.
-- Hero is contemporary visual storytelling rather than a generic silhouetted Bible-character image.
-- Visual Story 01/04 = Babel tower and gathered humanity.
-- Visual Story 02/04 = scattering outward across places/peoples.
-- Visual Story 03/04 = Abraham / one family / stars.
-- Visual Story 04/04 = global horizon / branching blessing / nations.
-- Each "What You Just Saw" visual now matches the exact lesson meaning.
-- Land / Seed / Blessing explanatory graphics also match the concept being taught.
-- Connect, Scripture popups, highlighting, underlining, notes, questions, Fill, Place, Check, Unlock, progress, and devotional behavior are preserved.
-- Deep Study retains the Bible-app-style reading-plan and devotional reader direction.
+## Visual identity locked
+- Contemporary cinematic hero using the approved warm horizon / illuminated-path direction.
+- Visual Story 01: a true Babel tower with gathered humanity.
+- Visual Story 02: a geographic scattering visual with movement radiating outward.
+- Visual Story 03: Abraham as the one-person / one-family focus beneath the stars.
+- Visual Story 04: an expansive global horizon with illuminated paths reaching outward.
+- “What You Just Saw” uses the exact approved editorial recap artwork: Babel → Scattered → Abraham → Nations.
+- No flat SVG replacement art and no decorative-dot substitution.
 
-## Deployment
-Upload the contents of this folder to the root of `fanpassai/through-the-bible`, replacing the existing matching files and adding the `assets/` folder. Commit to `main`; Vercel will redeploy automatically.
+## Preserved
+Connect animation, pinned map behavior, Fill, Place, Check, Unlock, Scripture popups, highlighting, underlining, notes, questions, progress tracking, Bible-app-style Deep Study, devotional reader, and tappable devotional insights.
+
+## Deploy
+Upload every file and the `assets/` folder to the root of `fanpassai/through-the-bible`, replacing existing matching files. Commit to `main`. Vercel will redeploy automatically.

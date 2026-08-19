@@ -21,27 +21,25 @@ $('#storyCheckpoint').onclick=()=>{st.story=true;save();progress();$('#storyChec
 
 // VISUAL STORY — image-led, no dots
 const storyStages=[
- {title:'Humanity gathered at Babel.',body:'One people. One place. One project. “Let us make a name for ourselves.”',mark:'BABEL',img:'assets/visual-01-babel.svg',summaryImg:'assets/summary-babel.svg',summaryTitle:'Humanity chose to build up, not together.',summaryText:'At Babel, humanity gathered around a shared project and a shared name. The story shows unity turned toward self-exaltation.',summaryAlt:'A stylized tower surrounded by people'},
- {title:'God scattered the people.',body:'Language fractures the project. Humanity spreads outward into many places and peoples.',mark:'SCATTERING',img:'assets/visual-02-scatter.svg',summaryImg:'assets/summary-scatter.svg',summaryTitle:'God scattered them across the earth.',summaryText:'The scattering is geographic and human: one centralized population becomes many peoples in many places.',summaryAlt:'A central point branching outward in multiple directions'},
- {title:'But God’s purpose never stopped.',body:'The story narrows to one man and one family. God calls Abram and carries the promise forward.',mark:'ABRAM',img:'assets/visual-03-abraham.svg',summaryImg:'assets/summary-abraham.svg',summaryTitle:'God chose one family to carry a promise.',summaryText:'The camera moves from the nations to Abram. God’s method narrows, but His purpose does not.',summaryAlt:'One man beneath a field of stars'},
- {title:'The purpose stayed global.',body:'From one man, God promises blessing that reaches all the families of the earth.',mark:'ALL FAMILIES',img:'assets/visual-04-global.svg',summaryImg:'assets/summary-nations.svg',summaryTitle:'The blessing was always meant for the nations.',summaryText:'Through Abraham, the horizon opens outward again: one family becomes the channel through which blessing reaches all families.',summaryAlt:'A globe with rays reaching outward'}
+ {title:'Humanity gathered at Babel.',body:'One people. One place. One project. “Let us make a name for ourselves.”',mark:'BABEL',img:'assets/visual-01-babel.jpg'},
+ {title:'God scattered the people.',body:'Language fractures the project. Humanity spreads outward into many places and peoples.',mark:'SCATTERING',img:'assets/visual-02-scatter.jpg'},
+ {title:'But God’s purpose never stopped.',body:'The story narrows to one man and one family. God calls Abram and carries the promise forward.',mark:'ABRAM',img:'assets/visual-03-abraham.jpg'},
+ {title:'The purpose stayed global.',body:'From one man, God promises blessing that reaches all the families of the earth.',mark:'ALL FAMILIES',img:'assets/visual-04-global.jpg'}
 ];
 let bs=0;
 function renderStoryStage(){
  const s=storyStages[bs];$('#babelStageCount').textContent=(bs+1)+' / 4';$('#babelTitle').textContent=s.title;$('#babelBody').textContent=s.body;$('#storyStageMark').textContent=s.mark;
  const bg=$('#storySceneBg');bg.style.backgroundImage=`url("${s.img}")`;bg.style.transform='scale(1.06)';setTimeout(()=>bg.style.transform='scale(1.02)',80);
- const sumImg=$('#visualSummaryImg'),sumTitle=$('#visualSummaryTitle'),sumText=$('#visualSummaryText');
- if(sumImg){sumImg.src=s.summaryImg;sumImg.alt=s.summaryAlt;sumTitle.textContent=s.summaryTitle;sumText.textContent=s.summaryText}
- $('#babelNext').innerHTML=bs===3?'CONTINUE THE STORY <span>→</span>':'WATCH WHAT HAPPENS <span>→</span>';
+ if(bs===3)$('#babelNext').innerHTML='CONTINUE THE STORY <span>→</span>';
 }
 renderStoryStage();
 $('#babelNext').onclick=()=>{if(bs<3){bs++;renderStoryStage();if(bs===3)encourage('One family. Worldwide purpose.')}else{$('#promiseConcept').scrollIntoView({behavior:'smooth'})}};
 
 // Promise images
 const conceptData={
- land:['LAND — A PLACE PROMISED','God promises a real place. The story is not floating in abstraction; covenant, family, inheritance, and history unfold somewhere.','assets/concept-land.svg'],
- seed:['SEED — A FAMILY MULTIPLIED','The promise moves from one man into a family line. The stars become a visual memory handle: one becomes many.','assets/concept-seed.svg'],
- blessing:['BLESSING — A HORIZON BEYOND THE FAMILY','The promise never terminates on Abraham. God keeps the nations in view from the beginning.','assets/concept-blessing.svg']
+ land:['LAND — A PLACE PROMISED','God promises a real place. The story is not floating in abstraction; covenant, family, inheritance, and history unfold somewhere.','https://images.unsplash.com/photo-1680110797102-a12a3596fb7a?auto=format&fit=crop&w=1400&q=82'],
+ seed:['SEED — A FAMILY MULTIPLIED','The promise moves from one man into a family line. The stars become a visual memory handle: one becomes many.','https://images.unsplash.com/photo-1514364978092-88ff32485504?auto=format&fit=crop&w=1400&q=82'],
+ blessing:['BLESSING — A HORIZON BEYOND THE FAMILY','The promise never terminates on Abraham. God keeps the nations in view from the beginning.','https://images.unsplash.com/photo-1473642676276-2d4ab561542e?auto=format&fit=crop&w=1400&q=82']
 };
 $$('.promise-panel').forEach(p=>p.onclick=()=>{
  const k=p.dataset.concept;$$('.promise-panel').forEach(x=>x.classList.toggle('active',x===p));
@@ -161,6 +159,7 @@ function openSheet(ref){currentRef=ref;if(!st.refs.includes(ref))st.refs.push(re
 function closeSheet(){$('#scriptureSheet').classList.remove('open');$('#sheetBackdrop').classList.remove('open')}
 $('#closeSheet').onclick=closeSheet;$('#sheetBackdrop').onclick=closeSheet;
 $$('.scripture-link').forEach(b=>b.onclick=()=>openSheet(b.dataset.ref));
+$$('.scripture-link-card').forEach(b=>b.onclick=()=>openSheet(b.dataset.ref));
 $$('[data-sheet-tab]').forEach(b=>b.onclick=()=>{$$('[data-sheet-tab]').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderSheet(b.dataset.sheetTab)});
 function verseKey(i){return currentRef+'::'+i}
 function renderSheet(tab){const box=$('#sheetContent');if(tab==='passage'){const vv=staticTexts[currentRef]||['This reference is part of the lesson. Add the full public-domain text in the production Bible data layer.'];box.innerHTML=`<div class="sheet-passage">${vv.map((v,i)=>`<span data-v="${i}"><sup>${i+1}</sup> ${v}</span>`).join('')}</div><div class="verse-actions"><button data-action="highlight">Highlight</button><button data-action="underline">Underline</button><button data-action="note">+ Note</button><button data-action="question">? Question</button><button data-action="connect">↗ Connect</button></div><div id="studyEditor"></div>`;$$('.sheet-passage span').forEach(s=>{const k=verseKey(+s.dataset.v),m=st.marks[k]||[];m.forEach(x=>s.classList.add('mark-'+x));s.onclick=()=>{$$('.sheet-passage span').forEach(x=>x.classList.remove('selected'));s.classList.add('selected');selectedVerse=+s.dataset.v;encourage('Verse selected. Choose a study action.')}});$$('[data-action]').forEach(b=>b.onclick=()=>handleStudyAction(b.dataset.action))}
