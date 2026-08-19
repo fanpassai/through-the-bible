@@ -1,55 +1,55 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#061922">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Through the Bible — Week 03</title>
-<link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="app.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#061922">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="description" content="Through the Bible — Week 03 interactive study experience">
+  <link rel="preconnect" href="https://images.unsplash.com">
+  <title>Through the Bible — Week 03</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="app.css">
 </head>
 <body>
-<div class="app-shell" id="appShell">
-  <header class="progress-header" id="progressHeader">
+<div class="app-shell">
+  <header class="progress-header">
     <div class="progress-meta"><span>WEEK 03</span><b id="progressLabel">0% COMPLETE</b></div>
     <div class="progress-track"><i id="progressBar"></i></div>
   </header>
 
   <main>
-    <!-- HERO: approved image 2 direction -->
     <section class="hero immersive" id="hero">
-      <img src="hero.jpg" class="hero-bg" alt="A lone traveler beneath a star-filled night sky">
-      <div class="hero-shade"></div>
-      <div class="hero-copy">
-        <div class="micro-kicker">THROUGH THE BIBLE · WEEK 03</div>
+      <div class="hero-media" aria-hidden="true"></div>
+      <div class="hero-overlay"></div>
+      <div class="hero-copy parallax-copy">
+        <div class="micro-kicker gold-kicker">THROUGH THE BIBLE · WEEK 03</div>
         <h1>Promise, People<br>&amp; the Beginning<br>of Israel</h1>
         <p>Abraham is where the story narrows to one family without narrowing God’s purpose for the world.</p>
-        <button class="cta gold" data-go="#storyIntro">BEGIN <span>→</span></button>
+        <button class="cta gold" data-go="#storyIntro">BEGIN JOURNEY <span>→</span></button>
       </div>
-      <div class="hero-foot"><span>GENESIS 11–50</span><span>Swipe or scroll ↓</span></div>
+      <div class="scroll-cue">⌄ <span>SCROLL TO EXPLORE</span></div>
     </section>
 
-    <!-- STORY -->
-    <section class="paper-section" id="storyIntro">
+    <section class="paper-section story-section" id="storyIntro">
       <div class="section-kicker">STORY · START HERE</div>
       <h2>First, get the story in your head.</h2>
       <p class="lede">Genesis 1–11 follows humanity as a whole: creation, rebellion, the Flood, and Babel. At Babel, people gather to make a name for themselves. God scatters them. Then Genesis 12 does something striking: the camera moves from the nations to one man.</p>
       <p>That man is Abram. God calls him to leave his country and promises to make him into a great nation, make his name great, and bless all the families of the earth through him. The story has narrowed, but the horizon has not.</p>
-      <button class="scripture-link" data-ref="Genesis 11:9">OPEN GENESIS 11:9 <span>↗</span></button>
-      <button class="scripture-link" data-ref="Genesis 12:1-3">OPEN GENESIS 12:1–3 <span>↗</span></button>
+      <div class="scripture-row">
+        <button class="scripture-link" data-ref="Genesis 11:9">READ GENESIS 11:9 <span>↗</span></button>
+        <button class="scripture-link" data-ref="Genesis 12:1-3">READ GENESIS 12:1–3 <span>↗</span></button>
+      </div>
       <aside class="margin-note"><b>Keep this:</b> Babel scatters the nations. Abraham’s call is God’s next major movement in the story.</aside>
       <button class="cta dark" data-go="#babelTakeover">SEE THE TURNING POINT <span>↓</span></button>
     </section>
 
-    <!-- BABEL → ABRAHAM INTERACTIVE TAKEOVER -->
     <section class="takeover immersive" id="babelTakeover">
       <canvas id="babelCanvas" aria-hidden="true"></canvas>
       <div class="takeover-vignette"></div>
       <div class="takeover-copy">
-        <div class="micro-kicker light">VISUAL STORY · 01</div>
-        <div class="stage-count" id="babelStageCount">1 / 4</div>
+        <div class="micro-kicker light">VISUAL STORY · <span id="babelStageCount">1 / 4</span></div>
         <h2 id="babelTitle">Humanity gathered at Babel.</h2>
         <p id="babelBody">One people. One place. One project. “Let us make a name for ourselves.”</p>
         <button class="cta glass" id="babelNext">WATCH WHAT HAPPENS <span>→</span></button>
@@ -61,30 +61,51 @@
       <div class="section-kicker">THE PROMISE</div>
       <h2>God gives Abraham something to trust before Abraham can see it.</h2>
       <p>Genesis 12 introduces the promise. Genesis 15 brings Abraham’s childlessness into the open and places him beneath the stars. Genesis 17 expands the covenant language and names Isaac as the promised son through Sarah.</p>
-      <button class="scripture-link" data-ref="Genesis 15:1-6">OPEN GENESIS 15:1–6 <span>↗</span></button>
-      <button class="scripture-link" data-ref="Genesis 17:1-8">OPEN GENESIS 17:1–8 <span>↗</span></button>
+      <div class="scripture-row">
+        <button class="scripture-link" data-ref="Genesis 15:1-6">GENESIS 15:1–6 <span>↗</span></button>
+        <button class="scripture-link" data-ref="Genesis 17:1-8">GENESIS 17:1–8 <span>↗</span></button>
+      </div>
       <aside class="margin-note"><b>Chronology is already teaching:</b> the promise exists before Moses, Sinai, and the Mosaic Law.</aside>
     </section>
 
-    <!-- LAND SEED BLESSING INTERACTIVE FULL SCREEN -->
-    <section class="concept immersive" id="promiseConcept">
+    <section class="concept light-scene" id="promiseConcept">
       <div class="concept-head">
-        <div class="micro-kicker">TOUCH THE PROMISE</div>
-        <h2>Land.<br>Seed.<br>Blessing.</h2>
-        <p>Don’t memorize three boxes. Watch each part behave.</p>
+        <div class="section-kicker">LAND · SEED · BLESSING</div>
+        <h2>Three promises.<br>One unfolding plan.</h2>
+        <p>Tap each image. Let the promise become visual before you move on.</p>
       </div>
-      <div class="concept-stage" id="conceptStage">
-        <svg id="conceptSvg" viewBox="0 0 390 420" role="img" aria-label="Interactive visualization of land, seed and blessing"></svg>
-        <div class="concept-caption" id="conceptCaption">Choose a word below.</div>
+
+      <div class="promise-gallery">
+        <button class="promise-panel land" data-concept="land" aria-label="Explore the promise of land">
+          <img loading="lazy" src="https://images.unsplash.com/photo-1680110797102-a12a3596fb7a?auto=format&fit=crop&w=1400&q=78" alt="Desert hills in Wadi Rum">
+          <span class="panel-scrim"></span>
+          <span class="panel-copy"><small>GENESIS 12:1</small><b>LAND</b><em>God promises a place that He will show and give.</em></span>
+          <i>→</i>
+        </button>
+
+        <button class="promise-panel seed" data-concept="seed" aria-label="Explore the promise of descendants">
+          <img loading="lazy" src="https://images.unsplash.com/photo-1514364978092-88ff32485504?auto=format&fit=crop&w=1400&q=78" alt="A person beneath a vast star-filled sky">
+          <span class="panel-scrim"></span>
+          <span class="panel-copy"><small>GENESIS 15:5</small><b>SEED</b><em>One family becomes as numerous as the stars.</em></span>
+          <i>→</i>
+        </button>
+
+        <button class="promise-panel blessing" data-concept="blessing" aria-label="Explore the promise of blessing">
+          <img loading="lazy" src="https://images.unsplash.com/photo-1473642676276-2d4ab561542e?auto=format&fit=crop&w=1400&q=78" alt="People silhouetted at sunset">
+          <span class="panel-scrim"></span>
+          <span class="panel-copy"><small>GENESIS 12:3</small><b>BLESSING</b><em>The promise reaches beyond Abraham to the families of the earth.</em></span>
+          <i>→</i>
+        </button>
       </div>
-      <div class="concept-tabs" role="tablist">
-        <button data-concept="land">LAND</button>
-        <button data-concept="seed">SEED</button>
-        <button data-concept="blessing">BLESSING</button>
-      </div>
-      <div class="concept-complete" id="conceptComplete">
-        <span>LAND</span><i>·</i><span>SEED</span><i>·</i><span>BLESSING</span>
-        <button class="scripture-link inverse" data-ref="Genesis 12:1-3">READ THE PROMISE ↗</button>
+
+      <div class="concept-reveal" id="conceptReveal">
+        <div class="concept-reveal-art" id="conceptRevealArt"></div>
+        <div>
+          <div class="micro-kicker">WHAT YOU JUST SAW</div>
+          <h3 id="conceptRevealTitle">Choose one promise.</h3>
+          <p id="conceptRevealText">Each image teaches a different part of the Abrahamic promise.</p>
+          <button class="scripture-link" data-ref="Genesis 12:1-3">READ THE PROMISE <span>↗</span></button>
+        </div>
       </div>
     </section>
 
@@ -92,29 +113,32 @@
       <div class="section-kicker">THE FAMILY</div>
       <h2>Abraham becomes a family. The family becomes Israel.</h2>
       <p>Isaac is born as promised. Isaac’s son Jacob receives the same promise and is later renamed <b>Israel</b>. Jacob’s twelve sons become the ancestral foundation of Israel’s tribes. One of them is Judah—a name we will need later when the royal line moves toward David.</p>
-      <button class="scripture-link" data-ref="Genesis 21:1-3">GENESIS 21:1–3 ↗</button>
-      <button class="scripture-link" data-ref="Genesis 32:28">GENESIS 32:28 ↗</button>
+      <div class="scripture-row">
+        <button class="scripture-link" data-ref="Genesis 21:1-3">GENESIS 21:1–3 ↗</button>
+        <button class="scripture-link" data-ref="Genesis 32:28">GENESIS 32:28 ↗</button>
+      </div>
       <aside class="margin-note big"><b>Map-changing fact:</b><br>Israel was a person before Israel was a people.</aside>
       <p>Joseph then explains why this family ends Genesis in Egypt. His brothers sell him there, but his position eventually becomes the means through which the family survives famine. Genesis closes with Joseph in Egypt looking forward to God keeping His promise.</p>
-      <button class="scripture-link" data-ref="Genesis 45:4-8">GENESIS 45:4–8 ↗</button>
-      <button class="scripture-link" data-ref="Genesis 50:19-26">GENESIS 50:19–26 ↗</button>
+      <div class="scripture-row">
+        <button class="scripture-link" data-ref="Genesis 45:4-8">GENESIS 45:4–8 ↗</button>
+        <button class="scripture-link" data-ref="Genesis 50:19-26">GENESIS 50:19–26 ↗</button>
+      </div>
       <button class="cta dark" id="storyCheckpoint">I CAN FOLLOW THE STORY <span>✓</span></button>
     </section>
 
-    <!-- FILL: ONE QUESTION AT A TIME -->
     <section class="worksheet immersive light-scene" id="fillScene">
       <div class="worksheet-top">
-        <div class="micro-kicker">FILL · GUIDED NOTES</div>
+        <div><div class="micro-kicker">FILL · GUIDED NOTES</div><h2>One thought at a time.</h2></div>
         <span id="fillCount">01 / 10</span>
       </div>
       <div class="worksheet-progress"><i id="fillProgress"></i></div>
-      <div class="question-card" id="fillCard">
+      <div class="question-card">
         <div class="q-number" id="fillNumber">01</div>
         <h2 id="fillQuestion">After Babel, God calls a man named…</h2>
         <input id="fillInput" class="answer-input" autocomplete="off" placeholder="type your answer">
         <div class="answer-tools">
           <button id="hintBtn" class="text-btn">NEED A NUDGE?</button>
-          <button id="revealBtn" class="text-btn muted">REVEAL</button>
+          <button id="revealBtn" class="text-btn muted">SHOW ME + EXPLAIN WHY</button>
         </div>
         <div class="hand-note" id="fillHint"></div>
         <div class="answer-feedback" id="fillFeedback"></div>
@@ -122,84 +146,77 @@
       <div class="worksheet-foot">Every answer moves your lesson forward.</div>
     </section>
 
-    <!-- PLACE FULL SCREEN -->
-    <section class="place immersive" id="placeScene">
+    <section class="place immersive dark-scene" id="placeScene">
       <div class="scene-head">
-        <div><div class="micro-kicker light">PLACE · BUILD THE STORY</div><h2>Put Abraham’s family in order.</h2></div>
-        <div class="scene-instruction">Tap a card, then the next empty stop.</div>
+        <div>
+          <div class="micro-kicker light">PLACE · BUILD THE STORY</div>
+          <h2>Build the family line.</h2>
+          <p class="scene-instruction"><b>Your task:</b> Choose a scrambled card, then tap the next empty stop. Wrong choices give a clue, not a failure screen.</p>
+        </div>
       </div>
       <div class="place-workspace">
         <svg class="place-lines" viewBox="0 0 390 510" aria-hidden="true">
-          <path id="placePath1" d="M195 65 L195 130"/>
-          <path id="placePath2" d="M195 150 L195 215"/>
-          <path id="placePath3" d="M195 235 L195 300"/>
-          <path id="placePath4" d="M195 320 L195 385"/>
-          <path id="placePath5" d="M195 405 L195 470"/>
+          <path d="M195 65 L195 130"/><path d="M195 150 L195 215"/><path d="M195 235 L195 300"/><path d="M195 320 L195 385"/><path d="M195 405 L195 470"/>
         </svg>
         <div class="place-slot" data-slot="0" style="top:30px">1</div>
         <div class="place-slot" data-slot="1" style="top:115px">2</div>
         <div class="place-slot" data-slot="2" style="top:200px">3</div>
-        <div class="place-slot branch-slot" data-slot="3" style="top:285px">4<div class="twelve-dots" id="twelveDots"></div></div>
+        <div class="place-slot branch-slot" data-slot="3" style="top:285px">4</div>
         <div class="place-slot" data-slot="4" style="top:370px">5</div>
         <div class="place-slot egypt" data-slot="5" style="top:455px">6</div>
       </div>
-      <div class="place-bank" id="placeBank" aria-label="Scrambled timeline cards">
-        <button data-piece="Joseph">Joseph</button>
-        <button data-piece="Egypt">Egypt</button>
-        <button data-piece="Jacob / Israel">Jacob / Israel</button>
-        <button data-piece="Abraham">Abraham</button>
-        <button data-piece="Twelve Sons">Twelve Sons</button>
-        <button data-piece="Isaac">Isaac</button>
+      <div class="place-bank" id="placeBank">
+        <button data-piece="Joseph">Joseph</button><button data-piece="Egypt">Egypt</button><button data-piece="Jacob / Israel">Jacob / Israel</button><button data-piece="Abraham">Abraham</button><button data-piece="Twelve Sons">Twelve Sons</button><button data-piece="Isaac">Isaac</button>
       </div>
       <button class="text-btn light" id="shufflePlace">SHUFFLE AGAIN</button>
       <div class="place-reward" id="placeReward">
-        <div class="egypt-art"><div class="pyramid p1"></div><div class="pyramid p2"></div><div class="route-line"></div></div>
+        <div class="reward-route"><span>ABRAHAM</span><i>→</i><span>ISAAC</span><i>→</i><span>JACOB / ISRAEL</span><i>→</i><span>12 SONS</span><i>→</i><span>JOSEPH</span><i>→</i><span>EGYPT</span></div>
         <div class="micro-kicker light">YOU BUILT THE BRIDGE</div>
         <h2>Now Exodus<br>has an address.</h2>
-        <p>Abraham → Isaac → Jacob / Israel → Twelve Sons → Joseph → Egypt</p>
         <button class="cta gold" id="closePlaceReward">KEEP GOING <span>→</span></button>
       </div>
     </section>
 
-    <!-- CONNECT FULL SCREEN -->
-    <section class="connect immersive" id="connectScene">
-      <div class="scene-head">
-        <div><div class="micro-kicker light">CONNECT · SCRIPTURE BRIDGES</div><h2>Watch the Bible connect itself.</h2></div>
-        <div class="scene-instruction">Read both sides. Answer the relationship. Then watch the bridge draw.</div>
-      </div>
-      <div class="connect-step" id="connectStep">
-        <div class="connect-progress" id="connectProgress">BRIDGE 1 / 3</div>
-        <div class="connect-canvas">
-          <svg viewBox="0 0 390 520" class="connect-svg" aria-hidden="true">
-            <path id="connectPath" d="M70 110 C240 100 120 350 310 410"/>
-            <path id="connectBranch" d="M210 280 C260 255 315 255 340 225"/>
-            <circle id="connectPulse" cx="210" cy="280" r="8"/>
-          </svg>
-          <button class="script-node start" id="connectStart"></button>
-          <div class="connection-word" id="connectionWord">?</div>
-          <button class="script-node end" id="connectEnd"></button>
-          <div class="christ-node" id="christNode">CHRIST</div>
+    <section class="connect immersive dark-scene" id="connectScene">
+      <div class="connect-intro">
+        <div class="micro-kicker light">CONNECT · BUILD THE THREAD</div>
+        <h2>See the whole connection<br>on one canvas.</h2>
+        <div class="instruction-card">
+          <b>YOUR TASK</b>
+          <p>1. Tap any Scripture node to read it.<br>2. Answer the bridge question below.<br>3. Each correct answer draws another part of the thread.<br>4. Keep going until the promise reaches Christ.</p>
         </div>
-        <div class="connect-question" id="connectQuestion"></div>
+      </div>
+
+      <div class="thread-board" id="threadBoard">
+        <svg viewBox="0 0 390 620" aria-hidden="true">
+          <path id="thread1" d="M82 112 C162 160 130 230 195 275"/>
+          <path id="thread2" d="M195 275 C254 320 246 375 308 410"/>
+          <path id="thread3" d="M195 275 C126 348 124 455 88 500"/>
+          <path id="thread4" d="M88 500 C170 548 238 540 303 515"/>
+        </svg>
+        <button class="thread-node n1 scripture-link" data-ref="Genesis 12:1-3"><small>GENESIS 12:1–3</small><b>The Promise<br>to Abraham</b></button>
+        <button class="thread-node n2 scripture-link" data-ref="Genesis 22:18"><small>GENESIS 22:18</small><b>Blessing to<br>All Nations</b></button>
+        <button class="thread-node n3 scripture-link" data-ref="Galatians 3:8"><small>GALATIANS 3:8</small><b>Gospel Announced<br>Beforehand</b></button>
+        <button class="thread-node n4 scripture-link" data-ref="Galatians 3:16"><small>GALATIANS 3:16</small><b>The Seed<br>is Christ</b></button>
+        <div class="thread-center" id="threadCenter">?</div>
+      </div>
+
+      <div class="bridge-card">
+        <div class="connect-progress" id="connectProgress">BRIDGE 1 / 3</div>
+        <h3 id="connectQuestion"></h3>
         <div class="connect-choices" id="connectChoices"></div>
         <div class="connect-aha" id="connectAha"></div>
       </div>
     </section>
 
-    <!-- CHECK -->
     <section class="quiz immersive light-scene" id="quizScene">
-      <div class="worksheet-top"><div class="micro-kicker">CHECK · 5 QUICK QUESTIONS</div><span id="quizCount">01 / 05</span></div>
+      <div class="worksheet-top"><div><div class="micro-kicker">CHECK · 5 QUICK QUESTIONS</div><h2>Can you see the big picture?</h2></div><span id="quizCount">01 / 05</span></div>
       <div class="worksheet-progress"><i id="quizProgress"></i></div>
-      <div class="quiz-card" id="quizCard">
-        <h2 id="quizQuestion"></h2>
-        <div class="quiz-options" id="quizOptions"></div>
-        <div class="quiz-feedback" id="quizFeedback"></div>
-      </div>
+      <div class="quiz-card"><h2 id="quizQuestion"></h2><div class="quiz-options" id="quizOptions"></div><div class="quiz-feedback" id="quizFeedback"></div></div>
       <div class="quiz-result" id="quizResult"></div>
     </section>
 
-    <!-- UNLOCK -->
-    <section class="unlock immersive" id="unlockScene">
+    <section class="unlock immersive dark-scene" id="unlockScene">
       <div class="micro-kicker light">UNLOCK · OWN THE UNDERSTANDING</div>
       <h2>Can you say it<br>without the workbook?</h2>
       <div class="unlock-list">
@@ -210,38 +227,62 @@
       <label class="tellback-label" for="tellback">Tell it back in your own words.</label>
       <textarea id="tellback" placeholder="Why did God call Abraham, and how does this move the story forward?"></textarea>
       <button class="cta gold" id="claimWeek">CLAIM WEEK 03 <span>→</span></button>
-      <div class="unlock-reveal" id="unlockReveal">
-        <div class="constellation" id="constellation"></div>
-        <div class="micro-kicker light">UNDERSTANDING UNLOCKED</div>
-        <h2>I know where Israel comes from.</h2>
-        <p>Exodus now begins with context, not confusion.</p>
-      </div>
+      <div class="unlock-reveal" id="unlockReveal"><div class="micro-kicker light">UNDERSTANDING UNLOCKED</div><h2>I know where Israel comes from.</h2><p>Exodus now begins with context, not confusion.</p></div>
     </section>
 
-    <!-- DEEP STUDY -->
-    <section class="deep immersive light-scene" id="deepScene">
+    <section class="deep light-scene" id="deepScene">
       <div class="deep-head">
-        <div><div class="micro-kicker">GO DEEPER · STUDY MODE</div><h2>Study the way a Bible reader actually studies.</h2></div>
+        <div><div class="section-kicker">DEEP STUDY · DEVOTIONAL</div><h2>Go deeper with God’s Word.</h2></div>
         <span id="deepDayLabel">DAY 1 / 7</span>
       </div>
-      <div class="deep-days" id="deepDays"></div>
-      <div class="reader-card">
-        <div class="reader-meta"><b id="deepRef">Genesis 12:1–3</b><button class="scripture-link compact" id="openDeepScripture">OPEN FULL PASSAGE ↗</button></div>
-        <div class="reader-text" id="deepText"></div>
-        <div class="reader-toolbar">
-          <button data-studytool="observe">OBSERVE</button>
-          <button data-studytool="notice">NOTICE</button>
-          <button data-studytool="ask">ASK</button>
-          <button data-studytool="place">PLACE</button>
-          <button data-studytool="connect">CONNECT</button>
+
+      <div class="devotional-shell">
+        <div class="dev-hero">
+          <div class="micro-kicker gold-kicker">TODAY’S FOCUS</div>
+          <h3 id="devTitle">The Promise Path</h3>
+          <p id="devIntro">Trace what God starts with Abraham and watch how Scripture carries the promise forward.</p>
         </div>
-        <div class="study-prompt" id="studyPrompt">Tap a study move above.</div>
-        <textarea id="deepJournal" placeholder="Write what you discovered…"></textarea>
+
+        <div class="deep-days" id="deepDays"></div>
+
+        <article class="study-stack">
+          <section class="study-block">
+            <div class="study-label">READ</div>
+            <div class="reader-meta"><b id="deepRef">Genesis 12:1–3</b><button class="scripture-link compact" id="openDeepScripture">OPEN PASSAGE ↗</button></div>
+            <p id="deepText"></p>
+          </section>
+          <section class="study-block">
+            <div class="study-label">KEY WORD</div>
+            <h4 id="wordTitle">Promise</h4>
+            <p id="wordMeaning">A committed word from God that creates expectation because of the character of the One who speaks.</p>
+          </section>
+          <section class="study-block">
+            <div class="study-label">LOOK CLOSER</div>
+            <h4 id="lookTitle">What should I notice?</h4>
+            <p id="lookText">Watch what God says He will do. The promise is carried by divine initiative before Abraham has achieved anything.</p>
+          </section>
+          <section class="study-block devotional-copy">
+            <div class="study-label">DEVOTIONAL</div>
+            <h4 id="devotionalTitle">God starts with a promise.</h4>
+            <p id="devotionalText">Abraham is asked to move before he can see the whole map. Scripture repeatedly places trust before sight. The call is not vague optimism; it rests on God’s spoken word and God’s faithfulness.</p>
+          </section>
+          <section class="study-block">
+            <div class="study-label">FOR YOUR LIFE</div>
+            <p id="lifeText">Where are you tempted to demand the whole map before obeying what God has already made clear?</p>
+          </section>
+          <section class="study-block">
+            <div class="study-label">PRAY</div>
+            <p id="prayerText">Lord, teach me to trust Your character when I cannot yet see the whole path. Help me respond faithfully to what You have made clear. Amen.</p>
+          </section>
+          <section class="study-block">
+            <div class="study-label">JOURNAL</div>
+            <textarea id="deepJournal" placeholder="Write what you discovered, questioned, or want to remember…"></textarea>
+          </section>
+        </article>
       </div>
     </section>
 
-    <section class="complete-scene immersive" id="completeScene">
-      <div class="complete-orbit" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <section class="complete-scene immersive dark-scene" id="completeScene">
       <div class="micro-kicker light">WEEK 03 COMPLETE</div>
       <h2>Look what<br>you built.</h2>
       <div class="final-thread"><span>BABEL</span><i>→</i><span>ABRAHAM</span><i>→</i><span>ISRAEL</span><i>→</i><span>CHRIST</span><i>→</i><span>NATIONS</span></div>
@@ -262,13 +303,20 @@
   <div class="encourage" id="encourage"></div>
 </div>
 
-<!-- SCRIPTURE BOTTOM SHEET -->
 <div class="sheet-backdrop" id="sheetBackdrop"></div>
 <aside class="scripture-sheet" id="scriptureSheet" aria-modal="true" role="dialog">
   <div class="sheet-handle"></div>
-  <header><div><div class="micro-kicker">BEREAN STANDARD BIBLE</div><h3 id="sheetTitle">Genesis 12:1–3</h3></div><button id="closeSheet">×</button></header>
+  <header>
+    <div><div class="micro-kicker">SCRIPTURE READER</div><h3 id="sheetTitle">Genesis 12:1–3</h3></div>
+    <button id="closeSheet" aria-label="Close Scripture">×</button>
+  </header>
   <div class="sheet-body">
-    <div class="sheet-tabs"><button class="active" data-sheet-tab="passage">PASSAGE</button><button data-sheet-tab="where">WHERE AM I?</button><button data-sheet-tab="study">STUDY</button></div>
+    <div class="sheet-help"><b>Study it:</b> Tap a verse first. Then choose Highlight, Underline, Note, Question, or Connect. Your markings stay saved on this device.</div>
+    <div class="sheet-tabs">
+      <button class="active" data-sheet-tab="passage">PASSAGE</button>
+      <button data-sheet-tab="where">WHERE AM I?</button>
+      <button data-sheet-tab="study">STUDY</button>
+    </div>
     <div id="sheetContent"></div>
   </div>
 </aside>

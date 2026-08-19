@@ -1,1 +1,8 @@
-{"name":"Through the Bible — Week 03","short_name":"TTB Week 03","start_url":"/","display":"standalone","background_color":"#061922","theme_color":"#061922"}
+{
+  "name": "Through the Bible",
+  "short_name": "Bible Journey",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fffdf7",
+  "theme_color": "#061922"
+}
