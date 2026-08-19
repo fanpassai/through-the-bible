@@ -7,7 +7,6 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="description" content="Through the Bible — Week 03 interactive study experience">
-  <link rel="preconnect" href="https://images.unsplash.com">
   <title>Through the Bible — Week 03</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="app.css">
@@ -46,15 +45,32 @@
     </section>
 
     <section class="takeover immersive" id="babelTakeover">
-      <canvas id="babelCanvas" aria-hidden="true"></canvas>
-      <div class="takeover-vignette"></div>
+      <div class="story-scene-bg" id="storySceneBg" aria-hidden="true"></div>
+      <div class="story-scene-overlay"></div>
       <div class="takeover-copy">
         <div class="micro-kicker light">VISUAL STORY · <span id="babelStageCount">1 / 4</span></div>
         <h2 id="babelTitle">Humanity gathered at Babel.</h2>
         <p id="babelBody">One people. One place. One project. “Let us make a name for ourselves.”</p>
         <button class="cta glass" id="babelNext">WATCH WHAT HAPPENS <span>→</span></button>
       </div>
+      <div class="story-stage-mark" id="storyStageMark">BABEL</div>
       <div class="tap-hint">Tap to move the story</div>
+    </section>
+
+    <section class="paper-section">
+      <div class="section-kicker">WHAT YOU JUST SAW</div>
+      <h2>The promise never stopped with Abraham.</h2>
+      <p>God chose one family, but His purpose still had the families of the earth in view. The story narrows to Abraham without shrinking God’s horizon.</p>
+      <div class="expanding-path" aria-hidden="true">
+        <div class="path-step"><span>01</span><b>ABRAHAM</b><small>one man</small></div>
+        <i></i>
+        <div class="path-step"><span>02</span><b>FAMILY</b><small>a line of promise</small></div>
+        <i></i>
+        <div class="path-step"><span>03</span><b>NATION</b><small>Israel</small></div>
+        <i></i>
+        <div class="path-step final"><span>04</span><b>NATIONS</b><small>all families</small></div>
+      </div>
+      <button class="scripture-link" data-ref="Genesis 12:3">READ GENESIS 12:3 <span>↗</span></button>
     </section>
 
     <section class="paper-section">
@@ -77,21 +93,21 @@
 
       <div class="promise-gallery">
         <button class="promise-panel land" data-concept="land" aria-label="Explore the promise of land">
-          <img loading="lazy" src="https://images.unsplash.com/photo-1680110797102-a12a3596fb7a?auto=format&fit=crop&w=1400&q=78" alt="Desert hills in Wadi Rum">
+          <img loading="lazy" src="https://images.unsplash.com/photo-1680110797102-a12a3596fb7a?auto=format&fit=crop&w=1400&q=82" alt="Desert hills">
           <span class="panel-scrim"></span>
           <span class="panel-copy"><small>GENESIS 12:1</small><b>LAND</b><em>God promises a place that He will show and give.</em></span>
           <i>→</i>
         </button>
 
         <button class="promise-panel seed" data-concept="seed" aria-label="Explore the promise of descendants">
-          <img loading="lazy" src="https://images.unsplash.com/photo-1514364978092-88ff32485504?auto=format&fit=crop&w=1400&q=78" alt="A person beneath a vast star-filled sky">
+          <img loading="lazy" src="https://images.unsplash.com/photo-1514364978092-88ff32485504?auto=format&fit=crop&w=1400&q=82" alt="A person beneath a vast star-filled sky">
           <span class="panel-scrim"></span>
           <span class="panel-copy"><small>GENESIS 15:5</small><b>SEED</b><em>One family becomes as numerous as the stars.</em></span>
           <i>→</i>
         </button>
 
         <button class="promise-panel blessing" data-concept="blessing" aria-label="Explore the promise of blessing">
-          <img loading="lazy" src="https://images.unsplash.com/photo-1473642676276-2d4ab561542e?auto=format&fit=crop&w=1400&q=78" alt="People silhouetted at sunset">
+          <img loading="lazy" src="https://images.unsplash.com/photo-1473642676276-2d4ab561542e?auto=format&fit=crop&w=1400&q=82" alt="People silhouetted at sunset">
           <span class="panel-scrim"></span>
           <span class="panel-copy"><small>GENESIS 12:3</small><b>BLESSING</b><em>The promise reaches beyond Abraham to the families of the earth.</em></span>
           <i>→</i>
@@ -99,7 +115,9 @@
       </div>
 
       <div class="concept-reveal" id="conceptReveal">
-        <div class="concept-reveal-art" id="conceptRevealArt"></div>
+        <div class="concept-reveal-art" id="conceptRevealArt" aria-hidden="true">
+          <span class="ray r1"></span><span class="ray r2"></span><span class="ray r3"></span><span class="ray r4"></span>
+        </div>
         <div>
           <div class="micro-kicker">WHAT YOU JUST SAW</div>
           <h3 id="conceptRevealTitle">Choose one promise.</h3>
@@ -177,35 +195,39 @@
       </div>
     </section>
 
-    <section class="connect immersive dark-scene" id="connectScene">
-      <div class="connect-intro">
-        <div class="micro-kicker light">CONNECT · BUILD THE THREAD</div>
-        <h2>See the whole connection<br>on one canvas.</h2>
-        <div class="instruction-card">
-          <b>YOUR TASK</b>
-          <p>1. Tap any Scripture node to read it.<br>2. Answer the bridge question below.<br>3. Each correct answer draws another part of the thread.<br>4. Keep going until the promise reaches Christ.</p>
+    <section class="connect dark-scene" id="connectScene">
+      <div class="connect-shell">
+        <div class="connect-intro">
+          <div class="micro-kicker light">CONNECT · BUILD THE THREAD</div>
+          <h2>See the connection form<br>while you answer.</h2>
+          <div class="instruction-card">
+            <b>YOUR TASK</b>
+            <p>Tap any Scripture node to read it. Then answer the bridge question. Each correct answer draws the next part of the line while the map stays on screen.</p>
+          </div>
         </div>
-      </div>
 
-      <div class="thread-board" id="threadBoard">
-        <svg viewBox="0 0 390 620" aria-hidden="true">
-          <path id="thread1" d="M82 112 C162 160 130 230 195 275"/>
-          <path id="thread2" d="M195 275 C254 320 246 375 308 410"/>
-          <path id="thread3" d="M195 275 C126 348 124 455 88 500"/>
-          <path id="thread4" d="M88 500 C170 548 238 540 303 515"/>
-        </svg>
-        <button class="thread-node n1 scripture-link" data-ref="Genesis 12:1-3"><small>GENESIS 12:1–3</small><b>The Promise<br>to Abraham</b></button>
-        <button class="thread-node n2 scripture-link" data-ref="Genesis 22:18"><small>GENESIS 22:18</small><b>Blessing to<br>All Nations</b></button>
-        <button class="thread-node n3 scripture-link" data-ref="Galatians 3:8"><small>GALATIANS 3:8</small><b>Gospel Announced<br>Beforehand</b></button>
-        <button class="thread-node n4 scripture-link" data-ref="Galatians 3:16"><small>GALATIANS 3:16</small><b>The Seed<br>is Christ</b></button>
-        <div class="thread-center" id="threadCenter">?</div>
-      </div>
+        <div class="connect-sticky">
+          <div class="thread-board" id="threadBoard">
+            <svg viewBox="0 0 390 500" aria-hidden="true">
+              <path id="thread1" d="M78 80 C154 110 150 170 195 210"/>
+              <path id="thread2" d="M195 210 C248 260 252 312 310 340"/>
+              <path id="thread3" d="M195 210 C136 278 122 348 82 390"/>
+              <path id="thread4" d="M82 390 C170 445 235 444 306 420"/>
+            </svg>
+            <button class="thread-node n1 scripture-link" data-ref="Genesis 12:1-3"><small>GENESIS 12:1–3</small><b>The Promise<br>to Abraham</b></button>
+            <button class="thread-node n2 scripture-link" data-ref="Genesis 22:18"><small>GENESIS 22:18</small><b>Blessing to<br>All Nations</b></button>
+            <button class="thread-node n3 scripture-link" data-ref="Galatians 3:8"><small>GALATIANS 3:8</small><b>Gospel Announced<br>Beforehand</b></button>
+            <button class="thread-node n4 scripture-link" data-ref="Galatians 3:16"><small>GALATIANS 3:16</small><b>The Seed<br>is Christ</b></button>
+            <div class="thread-center" id="threadCenter">?</div>
+          </div>
 
-      <div class="bridge-card">
-        <div class="connect-progress" id="connectProgress">BRIDGE 1 / 3</div>
-        <h3 id="connectQuestion"></h3>
-        <div class="connect-choices" id="connectChoices"></div>
-        <div class="connect-aha" id="connectAha"></div>
+          <div class="bridge-card" id="bridgeCard">
+            <div class="connect-progress" id="connectProgress">BRIDGE 1 / 3</div>
+            <h3 id="connectQuestion"></h3>
+            <div class="connect-choices" id="connectChoices"></div>
+            <div class="connect-aha" id="connectAha"></div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -232,53 +254,21 @@
 
     <section class="deep light-scene" id="deepScene">
       <div class="deep-head">
-        <div><div class="section-kicker">DEEP STUDY · DEVOTIONAL</div><h2>Go deeper with God’s Word.</h2></div>
+        <div><div class="section-kicker">DEEP STUDY · READING PLAN</div><h2>Go deeper with God’s Word.</h2></div>
         <span id="deepDayLabel">DAY 1 / 7</span>
       </div>
 
-      <div class="devotional-shell">
-        <div class="dev-hero">
-          <div class="micro-kicker gold-kicker">TODAY’S FOCUS</div>
-          <h3 id="devTitle">The Promise Path</h3>
-          <p id="devIntro">Trace what God starts with Abraham and watch how Scripture carries the promise forward.</p>
-        </div>
-
+      <div class="plan-card">
+        <div class="plan-art"><span>THE PROMISE<br>THAT CHANGES<br>EVERYTHING</span></div>
         <div class="deep-days" id="deepDays"></div>
-
-        <article class="study-stack">
-          <section class="study-block">
-            <div class="study-label">READ</div>
-            <div class="reader-meta"><b id="deepRef">Genesis 12:1–3</b><button class="scripture-link compact" id="openDeepScripture">OPEN PASSAGE ↗</button></div>
-            <p id="deepText"></p>
-          </section>
-          <section class="study-block">
-            <div class="study-label">KEY WORD</div>
-            <h4 id="wordTitle">Promise</h4>
-            <p id="wordMeaning">A committed word from God that creates expectation because of the character of the One who speaks.</p>
-          </section>
-          <section class="study-block">
-            <div class="study-label">LOOK CLOSER</div>
-            <h4 id="lookTitle">What should I notice?</h4>
-            <p id="lookText">Watch what God says He will do. The promise is carried by divine initiative before Abraham has achieved anything.</p>
-          </section>
-          <section class="study-block devotional-copy">
-            <div class="study-label">DEVOTIONAL</div>
-            <h4 id="devotionalTitle">God starts with a promise.</h4>
-            <p id="devotionalText">Abraham is asked to move before he can see the whole map. Scripture repeatedly places trust before sight. The call is not vague optimism; it rests on God’s spoken word and God’s faithfulness.</p>
-          </section>
-          <section class="study-block">
-            <div class="study-label">FOR YOUR LIFE</div>
-            <p id="lifeText">Where are you tempted to demand the whole map before obeying what God has already made clear?</p>
-          </section>
-          <section class="study-block">
-            <div class="study-label">PRAY</div>
-            <p id="prayerText">Lord, teach me to trust Your character when I cannot yet see the whole path. Help me respond faithfully to what You have made clear. Amen.</p>
-          </section>
-          <section class="study-block">
-            <div class="study-label">JOURNAL</div>
-            <textarea id="deepJournal" placeholder="Write what you discovered, questioned, or want to remember…"></textarea>
-          </section>
-        </article>
+        <div class="plan-list">
+          <button class="plan-item" id="openDevotional"><span class="check-dot" id="devotionalCheck">○</span><b>Devotional</b><i>›</i></button>
+          <button class="plan-item scripture-link" data-ref="Genesis 12:1-3"><span class="check-dot">○</span><b>Genesis 12:1–3</b><i>›</i></button>
+          <button class="plan-item scripture-link" data-ref="Genesis 15:1-6"><span class="check-dot">○</span><b>Genesis 15:1–6</b><i>›</i></button>
+          <button class="plan-item scripture-link" data-ref="Galatians 3:8"><span class="check-dot">○</span><b>Galatians 3:8</b><i>›</i></button>
+          <button class="plan-item scripture-link" data-ref="Galatians 3:16"><span class="check-dot">○</span><b>Galatians 3:16</b><i>›</i></button>
+        </div>
+        <button class="cta dark plan-start" id="startReading">START READING</button>
       </div>
     </section>
 
@@ -319,6 +309,26 @@
     </div>
     <div id="sheetContent"></div>
   </div>
+</aside>
+
+<div class="reader-overlay" id="readerOverlay" aria-hidden="true">
+  <header class="reader-header">
+    <button id="closeReader" aria-label="Close devotional">←</button>
+    <b>Devotional</b>
+    <div class="reader-actions"><button id="readerTextSize">AA</button></div>
+  </header>
+  <main class="reader-body" id="readerBody"></main>
+  <div class="reader-progress"><i id="readerProgress"></i></div>
+</div>
+
+<div class="insight-backdrop" id="insightBackdrop"></div>
+<aside class="insight-sheet" id="insightSheet">
+  <div class="sheet-handle"></div>
+  <button class="insight-close" id="closeInsight">×</button>
+  <div class="micro-kicker" id="insightType">DEFINITION</div>
+  <h3 id="insightTitle">Promise</h3>
+  <p id="insightText"></p>
+  <small id="insightRef"></small>
 </aside>
 
 <script src="app.js"></script>
