@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1800">
+<defs><linearGradient id="bg" x2="0" y2="1"><stop stop-color="#16333e"/><stop offset=".55" stop-color="#b06c3d"/><stop offset="1" stop-color="#241c1b"/></linearGradient>
+<linearGradient id="stone" x2="1" y2="1"><stop stop-color="#b38a5a"/><stop offset="1" stop-color="#4d392b"/></linearGradient></defs>
+<rect width="1200" height="1800" fill="url(#bg)"/>
+<circle cx="900" cy="340" r="120" fill="#eac780" opacity=".45"/>
+<g opacity=".85" fill="#d6d8d0"><path d="M0 430 C160 370 250 480 410 410 C560 345 680 420 870 360 C1000 320 1100 340 1200 310 L1200 0 L0 0Z"/></g>
+<g transform="translate(155 330)" fill="url(#stone)" stroke="#2d241f" stroke-width="5">
+ <path d="M170 930 H690 L650 700 H210Z"/><path d="M225 700 H635 L590 520 H270Z"/><path d="M290 520 H575 L535 365 H335Z"/>
+ <path d="M350 365 H520 L490 225 H380Z"/><path d="M400 225 H475 L458 80 H420Z"/>
+</g>
+<g fill="#171719" opacity=".9">
+ <circle cx="110" cy="1500" r="14"/><rect x="103" y="1512" width="14" height="80" rx="7"/>
+ <circle cx="175" cy="1520" r="13"/><rect x="169" y="1532" width="12" height="72" rx="6"/>
+ <circle cx="245" cy="1490" r="14"/><rect x="238" y="1502" width="14" height="83" rx="7"/>
+ <circle cx="1010" cy="1510" r="14"/><rect x="1003" y="1522" width="14" height="80" rx="7"/>
+ <circle cx="930" cy="1490" r="13"/><rect x="924" y="1502" width="12" height="75" rx="6"/>
+</g>
+<path d="M0 1640 C300 1570 420 1650 620 1600 C830 1545 1000 1605 1200 1540 L1200 1800 L0 1800Z" fill="#0a171c" opacity=".85"/>
+</svg>

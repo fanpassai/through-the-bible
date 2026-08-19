@@ -1,22 +1,19 @@
-# Through the Bible — Week 03 Final Deployment Build
+# Through the Bible — Week 03 Wrap-Up Deployment Build
 
-This package combines the final corrections discussed for the Week 03 experience.
+This is the locked visual-fidelity pass before scaling to the full 10-week app.
 
-## Included corrections
-- Ivory/white editorial learning surfaces remain the default; dark scenes are reserved for immersive moments.
-- Visual Story no longer uses decorative dots. Each of the four stages uses image-led cinematic backgrounds.
-- "What You Just Saw" is redesigned as a clean explanatory visual, not filler.
-- Land / Seed / Blessing retains the image-driven interaction and the explanatory reveal.
-- CONNECT keeps the map pinned in the viewport while students answer, so every correct response visibly draws the line in real time.
-- Scripture nodes remain tappable and open the Scripture study bottom sheet.
-- Scripture highlight, underline, note, question, and connect tools persist locally.
-- Deep Study is now a Bible-app-style reading plan landing screen.
-- Tapping Devotional opens a distraction-free reader.
-- Devotional terms contain tappable insight hotspots for definitions, historical context, connections, and interpretive facts.
-- Devotional includes assigned Scripture readings that open the Scripture reader.
-- Devotional completion contributes to lesson progress.
-- Mobile-first spacing, safe areas, sticky behaviors, and reduced-motion compatibility are included.
+## Locked direction
+- Light/ivory editorial learning surfaces remain the default.
+- Dark cinematic treatment is reserved for immersive story, Place, Connect, Unlock, and completion moments.
+- Hero is contemporary visual storytelling rather than a generic silhouetted Bible-character image.
+- Visual Story 01/04 = Babel tower and gathered humanity.
+- Visual Story 02/04 = scattering outward across places/peoples.
+- Visual Story 03/04 = Abraham / one family / stars.
+- Visual Story 04/04 = global horizon / branching blessing / nations.
+- Each "What You Just Saw" visual now matches the exact lesson meaning.
+- Land / Seed / Blessing explanatory graphics also match the concept being taught.
+- Connect, Scripture popups, highlighting, underlining, notes, questions, Fill, Place, Check, Unlock, progress, and devotional behavior are preserved.
+- Deep Study retains the Bible-app-style reading-plan and devotional reader direction.
 
 ## Deployment
-Upload these files into the root of the existing `fanpassai/through-the-bible` repository and commit the changes.
-Vercel should redeploy automatically.
+Upload the contents of this folder to the root of `fanpassai/through-the-bible`, replacing the existing matching files and adding the `assets/` folder. Commit to `main`; Vercel will redeploy automatically.

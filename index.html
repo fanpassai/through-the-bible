@@ -9,7 +9,7 @@
   <meta name="description" content="Through the Bible — Week 03 interactive study experience">
   <title>Through the Bible — Week 03</title>
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="app.css">
+  <link rel="stylesheet" href="app.css?v=wrapup-1">
 </head>
 <body>
 <div class="app-shell">
@@ -57,10 +57,11 @@
       <div class="tap-hint">Tap to move the story</div>
     </section>
 
-    <section class="paper-section">
+    <section class="paper-section visual-summary" id="visualSummary">
       <div class="section-kicker">WHAT YOU JUST SAW</div>
-      <h2>The promise never stopped with Abraham.</h2>
-      <p>God chose one family, but His purpose still had the families of the earth in view. The story narrows to Abraham without shrinking God’s horizon.</p>
+      <div class="summary-art-wrap"><img id="visualSummaryImg" src="assets/summary-babel.svg" alt="Visual summary of Babel"></div>
+      <h2 id="visualSummaryTitle">Humanity chose to build up, not together.</h2>
+      <p id="visualSummaryText">At Babel, humanity gathered around a shared project and a shared name. The story shows unity turned toward self-exaltation.</p>
       <div class="expanding-path" aria-hidden="true">
         <div class="path-step"><span>01</span><b>ABRAHAM</b><small>one man</small></div>
         <i></i>
@@ -116,7 +117,7 @@
 
       <div class="concept-reveal" id="conceptReveal">
         <div class="concept-reveal-art" id="conceptRevealArt" aria-hidden="true">
-          <span class="ray r1"></span><span class="ray r2"></span><span class="ray r3"></span><span class="ray r4"></span>
+          <img id="conceptRevealImg" src="assets/concept-land.svg" alt="">
         </div>
         <div>
           <div class="micro-kicker">WHAT YOU JUST SAW</div>
@@ -331,6 +332,6 @@
   <small id="insightRef"></small>
 </aside>
 
-<script src="app.js"></script>
+<script src="app.js?v=wrapup-1"></script>
 </body>
 </html>

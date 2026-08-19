@@ -21,30 +21,32 @@ $('#storyCheckpoint').onclick=()=>{st.story=true;save();progress();$('#storyChec
 
 // VISUAL STORY — image-led, no dots
 const storyStages=[
- {title:'Humanity gathered at Babel.',body:'One people. One place. One project. “Let us make a name for ourselves.”',mark:'BABEL',img:'https://images.unsplash.com/photo-1473642676276-2d4ab561542e?auto=format&fit=crop&w=1800&q=86'},
- {title:'The nations scattered.',body:'The human project fractures. People spread outward across the earth.',mark:'SCATTERING',img:'https://images.unsplash.com/photo-1680110797102-a12a3596fb7a?auto=format&fit=crop&w=1800&q=86'},
- {title:'Then God called one man.',body:'The story narrows to Abram. One man becomes the next major movement in God’s unfolding plan.',mark:'ABRAM',img:'https://images.unsplash.com/photo-1514364978092-88ff32485504?auto=format&fit=crop&w=1800&q=86'},
- {title:'But the purpose stayed global.',body:'From one man, God promises blessing that reaches all the families of the earth.',mark:'ALL FAMILIES',img:'https://images.unsplash.com/photo-1490730141103-6cac27aaab94?auto=format&fit=crop&w=1800&q=86'}
+ {title:'Humanity gathered at Babel.',body:'One people. One place. One project. “Let us make a name for ourselves.”',mark:'BABEL',img:'assets/visual-01-babel.svg',summaryImg:'assets/summary-babel.svg',summaryTitle:'Humanity chose to build up, not together.',summaryText:'At Babel, humanity gathered around a shared project and a shared name. The story shows unity turned toward self-exaltation.',summaryAlt:'A stylized tower surrounded by people'},
+ {title:'God scattered the people.',body:'Language fractures the project. Humanity spreads outward into many places and peoples.',mark:'SCATTERING',img:'assets/visual-02-scatter.svg',summaryImg:'assets/summary-scatter.svg',summaryTitle:'God scattered them across the earth.',summaryText:'The scattering is geographic and human: one centralized population becomes many peoples in many places.',summaryAlt:'A central point branching outward in multiple directions'},
+ {title:'But God’s purpose never stopped.',body:'The story narrows to one man and one family. God calls Abram and carries the promise forward.',mark:'ABRAM',img:'assets/visual-03-abraham.svg',summaryImg:'assets/summary-abraham.svg',summaryTitle:'God chose one family to carry a promise.',summaryText:'The camera moves from the nations to Abram. God’s method narrows, but His purpose does not.',summaryAlt:'One man beneath a field of stars'},
+ {title:'The purpose stayed global.',body:'From one man, God promises blessing that reaches all the families of the earth.',mark:'ALL FAMILIES',img:'assets/visual-04-global.svg',summaryImg:'assets/summary-nations.svg',summaryTitle:'The blessing was always meant for the nations.',summaryText:'Through Abraham, the horizon opens outward again: one family becomes the channel through which blessing reaches all families.',summaryAlt:'A globe with rays reaching outward'}
 ];
 let bs=0;
 function renderStoryStage(){
  const s=storyStages[bs];$('#babelStageCount').textContent=(bs+1)+' / 4';$('#babelTitle').textContent=s.title;$('#babelBody').textContent=s.body;$('#storyStageMark').textContent=s.mark;
  const bg=$('#storySceneBg');bg.style.backgroundImage=`url("${s.img}")`;bg.style.transform='scale(1.06)';setTimeout(()=>bg.style.transform='scale(1.02)',80);
- if(bs===3)$('#babelNext').innerHTML='CONTINUE THE STORY <span>→</span>';
+ const sumImg=$('#visualSummaryImg'),sumTitle=$('#visualSummaryTitle'),sumText=$('#visualSummaryText');
+ if(sumImg){sumImg.src=s.summaryImg;sumImg.alt=s.summaryAlt;sumTitle.textContent=s.summaryTitle;sumText.textContent=s.summaryText}
+ $('#babelNext').innerHTML=bs===3?'CONTINUE THE STORY <span>→</span>':'WATCH WHAT HAPPENS <span>→</span>';
 }
 renderStoryStage();
 $('#babelNext').onclick=()=>{if(bs<3){bs++;renderStoryStage();if(bs===3)encourage('One family. Worldwide purpose.')}else{$('#promiseConcept').scrollIntoView({behavior:'smooth'})}};
 
 // Promise images
 const conceptData={
- land:['LAND — A PLACE PROMISED','God promises a real place. The story is not floating in abstraction; covenant, family, inheritance, and history unfold somewhere.'],
- seed:['SEED — A FAMILY MULTIPLIED','The promise moves from one man into a family line. The stars become a visual memory handle: one becomes many.'],
- blessing:['BLESSING — A HORIZON BEYOND THE FAMILY','The promise never terminates on Abraham. God keeps the nations in view from the beginning.']
+ land:['LAND — A PLACE PROMISED','God promises a real place. The story is not floating in abstraction; covenant, family, inheritance, and history unfold somewhere.','assets/concept-land.svg'],
+ seed:['SEED — A FAMILY MULTIPLIED','The promise moves from one man into a family line. The stars become a visual memory handle: one becomes many.','assets/concept-seed.svg'],
+ blessing:['BLESSING — A HORIZON BEYOND THE FAMILY','The promise never terminates on Abraham. God keeps the nations in view from the beginning.','assets/concept-blessing.svg']
 };
 $$('.promise-panel').forEach(p=>p.onclick=()=>{
  const k=p.dataset.concept;$$('.promise-panel').forEach(x=>x.classList.toggle('active',x===p));
  if(!st.concepts.includes(k))st.concepts.push(k);save();progress();
- $('#conceptRevealTitle').textContent=conceptData[k][0];$('#conceptRevealText').textContent=conceptData[k][1];
+ $('#conceptRevealTitle').textContent=conceptData[k][0];$('#conceptRevealText').textContent=conceptData[k][1];const cri=$('#conceptRevealImg');if(cri)cri.src=conceptData[k][2];
  encourage(st.concepts.length===3?'Land. Seed. Blessing. Keep those three.':'You just made one part visible.');
 });
 

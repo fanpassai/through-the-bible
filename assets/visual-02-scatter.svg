@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1800">
+<defs><linearGradient id="bg" x2="0" y2="1"><stop stop-color="#092630"/><stop offset="1" stop-color="#173f46"/></linearGradient>
+<filter id="g"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+<rect width="1200" height="1800" fill="url(#bg)"/>
+<g opacity=".18" fill="#e9d8a0">
+ <path d="M160 640 C230 540 370 520 460 590 C550 650 595 760 530 840 C455 930 320 925 225 850 C140 780 100 705 160 640Z"/>
+ <path d="M565 545 C650 500 760 530 815 615 C845 665 835 740 800 795 C765 850 720 865 700 930 C680 1000 720 1050 670 1090 C605 1135 500 1090 475 1020 C450 950 510 895 500 820 C490 735 490 585 565 545Z"/>
+ <path d="M845 840 C930 780 1045 805 1090 900 C1120 965 1080 1040 1015 1075 C950 1110 875 1085 830 1025 C785 965 785 885 845 840Z"/>
+</g>
+<circle cx="590" cy="850" r="18" fill="#e5b852" filter="url(#g)"/>
+<g fill="none" stroke="#f0c663" stroke-width="10" stroke-linecap="round" filter="url(#g)">
+ <path d="M590 850 C500 760 415 650 280 545"/><path d="M590 850 C700 750 785 610 930 500"/>
+ <path d="M590 850 C430 905 305 1030 220 1195"/><path d="M590 850 C725 935 840 1070 965 1260"/>
+ <path d="M590 850 C590 680 590 540 595 390"/>
+</g>
+<g fill="#f0c663">
+ <path d="M268 545 l50 -4 -23 44z"/><path d="M940 495 l-42 28 4 -50z"/><path d="M212 1210 l12 -51 33 36z"/>
+ <path d="M975 1275 l-43 -29 45 -17z"/><path d="M596 375 l-24 45 47 0z"/>
+</g>
+<g font-family="Arial" font-size="28" fill="#a9d5d0" opacity=".75">
+ <text x="140" y="1400">MANY PLACES</text><text x="780" y="1420">MANY PEOPLES</text>
+</g>
+</svg>

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1800">
+<defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#061a25"/><stop offset=".55" stop-color="#34545b"/><stop offset="1" stop-color="#e0a453"/></linearGradient>
+<filter id="g"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+<rect width="1200" height="1800" fill="url(#sky)"/>
+<circle cx="870" cy="520" r="115" fill="#ffe5a3" filter="url(#g)"/>
+<path d="M0 1050 C190 950 340 1055 520 950 C720 835 875 925 1200 750 L1200 1800 L0 1800Z" fill="#405b50"/>
+<path d="M0 1190 C190 1120 350 1200 550 1080 C760 960 950 1060 1200 920 L1200 1800 L0 1800Z" fill="#15282b"/>
+<path d="M180 1450 C390 1380 420 1180 610 1160 C790 1140 820 950 960 900 C1050 865 1110 800 1200 760" fill="none" stroke="#f0c663" stroke-width="8" stroke-linecap="round" filter="url(#g)"/>
+<path d="M610 1160 C680 1250 760 1310 860 1450" fill="none" stroke="#f0c663" stroke-width="5" opacity=".65"/>
+<path d="M760 1040 C890 1130 1030 1185 1200 1215" fill="none" stroke="#f0c663" stroke-width="5" opacity=".65"/>
+<path d="M550 1230 C460 1310 360 1360 250 1390" fill="none" stroke="#f0c663" stroke-width="5" opacity=".65"/>
+<g transform="translate(520 1210) scale(.65)" fill="#0b1519">
+ <circle cx="120" cy="70" r="48"/><path d="M80 125 C105 105 150 105 170 128 L210 390 H35Z"/>
+</g>
+<circle cx="1015" cy="1305" r="180" fill="none" stroke="#9bd8d1" stroke-width="3" opacity=".28"/>
+<path d="M855 1305 H1175 M1015 1145 V1465" stroke="#9bd8d1" stroke-width="2" opacity=".22"/>
+</svg>
