@@ -1,18 +1,20 @@
-# Through the Bible — Week 03 APPROVED FINAL Deployment
+# Through the Bible — Week 03 HD Experience Fix
 
-This build uses the approved cinematic visual identity and preserves the working interaction system.
+This release fixes the final mobile issues without redesigning the app.
 
-## Visual identity locked
-- Contemporary cinematic hero using the approved warm horizon / illuminated-path direction.
-- Visual Story 01: a true Babel tower with gathered humanity.
-- Visual Story 02: a geographic scattering visual with movement radiating outward.
-- Visual Story 03: Abraham as the one-person / one-family focus beneath the stars.
-- Visual Story 04: an expansive global horizon with illuminated paths reaching outward.
-- “What You Just Saw” uses the exact approved editorial recap artwork: Babel → Scattered → Abraham → Nations.
-- No flat SVG replacement art and no decorative-dot substitution.
-
-## Preserved
-Connect animation, pinned map behavior, Fill, Place, Check, Unlock, Scripture popups, highlighting, underlining, notes, questions, progress tracking, Bible-app-style Deep Study, devotional reader, and tappable devotional insights.
+## Fixed
+- Restored the earlier lone-person-under-the-stars hero using the original high-resolution image source.
+- Replaced cropped Visual Story screenshots with original/high-resolution sources:
+  - Babel: high-resolution Bruegel Tower of Babel artwork.
+  - Scattering: high-resolution Mercator world map with movement treatment.
+  - Abraham: the same high-resolution stars/one-person visual direction.
+  - Global purpose: high-resolution expansive horizon image.
+- Rebuilt “What You Just Saw” as live editorial HTML using the same HD sources instead of a cropped composite screenshot.
+- Connect now fits the complete four-node thread map and bridge question in the mobile viewport at the same time.
+- Galatians 3:8 / node text is constrained to its card and cannot spill outside.
+- Fixed the `<b>Aha.</b>` literal-code bug by rendering the feedback as HTML.
+- Replaced the Deep Study hero with a contemporary photographic/editorial treatment.
+- Preserved devotional reader, Scripture study tools, Fill, Place, Check, Unlock, progress, and line animation.
 
 ## Deploy
-Upload every file and the `assets/` folder to the root of `fanpassai/through-the-bible`, replacing existing matching files. Commit to `main`. Vercel will redeploy automatically.
+Replace the current root files in `fanpassai/through-the-bible` with this package and commit to `main`.

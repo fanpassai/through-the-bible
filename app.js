@@ -21,15 +21,15 @@ $('#storyCheckpoint').onclick=()=>{st.story=true;save();progress();$('#storyChec
 
 // VISUAL STORY — image-led, no dots
 const storyStages=[
- {title:'Humanity gathered at Babel.',body:'One people. One place. One project. “Let us make a name for ourselves.”',mark:'BABEL',img:'assets/visual-01-babel.jpg'},
- {title:'God scattered the people.',body:'Language fractures the project. Humanity spreads outward into many places and peoples.',mark:'SCATTERING',img:'assets/visual-02-scatter.jpg'},
- {title:'But God’s purpose never stopped.',body:'The story narrows to one man and one family. God calls Abram and carries the promise forward.',mark:'ABRAM',img:'assets/visual-03-abraham.jpg'},
- {title:'The purpose stayed global.',body:'From one man, God promises blessing that reaches all the families of the earth.',mark:'ALL FAMILIES',img:'assets/visual-04-global.jpg'}
+ {title:'Humanity gathered at Babel.',body:'One people. One place. One project. “Let us make a name for ourselves.”',mark:'BABEL',img:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Pieter_Bruegel_the_Elder_-_The_Tower_of_Babel_(Vienna)_-_Google_Art_Project_-_edited.jpg?width=2400'},
+ {title:'God scattered the people.',body:'Language fractures the project. Humanity spreads outward into many places and peoples.',mark:'SCATTERING',img:'linear-gradient(rgba(6,29,39,.18),rgba(6,29,39,.30)), url("https://commons.wikimedia.org/wiki/Special:Redirect/file/Mercator_1538_world_map.jpg?width=2400")'},
+ {title:'But God’s purpose never stopped.',body:'The story narrows to one man and one family. God calls Abram and carries the promise forward.',mark:'ABRAM',img:'https://images.unsplash.com/photo-1514364978092-88ff32485504?auto=format&fit=max&w=2400&q=95'},
+ {title:'The purpose stayed global.',body:'From one man, God promises blessing that reaches all the families of the earth.',mark:'ALL FAMILIES',img:'https://images.unsplash.com/photo-1490730141103-6cac27aaab94?auto=format&fit=max&w=2400&q=95'}
 ];
 let bs=0;
 function renderStoryStage(){
  const s=storyStages[bs];$('#babelStageCount').textContent=(bs+1)+' / 4';$('#babelTitle').textContent=s.title;$('#babelBody').textContent=s.body;$('#storyStageMark').textContent=s.mark;
- const bg=$('#storySceneBg');bg.style.backgroundImage=`url("${s.img}")`;bg.style.transform='scale(1.06)';setTimeout(()=>bg.style.transform='scale(1.02)',80);
+ const bg=$('#storySceneBg');bg.style.backgroundImage=s.img.startsWith('linear-gradient')?s.img:`url("${s.img}")`;bg.style.transform='scale(1.06)';setTimeout(()=>bg.style.transform='scale(1.02)',80);
  if(bs===3)$('#babelNext').innerHTML='CONTINUE THE STORY <span>→</span>';
 }
 renderStoryStage();
@@ -79,7 +79,7 @@ const bridges=[
 ];
 function restoreConnect(){for(let i=0;i<st.connect;i++)bridges[i].paths.forEach(id=>$('#'+id)?.classList.add('live'));if(st.connect>=3){$('#threadCenter').textContent='✦';$('#threadCenter').classList.add('found')}}
 restoreConnect();
-function renderBridge(){const i=Math.min(st.connect,2),b=bridges[i];$('#connectProgress').textContent=`BRIDGE ${i+1} / 3`;$('#connectQuestion').textContent=b.q;$('#connectChoices').innerHTML=b.opts.map((o,j)=>`<button data-i="${j}">${o}</button>`).join('');$('#connectAha').textContent=st.connect>=3?'<b>Aha.</b> You found the thread: Abraham’s promise reaches forward into Christ.':'';$$('#connectChoices button').forEach(x=>x.onclick=()=>{if(+x.dataset.i!==b.ans){encourage('Read the nodes again. The relationship is visible on the map.');return}
+function renderBridge(){const i=Math.min(st.connect,2),b=bridges[i];$('#connectProgress').textContent=`BRIDGE ${i+1} / 3`;$('#connectQuestion').textContent=b.q;$('#connectChoices').innerHTML=b.opts.map((o,j)=>`<button data-i="${j}">${o}</button>`).join('');$('#connectAha').innerHTML=st.connect>=3?'<b>Aha.</b> You found the thread: Abraham’s promise reaches forward into Christ.':'';$$('#connectChoices button').forEach(x=>x.onclick=()=>{if(+x.dataset.i!==b.ans){encourage('Read the nodes again. The relationship is visible on the map.');return}
   b.paths.forEach((id,idx)=>setTimeout(()=>$('#'+id).classList.add('live'),idx*220));
   $('#bridgeCard').classList.remove('animate-pulse');void $('#bridgeCard').offsetWidth;$('#bridgeCard').classList.add('animate-pulse');
   if(i===2){setTimeout(()=>{$('#threadCenter').textContent='✦';$('#threadCenter').classList.add('found')},650)}
