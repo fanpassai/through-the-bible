@@ -1,14 +1,5 @@
-# Through the Bible — Week 03
+# Through the Bible — Week 03 Experience Restored
 
-Static interactive lesson package for Week 03: Promise, People & the Beginning of Israel.
+Restores cinematic reward reveals, Scripture study tools, richer devotional interactions, and stronger transitions while preserving the current Week 03 chronology and visual direction.
 
-## Deploy
-
-Upload these files to the root of the GitHub repository:
-
-- `index.html`
-- `README.md`
-- `.nojekyll`
-- `vercel.json`
-
-The build is a single-file static page and does not require an install step.
+Deploy `index.html`, `README.md`, `.nojekyll`, and `vercel.json` to the repo root.
