@@ -1,10 +1,11 @@
-# Through the Bible — Week 03 · Bible App Pass
+# Through the Bible — Week 03
 
-This pass keeps the current Week 03 learning flow and restores a more polished Bible-app study feel.
+GitHub Pages-ready single-page lesson build.
 
-- CONNECT is now a clean vertical flowing story thread instead of a Z.
-- All seven devotionals contain additional tappable highlighted key terms with definitions, cultural notes, history, and learning insights.
-- Every Scripture reference used in the Week 03 experience is embedded locally as the complete KJV passage for the requested range.
-- Scripture popups retain verse selection, Highlight, Underline, Note, and Question tools.
+## Publish with GitHub Pages
+1. Upload `index.html` to the root of your repository.
+2. In GitHub: **Settings → Pages**.
+3. Under **Build and deployment**, choose **Deploy from a branch**.
+4. Select your main branch and `/ (root)`, then Save.
 
-Deploy `index.html`, `README.md`, `.nojekyll`, and `vercel.json` to the repository root.
+The lesson is self-contained in `index.html`; some existing lesson images load from public web URLs, so an internet connection is required for those images.
