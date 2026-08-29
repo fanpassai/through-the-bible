@@ -128,16 +128,16 @@ function CourseIntro({ enterWeekOne }: { enterWeekOne: () => void }) {
             <span className="course-hero-shade" />
             <header className="course-mobile-header"><BookOpen /><span><b>THROUGH THE BIBLE</b><small>COURSE INTRODUCTION</small></span><button aria-label="Open course map" onClick={() => goTo("course-weeks")}><Menu /></button></header>
             <div className="course-hero-copy">
-              <p>THE BIG STORY</p>
-              <h1>The whole Bible is one story.</h1>
-              <span>Enter the world Scripture has been building from creation to new creation—and learn to see every book as part of one unfolding promise.</span>
+              <p>ONE BIBLE · ONE UNFOLDING STORY</p>
+              <h1>See the story whole.</h1>
+              <span>Trace the one story Scripture has been telling—from a garden, through a cross, toward a city filled with God&apos;s presence.</span>
             </div>
             <div className="course-story-compass" aria-label="Creation, Fall, Redemption, Restoration"><span>Creation</span><i /><span>Fall</span><i /><span>Redemption</span><i /><span>Restoration</span></div>
             <button className="course-hero-cta" onClick={() => goTo("course-shape")}><span><small>ENTER THE STORY</small><strong>Discover the four movements</strong></span><ArrowDown /></button>
           </section>
 
           <section className="course-shape" id="course-shape">
-            <header className="course-section-intro"><p>THE FOUR MOVEMENTS</p><h2>Before the details, see the whole.</h2><span>This is the map we will return to throughout the course.</span></header>
+            <header className="course-section-intro"><p>THE STORY COMPASS</p><h2>Four movements.<br />One divine purpose.</h2><span>Use this living map to locate every person, promise and passage you encounter.</span></header>
             <nav className="course-movement-nav" aria-label="The four movements">
               {MOVEMENTS.map(movement => <button key={movement.key} className={activeMovement === movement.key ? "active" : ""} onClick={() => goTo(`movement-${movement.key}`)}><span />{movement.label}</button>)}
             </nav>

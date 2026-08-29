@@ -433,10 +433,13 @@ function RoadmapScreen({ navigate, openMovement }: { navigate: (screen: Screen) 
       <AtlasHeader label="THROUGH THE BIBLE · WEEK 01" onBack={() => navigate("home")} />
       <div className="screen-scroll roadmap-body">
         <header className="roadmap-intro">
-          <p>WEEK 01 · FOUR CHAPTERS</p>
-          <h1>The beginning,<br />in four movements.</h1>
-          <span>Read Genesis 1–3 as one unfolding movement: a world formed and filled, humanity crowned with responsibility, trust ruptured, and a promise spoken before Eden closes.</span>
-          <small>SCROLL TO EXPLORE · TAP A CHAPTER TO ENTER</small>
+          <div className="roadmap-intro-top"><p>WEEK 01 · GENESIS 1–3</p><em>18 MIN · VISUAL STORY</em></div>
+          <h1>Follow the story<br />as it changes.</h1>
+          <span>Four decisive movements establish the world, the human calling, the rupture and the promise that carries the Bible forward.</span>
+          <div className="roadmap-thread-map" aria-label="Week 1 story progression">
+            {MOVEMENTS.map((movement, index) => <button key={movement.roadmapTitle} onClick={() => openMovement(index)}><i>{String(index + 1).padStart(2, "0")}</i><b>{["FORMED", "CROWNED", "RUPTURED", "PROMISED"][index]}</b></button>)}
+          </div>
+          <small>CHOOSE A CHAPTER · EACH OPENS AS A VISUAL STORY</small>
         </header>
         <div className="roadmap-cinema-list">{MOVEMENTS.map((movement, index) => (
           <button
@@ -882,17 +885,20 @@ function DeepStudyScreen({ completed, openDay, navigate }: { completed: Record<s
     <section className="app-screen atlas-screen deep-screen"><AtlasHeader label="GO DEEPER · WEEK 01" onBack={() => navigate("home")} />
       <div className="screen-scroll deep-body">
         <section className="deep-plan-hero" style={{ backgroundImage: `url('${DEEP_COVER}')` }}><span className="deep-plan-shade" />
-          <div className="deep-plan-count"><strong>{completedCount}</strong><span>OF 7<br />COMPLETE</span></div>
-          <div className="deep-plan-copy"><small>WEEK 01 · A SEVEN-DAY STUDY</small><h1>Go deeper through the week.</h1>
-            <p>Stories, context, history, science and Scripture—then a place to reflect, pray and keep what God is teaching you.</p>
-            <button onClick={() => openDay(featuredDay)}>{completedCount === 7 ? "Revisit Day 7" : `Enter Day ${featuredDay + 1}`}<ArrowRight /></button></div>
+          <div className="deep-plan-copy"><small>WEEK 01 · SEVEN DAYS</small><h1>Carry the beginning into your week.</h1>
+            <p>Read slowly. Notice deeply. Make space for Scripture, reflection and prayer.</p></div>
+          <div className="deep-progress" aria-label={`${completedCount} of 7 devotionals complete`}>
+            {DEEP_DAYS.map((day, index) => <span className={completed[index] ? "done" : index === featuredDay ? "current" : ""} key={day.title}><i />DAY {index + 1}</span>)}
+          </div>
         </section>
 
-        <section className="deep-plan-intro"><MicroLabel>SEVEN DAYS · ONE DEEPER READING</MicroLabel><h2>Do more than finish the lesson. Live inside the text.</h2>
-          <p>Each doorway opens a substantial study shaped by Scripture, history, language, science, reflection and prayer. Your private notes remain saved on this device.</p></section>
+        <section className="deep-today">
+          <div className="deep-today-heading"><span><small>{completedCount === 7 ? "RETURN TO THE STORY" : "CONTINUE HERE"}</small><strong>{completedCount === 7 ? "Revisit the final day" : "Today’s reading"}</strong></span><em>{completedCount} / 7 COMPLETE</em></div>
+          <button onClick={() => openDay(featuredDay)}><img src={DEEP_ART[featuredDay]} alt="" /><span className="deep-today-copy"><small>DAY {String(featuredDay + 1).padStart(2, "0")} · {DEEP_DAYS[featuredDay].eyebrow}</small><b>{DEEP_DAYS[featuredDay].cover}</b><p>{DEEP_DAYS[featuredDay].subtitle}</p><strong>{completed[featuredDay] ? "Read again" : "Enter today’s study"}<ArrowRight /></strong></span></button>
+        </section>
 
-        <div className="deep-week-heading"><span><small>YOUR SEVEN DAYS</small><strong>Choose a doorway</strong></span><em>{completedCount} / 7 COMPLETE</em></div>
-        <div className="deep-story-stack">{DEEP_DAYS.map((day, index) => (
+        <div className="deep-week-heading"><span><small>THE WEEK AHEAD</small><strong>Seven invitations to go deeper</strong></span><em>NOTES SAVE ON THIS DEVICE</em></div>
+        <div className="deep-story-stack">{DEEP_DAYS.map((day, index) => index === featuredDay ? null : (
           <button className="deep-story-panel" key={day.title} onClick={() => openDay(index)}><img src={DEEP_ART[index]} alt="" /><span className="deep-shade" />
             <span className="deep-number">DAY 0{index + 1}</span>{completed[index] && <span className="deep-check"><Check /></span>}
             <span className="deep-copy"><small>{day.eyebrow}</small><b>{day.cover}</b><p>{day.subtitle}</p><em>{day.time} · READING + REFLECTION</em><strong>{completed[index] ? "Read again" : "Enter today’s study"}<ArrowRight /></strong></span></button>
