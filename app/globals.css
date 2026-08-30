@@ -1532,3 +1532,98 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus
   .course-story-compass { bottom: calc(116px + env(safe-area-inset-bottom)); }
   .deep-plan-hero { min-height: 390px; }
 }
+
+/* v30 — genuinely distinct page compositions */
+.roadmap-cinema-list { padding: 0 16px 26px; gap: 13px; }
+.roadmap-cinema-card {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 122px minmax(0,1fr);
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid #dcd5ca;
+  border-radius: 18px;
+  background: #fff;
+  color: #111827;
+  box-shadow: 0 12px 32px rgba(40,33,24,.07);
+}
+.roadmap-cinema-card:first-child { min-height: 0; grid-template-columns: 1fr; }
+.roadmap-image-frame { position: relative; isolation: isolate; min-height: 190px; overflow: hidden; display: block; background: #18202a; }
+.roadmap-cinema-card:first-child .roadmap-image-frame { min-height: 330px; }
+.roadmap-image-frame > img, .roadmap-image-frame > .roadmap-cinema-shade { position: absolute; z-index: -2; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.roadmap-image-frame > .roadmap-cinema-shade { z-index: -1; background: linear-gradient(180deg,rgba(3,8,13,.02),rgba(3,8,13,.45)); }
+.roadmap-image-frame > b { position: absolute; left: 12px; bottom: 10px; color: rgba(255,255,255,.92); font-family: var(--editorial-narrow); font-size: 32px; line-height: 1; letter-spacing: -.03em; text-shadow: 0 2px 12px rgba(0,0,0,.55); }
+.roadmap-cinema-copy { min-height: 190px; padding: 17px 15px 15px; display: flex; justify-content: flex-start; color: #111827; }
+.roadmap-cinema-card:first-child .roadmap-cinema-copy { min-height: 0; padding: 23px 21px 20px; }
+.roadmap-cinema-meta { margin-bottom: 7px; color: #9b7336; font-size: 6.5px; text-shadow: none; }
+.roadmap-cinema-copy > strong { max-width: 100%; color: #111827; font-size: 23px; line-height: .98; text-shadow: none; }
+.roadmap-cinema-card:first-child .roadmap-cinema-copy > strong { max-width: 360px; font-size: 35px; }
+.roadmap-cinema-summary { margin-top: 8px; color: #657080; font-size: 9px; line-height: 1.4; text-shadow: none; }
+.roadmap-cinema-card:first-child .roadmap-cinema-summary { max-width: 345px; font-size: 11px; }
+.roadmap-cinema-refs { margin-top: 8px; color: #9299a3; font-family: var(--apple-display); font-size: 7px; line-height: 1.35; }
+.roadmap-cinema-thread { display: none; }
+.roadmap-cinema-enter { min-height: 27px; margin-top: auto; padding-top: 8px; border-top-color: #e3e0da; color: #111827; }
+.roadmap-cinema-enter b { font-size: 6.5px; }
+.roadmap-cinema-enter svg { width: 14px; color: #9b7336; }
+.roadmap-cinema-card:first-child .roadmap-cinema-enter { min-height: 38px; margin-top: 15px; padding-top: 11px; }
+.roadmap-cinema-card:first-child .roadmap-cinema-enter b { font-size: 8px; }
+.roadmap-cinema-card:first-child .roadmap-cinema-enter svg { width: 17px; }
+
+.deep-body { background: #f5efe5; }
+.deep-plan-hero {
+  min-height: 0;
+  padding: 18px 18px 25px;
+  display: block;
+  background: #f5efe5;
+  color: #111827;
+}
+.deep-journal-art { position: relative; height: 235px; overflow: hidden; border-radius: 22px 22px 5px 5px; background: #14212c; box-shadow: 0 18px 45px rgba(48,39,27,.13); }
+.deep-journal-art > img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.deep-journal-art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg,rgba(3,10,16,.04),rgba(3,10,16,.55)); }
+.deep-journal-art > span { position: absolute; z-index: 1; left: 18px; right: 18px; bottom: 15px; display: flex; align-items: end; justify-content: space-between; color: #fff; }
+.deep-journal-art small { font-size: 6.5px; font-weight: 760; letter-spacing: .14em; }
+.deep-journal-art b { font-family: var(--editorial-narrow); font-size: 18px; letter-spacing: .04em; }
+.deep-plan-copy { position: relative; margin: -2px 10px 0; padding: 26px 18px 21px; border: 1px solid #ded5c8; border-top: 0; border-radius: 0 0 18px 18px; background: #fffdf9; box-shadow: 0 18px 40px rgba(48,39,27,.07); }
+.deep-plan-copy small { color: #9b7336; }
+.deep-plan-copy h1 { max-width: 345px; margin: 9px 0 10px; color: #111827; font-size: 38px; }
+.deep-plan-copy p { max-width: 335px; color: #657080; font-size: 11px; }
+.deep-progress { margin: 23px 10px 0; }
+.deep-progress span { color: #8f887f; }
+.deep-progress i { background: #d7cfc2; }
+.deep-progress span.done i { background: #9b7336; }
+.deep-progress span.current { color: #111827; }
+.deep-progress span.current i { background: #111827; box-shadow: none; }
+.deep-today { padding-top: 8px; background: #f5efe5; }
+.deep-today > button { background: #fffdf9; }
+.deep-week-heading { border-top: 1px solid #e2d9cc; background: #fffdf9; }
+.deep-story-stack { background: #fffdf9; }
+.deep-story-panel {
+  grid-template-columns: 91px minmax(0,1fr);
+  min-height: 126px;
+  padding: 0;
+  display: grid;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid #e0ddd7;
+  background: #fff;
+  color: #111827;
+  box-shadow: none;
+}
+.deep-story-panel > img { position: relative; z-index: 0; width: 91px; height: 100%; min-height: 126px; border-radius: 0; object-fit: cover; }
+.deep-story-panel > .deep-shade { display: none; }
+.deep-story-panel .deep-number { left: 8px; top: 8px; padding: 4px 5px; border-radius: 5px; background: rgba(5,15,24,.72); color: #fff; font-size: 5.5px; backdrop-filter: blur(5px); }
+.deep-story-panel .deep-check { top: 8px; right: 8px; }
+.deep-story-panel .deep-copy { width: auto; min-width: 0; padding: 15px 14px 13px; display: flex; flex-direction: column; }
+.deep-story-panel .deep-copy small { color: #9b7336; font-size: 6px; }
+.deep-story-panel .deep-copy b { max-width: 240px; margin-top: 5px; color: #111827; font-size: 20px; }
+.deep-story-panel .deep-copy p { margin-top: 6px; color: #707986; font-size: 8px; }
+.deep-story-panel .deep-copy > strong { margin-top: auto; padding-top: 7px; border-top-color: #e5e2dd; color: #111827; font-size: 6px; }
+.deep-story-panel .deep-copy > strong svg { color: #9b7336; }
+
+@media (max-width: 365px) {
+  .roadmap-cinema-card { grid-template-columns: 106px minmax(0,1fr); }
+  .roadmap-cinema-copy > strong { font-size: 20px; }
+  .deep-today > button { grid-template-columns: 35% 1fr; }
+  .deep-story-panel { grid-template-columns: 82px minmax(0,1fr); }
+  .deep-story-panel > img { width: 82px; }
+}

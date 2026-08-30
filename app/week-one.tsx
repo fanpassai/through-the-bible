@@ -448,12 +448,12 @@ function RoadmapScreen({ navigate, openMovement }: { navigate: (screen: Screen) 
             onClick={() => openMovement(index)}
             aria-label={`Open chapter ${index + 1}: ${movement.roadmapTitle}`}
           >
-            <img src={ROADMAP_ART[index]} alt="" aria-hidden="true" />
-            <span className="roadmap-cinema-shade" />
+            <span className="roadmap-image-frame"><img src={ROADMAP_ART[index]} alt="" aria-hidden="true" /><span className="roadmap-cinema-shade" /><b>0{index + 1}</b></span>
             <span className="roadmap-cinema-copy">
-              <span className="roadmap-cinema-meta">CHAPTER {String(index + 1).padStart(2, "0")} · {movement.refs.join(" · ")}</span>
+              <span className="roadmap-cinema-meta">CHAPTER {String(index + 1).padStart(2, "0")} · OPEN STORY</span>
               <strong>{movement.roadmapTitle}</strong>
               <span className="roadmap-cinema-summary">{movement.roadmapSummary}</span>
+              <span className="roadmap-cinema-refs">{movement.refs.join(" · ")}</span>
               <span className="roadmap-cinema-thread">{chapterThreads[index]}</span>
               <span className="roadmap-cinema-enter"><b>ENTER CHAPTER</b><ArrowRight /></span>
             </span>
@@ -884,9 +884,10 @@ function DeepStudyScreen({ completed, openDay, navigate }: { completed: Record<s
   return (
     <section className="app-screen atlas-screen deep-screen"><AtlasHeader label="GO DEEPER · WEEK 01" onBack={() => navigate("home")} />
       <div className="screen-scroll deep-body">
-        <section className="deep-plan-hero" style={{ backgroundImage: `url('${DEEP_COVER}')` }}><span className="deep-plan-shade" />
-          <div className="deep-plan-copy"><small>WEEK 01 · SEVEN DAYS</small><h1>Carry the beginning into your week.</h1>
-            <p>Read slowly. Notice deeply. Make space for Scripture, reflection and prayer.</p></div>
+        <section className="deep-plan-hero">
+          <div className="deep-journal-art"><img src={DEEP_COVER} alt="A traveler looking across a landscape shaped by light and water" /><span><small>A SEVEN-DAY READING JOURNAL</small><b>WEEK 01</b></span></div>
+          <div className="deep-plan-copy"><small>GO DEEPER</small><h1>Carry the beginning into your week.</h1>
+            <p>Seven unhurried encounters with Scripture, context, reflection and prayer. Your notes remain private and saved on this device.</p></div>
           <div className="deep-progress" aria-label={`${completedCount} of 7 devotionals complete`}>
             {DEEP_DAYS.map((day, index) => <span className={completed[index] ? "done" : index === featuredDay ? "current" : ""} key={day.title}><i />DAY {index + 1}</span>)}
           </div>
