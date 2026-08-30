@@ -78,7 +78,7 @@ function SignInScreen({ onBack, onPreview }: { onBack: () => void; onPreview: ()
       <div className="signin-art-copy"><small>YOUR STUDY · KEPT TOGETHER</small><h1>Keep your place<br />in the story.</h1><p>Your reading, discoveries and questions should travel with you.</p></div>
     </section>
     <section className="signin-panel">
-      {!sent ? <>
+      {!sent ? <div className="signin-panel-inner">
         <div className="signin-panel-heading"><span><Sparkles /></span><small>WELCOME</small><h2>Begin with an account that remembers.</h2><p>Sign in once. Every Scripture, note, highlight and devotional reflection will remain connected to you.</p></div>
         {googleEnabled ? <><button className="signin-google" onClick={signInWithGoogle}><span>G</span>Continue with Google<ArrowRight /></button><div className="signin-divider"><span>OR USE EMAIL</span></div></> : null}
         <form onSubmit={submit} className="signin-form">
@@ -89,7 +89,7 @@ function SignInScreen({ onBack, onPreview }: { onBack: () => void; onPreview: ()
         {authMessage ? <p className="signin-message">{authMessage}</p> : null}
         <div className="signin-assurance"><ShieldCheck /><span><b>Private by design</b><small>Your writing is yours. Only questions you submit are shared.</small></span></div>
         <button className="signin-preview" onClick={onPreview}>Preview the course without saving <ChevronRight /></button>
-      </> : <div className="signin-sent">
+      </div> : <div className="signin-sent">
         <span><Mail /></span><small>SECURE LINK SENT</small><h2>Open your email to enter.</h2><p>We sent a private sign-in link to <b>{email}</b>. Tap it and you will return directly to your study.</p><div><Check />No password to remember</div><button onClick={() => setSent(false)}>Use a different email</button>
       </div>}
     </section>
