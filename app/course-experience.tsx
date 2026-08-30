@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ArrowDown, ArrowRight, BookOpen, CalendarDays, Check, ChevronRight,
-  Link2, LockKeyhole, MapPin, Menu, Minus, Sparkles,
+  Link2, LockKeyhole, MapPin, Minus, Sparkles, UserRound,
 } from "lucide-react";
 import WeekOne from "./week-one";
+import { useStudyAccount } from "./study-account";
 
 type CourseView = "intro" | "week1";
 
@@ -70,7 +71,9 @@ export default function CourseExperience() {
   const [view, setView] = useState<CourseView>("intro");
 
   useEffect(() => {
-    if (sessionStorage.getItem("ttb-course-active-view") === "week1") setView("week1");
+    if (sessionStorage.getItem("ttb-course-active-view") !== "week1") return;
+    const restore = window.setTimeout(() => setView("week1"), 0);
+    return () => window.clearTimeout(restore);
   }, []);
 
   function enterWeekOne() {
@@ -89,6 +92,7 @@ export default function CourseExperience() {
 function CourseIntro({ enterWeekOne }: { enterWeekOne: () => void }) {
   const scroller = useRef<HTMLDivElement>(null);
   const [activeMovement, setActiveMovement] = useState("creation");
+  const { user, openAccount } = useStudyAccount();
 
   useEffect(() => {
     const root = scroller.current;
@@ -119,6 +123,7 @@ function CourseIntro({ enterWeekOne }: { enterWeekOne: () => void }) {
           <button onClick={() => goTo("course-weeks")}><small>03</small><b>The ten-week map</b><ChevronRight /></button>
         </nav>
         <button className="course-rail-cta" onClick={enterWeekOne}>Enter Week 01 <ArrowRight /></button>
+        <button className="course-account-entry" onClick={openAccount}><UserRound /><span><small>{user ? "MY ACCOUNT" : "PROTECT YOUR STUDY"}</small><b>{user?.email || "Sign in when you are ready"}</b></span><ChevronRight /></button>
       </aside>
 
       <section className="phone-canvas course-canvas" aria-label="Through the Bible course introduction">
@@ -126,7 +131,7 @@ function CourseIntro({ enterWeekOne }: { enterWeekOne: () => void }) {
           <section className="course-hero" id="course-top">
             <img src="/images/course-intro-hero-v2.webp" alt="An ancient traveler overlooking a vast landscape that moves from garden to radiant city" />
             <span className="course-hero-shade" />
-            <header className="course-mobile-header"><BookOpen /><span><b>THROUGH THE BIBLE</b><small>COURSE INTRODUCTION</small></span><button aria-label="Open course map" onClick={() => goTo("course-weeks")}><Menu /></button></header>
+            <header className="course-mobile-header"><BookOpen /><span><b>THROUGH THE BIBLE</b><small>COURSE INTRODUCTION</small></span><button aria-label={user ? "Open my account" : "Sign in"} onClick={openAccount}><UserRound /></button></header>
             <div className="course-hero-copy">
               <p>ONE BIBLE · ONE UNFOLDING STORY</p>
               <h1>See the story whole.</h1>

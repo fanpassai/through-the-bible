@@ -5,10 +5,12 @@ import {
   ArrowLeft, ArrowRight, Bookmark, BookOpen, Check, ChevronDown, ChevronRight, CircleHelp,
   GripVertical, Highlighter, Info, Link2, LockKeyhole, MapPin, Minus,
   MessageCircleQuestion, NotebookPen, RotateCcw,
-  Sparkles, Underline, Users, Waypoints, X,
+  Sparkles, Underline, UserRound, Users, Waypoints, X,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import lesson from "./week1-data.json";
+import { useStudyAccount } from "./study-account";
+import type { ScriptureMark, ScriptureSelection, StudyPortfolio } from "@/lib/study-types";
 
 type ToolName = "place" | "fill" | "connect" | "unlock";
 type StudyDockName = ToolName | "deep";
@@ -21,7 +23,6 @@ type DeepDay = {
   time: string; refs: string[]; lede: string; paragraphs: string[];
   quote: string; quoteRef: string; hold: string; reflect: string; prayer: string;
 };
-type ScriptureMark = { highlight?: boolean; underline?: boolean; bookmark?: boolean; notes?: string; question?: string };
 type AppState = {
   started: boolean; story: number; place: string[]; placeOrder: string[];
   fillAnswers: Record<string, string>; fillCorrect: Record<string, boolean>;
@@ -218,6 +219,9 @@ export default function WeekOne({ onCourseHome }: { onCourseHome?: () => void })
   const [teachbackSummary, setTeachbackSummary] = useState("");
   const [showModel, setShowModel] = useState(false);
   const [teachbackMessage, setTeachbackMessage] = useState("");
+  const [myStudyOpen, setMyStudyOpen] = useState(false);
+  const cloudLoadedFor = useRef<string | null>(null);
+  const { user, cloudConfigured, loading: accountLoading, openAccount, loadPortfolio, savePortfolio, submitQuestion } = useStudyAccount();
 
   useEffect(() => {
     const loadSavedProgress = window.setTimeout(() => {
@@ -262,6 +266,34 @@ export default function WeekOne({ onCourseHome }: { onCourseHome?: () => void })
       }));
     } catch { /* storage restrictions must never block the lesson */ }
   }, [ready, state]);
+
+  useEffect(() => {
+    if (!ready || !user || cloudLoadedFor.current === user.id) return;
+    let cancelled = false;
+    loadPortfolio().then((cloud) => {
+      if (cancelled) return;
+      setState((current) => cloud ? ({ ...current,
+        deepCompleted: { ...cloud.deepCompleted, ...current.deepCompleted },
+        deepNotes: { ...cloud.deepNotes, ...current.deepNotes },
+        deepReflections: { ...cloud.deepReflections, ...current.deepReflections },
+        scriptureTools: { ...cloud.scriptureTools, ...current.scriptureTools },
+      }) : current);
+      cloudLoadedFor.current = user.id;
+    }).catch(() => { cloudLoadedFor.current = user.id; });
+    return () => { cancelled = true; };
+  }, [ready, user, loadPortfolio]);
+
+  useEffect(() => {
+    if (!ready || !user || cloudLoadedFor.current !== user.id) return;
+    const portfolio: StudyPortfolio = {
+      deepCompleted: state.deepCompleted,
+      deepNotes: state.deepNotes,
+      deepReflections: state.deepReflections,
+      scriptureTools: state.scriptureTools,
+    };
+    const timer = window.setTimeout(() => savePortfolio(portfolio).catch(() => undefined), 700);
+    return () => window.clearTimeout(timer);
+  }, [ready, user, state.deepCompleted, state.deepNotes, state.deepReflections, state.scriptureTools, savePortfolio]);
 
   const progress = useMemo(() => {
     const story = state.started ? ((Math.max(state.story, 0) + 1) / STORY.length) * 20 : 0;
@@ -340,6 +372,11 @@ export default function WeekOne({ onCourseHome }: { onCourseHome?: () => void })
     setState((current) => ({ ...current, scriptureTools: { ...current.scriptureTools,
       [scriptureRef]: { ...current.scriptureTools[scriptureRef], [key]: value } } }));
   }
+  function addScriptureSelection(selection: ScriptureSelection) {
+    if (!scriptureRef) return;
+    setState((current) => ({ ...current, scriptureTools: { ...current.scriptureTools,
+      [scriptureRef]: { ...current.scriptureTools[scriptureRef], selections: [...(current.scriptureTools[scriptureRef]?.selections || []), selection] } } }));
+  }
   function completeDeepDay() {
     if ((state.deepReflections[String(deepDay)] || "").trim().length < 15) return;
     setState((current) => ({ ...current, deepCompleted: { ...current.deepCompleted, [deepDay]: true } }));
@@ -353,6 +390,7 @@ export default function WeekOne({ onCourseHome }: { onCourseHome?: () => void })
     <main className="product-shell">
       <DesktopRail screen={screen} progress={progress} navigate={navigate} />
       <section className="phone-canvas" aria-label="Through the Bible Week 1">
+        <button className={`my-study-trigger ${["home", "movement", "story", "promise", "family", "complete"].includes(screen) ? "on-dark" : ""}`} onClick={() => setMyStudyOpen(true)} aria-label="Open My Study"><NotebookPen />{user && <span />}</button>
         {screen === "home" && <HomeScreen beginJourney={beginJourney} onCourseHome={onCourseHome} />}
         {screen === "roadmap" && <RoadmapScreen navigate={navigate} openMovement={(index) => { setMovementIndex(index); navigate("movement"); }} />}
         {screen === "movement" && <MovementScreen index={movementIndex} setIndex={setMovementIndex} {...common} />}
@@ -386,13 +424,17 @@ export default function WeekOne({ onCourseHome }: { onCourseHome?: () => void })
 
         <ScriptureReader reference={scriptureRef} scripture={scriptureRef ? SCRIPTURES[scriptureRef] : null}
           mark={scriptureRef ? state.scriptureTools[scriptureRef] || {} : {}} onClose={() => setScriptureRef(null)}
-          onTool={updateScriptureTool} onText={updateScriptureText} />
+          onTool={updateScriptureTool} onText={updateScriptureText} onSelection={addScriptureSelection} />
         <DeepReader key={`deep-reader-${deepDay}`} open={deepOpen} dayIndex={deepDay} day={DEEP_DAYS[deepDay]}
           completed={Boolean(state.deepCompleted[deepDay])} reflection={state.deepReflections[deepDay] || ""}
           notes={state.deepNotes[deepDay] || ""} onClose={() => setDeepOpen(false)} onScripture={openScripture}
           onInsight={setInsightKey} onReflection={(value) => setState((current) => ({ ...current, deepReflections: { ...current.deepReflections, [deepDay]: value } }))}
           onNotes={(value) => setState((current) => ({ ...current, deepNotes: { ...current.deepNotes, [deepDay]: value } }))}
           onComplete={completeDeepDay} />
+        <MyStudySheet open={myStudyOpen} onOpenChange={setMyStudyOpen} state={state} userEmail={user?.email || null}
+          cloudConfigured={cloudConfigured} accountLoading={accountLoading} openAccount={openAccount}
+          openScripture={(ref) => { setMyStudyOpen(false); openScripture(ref); }}
+          openDay={(index) => { setMyStudyOpen(false); setDeepDay(index); setDeepOpen(true); }} submitQuestion={submitQuestion} />
         <Sheet open={Boolean(insightKey)} onOpenChange={(open) => !open && setInsightKey(null)}>
           <SheetContent side="bottom" className="insight-sheet">
             <SheetHeader><MicroLabel>{insightKey ? DEEP_INSIGHTS[insightKey]?.type : "STUDY NOTE"}</MicroLabel>
@@ -978,18 +1020,120 @@ function DesktopRail({ screen, progress, navigate }: { screen: Screen; progress:
     <blockquote>“Hope appears before Eden closes.”</blockquote></aside>;
 }
 
-function ScriptureReader({ reference, scripture, mark, onClose, onTool, onText }: {
+function ScriptureReader({ reference, scripture, mark, onClose, onTool, onText, onSelection }: {
   reference: string | null; scripture: Scripture | null; mark: ScriptureMark; onClose: () => void;
   onTool: (key: "highlight" | "underline" | "bookmark") => void; onText: (key: "notes" | "question", value: string) => void;
+  onSelection: (selection: ScriptureSelection) => void;
 }) {
+  const articleRef = useRef<HTMLElement>(null);
+  const [pendingSelection, setPendingSelection] = useState<{ quote: string; start: number; end: number } | null>(null);
+
+  useEffect(() => {
+    const article = articleRef.current;
+    if (!article) return;
+    article.innerHTML = scripture?.html || "";
+    const annotations = mark.selections || [];
+    if (!annotations.length) return;
+    const walker = document.createTreeWalker(article, NodeFilter.SHOW_TEXT);
+    const nodes: { node: Text; start: number; end: number }[] = [];
+    let offset = 0;
+    while (walker.nextNode()) {
+      const node = walker.currentNode as Text;
+      const length = node.data.length;
+      nodes.push({ node, start: offset, end: offset + length });
+      offset += length;
+    }
+    nodes.forEach(({ node, start, end }) => {
+      const local = annotations.filter((item) => item.start < end && item.end > start);
+      if (!local.length) return;
+      const boundaries = new Set<number>([0, node.data.length]);
+      local.forEach((item) => { boundaries.add(Math.max(0, item.start - start)); boundaries.add(Math.min(node.data.length, item.end - start)); });
+      const points = [...boundaries].sort((a, b) => a - b);
+      const fragment = document.createDocumentFragment();
+      points.slice(0, -1).forEach((from, index) => {
+        const to = points[index + 1];
+        const text = node.data.slice(from, to);
+        const active = local.filter((item) => item.start < start + to && item.end > start + from);
+        if (!active.length) fragment.append(text);
+        else {
+          const span = document.createElement("span");
+          span.className = `scripture-selection ${active.some((item) => item.type === "highlight") ? "is-highlighted" : ""} ${active.some((item) => item.type === "underline") ? "is-underlined" : ""}`;
+          span.textContent = text;
+          fragment.append(span);
+        }
+      });
+      node.replaceWith(fragment);
+    });
+  }, [scripture?.html, mark.selections]);
+
+  function captureSelection() {
+    const article = articleRef.current;
+    const selection = window.getSelection();
+    if (!article || !selection || selection.rangeCount === 0 || selection.isCollapsed) return;
+    const range = selection.getRangeAt(0);
+    if (!article.contains(range.commonAncestorContainer)) return;
+    const quote = selection.toString().trim();
+    if (quote.length < 2) return;
+    const before = document.createRange();
+    before.selectNodeContents(article);
+    before.setEnd(range.startContainer, range.startOffset);
+    const start = before.toString().length;
+    setPendingSelection({ quote, start, end: start + selection.toString().length });
+  }
+
+  function saveSelection(type: "highlight" | "underline") {
+    if (!pendingSelection) return;
+    onSelection({ ...pendingSelection, type, id: globalThis.crypto?.randomUUID?.() || `${Date.now()}`, createdAt: new Date().toISOString() });
+    window.getSelection()?.removeAllRanges();
+    setPendingSelection(null);
+  }
+
   return <Sheet open={Boolean(reference)} onOpenChange={(open) => !open && onClose()}><SheetContent side="right" className="scripture-sheet">
     <SheetHeader className="scripture-header"><MicroLabel>{scripture?.translation}</MicroLabel><SheetTitle>{reference}</SheetTitle><SheetDescription>Read, mark, question and keep what you notice.</SheetDescription></SheetHeader>
-    <div className="scripture-toolbar" aria-label="Scripture study tools"><button className={mark.highlight ? "active" : ""} onClick={() => onTool("highlight")}><Highlighter />Highlight</button>
-      <button className={mark.underline ? "active" : ""} onClick={() => onTool("underline")}><Underline />Underline</button><button className={mark.bookmark ? "active" : ""} onClick={() => onTool("bookmark")}><Bookmark />Save</button></div>
-    <div className="scripture-scroll"><article className={`scripture-text ${mark.highlight ? "highlighted" : ""} ${mark.underline ? "underlined" : ""}`} dangerouslySetInnerHTML={{ __html: scripture?.html || "" }} />
+    <div className="scripture-toolbar" aria-label="Scripture study tools"><span><Highlighter />Select exact words to mark them</span><button className={mark.bookmark ? "active" : ""} onClick={() => onTool("bookmark")}><Bookmark />{mark.bookmark ? "Saved" : "Save"}</button></div>
+    {pendingSelection && <div className="selection-actionbar"><span>“{pendingSelection.quote.length > 46 ? `${pendingSelection.quote.slice(0, 46)}…` : pendingSelection.quote}”</span><div><button onClick={() => saveSelection("highlight")}><Highlighter />Highlight</button><button onClick={() => saveSelection("underline")}><Underline />Underline</button><button onClick={() => setPendingSelection(null)}><X />Cancel</button></div></div>}
+    <div className="scripture-scroll"><article ref={articleRef} onMouseUp={captureSelection} onTouchEnd={() => window.setTimeout(captureSelection, 0)} className={`scripture-text ${mark.highlight ? "highlighted" : ""} ${mark.underline ? "underlined" : ""}`} />
       <WhyCard>{scripture?.study}</WhyCard><label className="study-field"><span><MessageCircleQuestion />ASK A QUESTION</span><textarea value={mark.question || ""} onChange={(event) => onText("question", event.target.value)} placeholder="What do you want to understand about this text?" /></label>
       <label className="study-field"><span><NotebookPen />PRIVATE NOTES</span><textarea value={mark.notes || ""} onChange={(event) => onText("notes", event.target.value)} placeholder="Capture an observation, connection or question…" /></label><p className="saved-note"><Check />Saved automatically on this device</p>
     </div></SheetContent></Sheet>;
+}
+
+function MyStudySheet({ open, onOpenChange, state, userEmail, cloudConfigured, accountLoading, openAccount, openScripture, openDay, submitQuestion }: {
+  open: boolean; onOpenChange: (open: boolean) => void; state: AppState; userEmail: string | null; cloudConfigured: boolean; accountLoading: boolean;
+  openAccount: () => void; openScripture: (reference: string) => void; openDay: (index: number) => void;
+  submitQuestion: (reference: string, question: string) => Promise<boolean>;
+}) {
+  const [submitted, setSubmitted] = useState<Record<string, boolean>>({});
+  const scriptureEntries = Object.entries(state.scriptureTools).filter(([, mark]) => mark.bookmark || mark.notes?.trim() || mark.question?.trim() || mark.selections?.length);
+  const devotionalEntries = DEEP_DAYS.map((day, index) => ({ day, index, note: state.deepNotes[index] || "", reflection: state.deepReflections[index] || "" }))
+    .filter((item) => item.note.trim() || item.reflection.trim());
+  const highlightCount = scriptureEntries.reduce((total, [, mark]) => total + (mark.selections?.length || 0), 0);
+  const questionCount = scriptureEntries.filter(([, mark]) => mark.question?.trim()).length;
+
+  async function sendQuestion(reference: string, question: string) {
+    if (!userEmail) { onOpenChange(false); openAccount(); return; }
+    if (await submitQuestion(reference, question)) setSubmitted((current) => ({ ...current, [reference]: true }));
+  }
+
+  return <Sheet open={open} onOpenChange={onOpenChange}><SheetContent side="right" className="my-study-sheet" showCloseButton={false}>
+    <header className="my-study-header"><button onClick={() => onOpenChange(false)}><ArrowLeft />Back</button><b>MY STUDY</b><button onClick={openAccount} aria-label="Open account"><UserRound /></button></header>
+    <div className="my-study-scroll"><section className="my-study-hero"><small>YOUR PRIVATE STUDY LIBRARY</small><h1>Everything you<br />didn’t want to lose.</h1><p>Notes, marked Scripture, questions and devotional reflections—kept together and linked to their original context.</p>
+      <div className={`study-sync-state ${userEmail ? "synced" : ""}`}><span>{userEmail ? <Check /> : <LockKeyhole />}</span><div><small>{userEmail ? "CLOUD SYNC ACTIVE" : cloudConfigured ? "SAVED ON THIS DEVICE" : "ACCOUNT CONNECTION PENDING"}</small><b>{accountLoading ? "Checking your account…" : userEmail || "Protect this study across every device"}</b></div>{!userEmail && <button onClick={() => { onOpenChange(false); openAccount(); }}>Protect it <ArrowRight /></button>}</div>
+    </section>
+    <section className="study-overview"><article><b>{scriptureEntries.length}</b><span>SCRIPTURES</span></article><article><b>{highlightCount}</b><span>MARKS</span></article><article><b>{questionCount}</b><span>QUESTIONS</span></article><article><b>{devotionalEntries.length}</b><span>JOURNAL DAYS</span></article></section>
+
+    {!scriptureEntries.length && !devotionalEntries.length ? <section className="my-study-empty"><NotebookPen /><h2>Your study library is waiting.</h2><p>Highlight a phrase, save a Scripture or write inside a devotional. It will appear here automatically.</p></section> : null}
+
+    {scriptureEntries.length > 0 && <section className="study-library-section"><header><small>SCRIPTURE STUDY</small><h2>Saved from the text</h2></header>{scriptureEntries.map(([reference, mark]) => <article className="study-library-card" key={reference}>
+      <button className="study-card-main" onClick={() => openScripture(reference)}><span><Bookmark /></span><div><small>{reference}</small><b>{mark.notes?.trim() || mark.question?.trim() || mark.selections?.[0]?.quote || "Saved Scripture"}</b><em>{mark.selections?.length || 0} text mark{mark.selections?.length === 1 ? "" : "s"}{mark.notes?.trim() ? " · note" : ""}{mark.question?.trim() ? " · question" : ""}</em></div><ChevronRight /></button>
+      {mark.selections?.map((selection) => <button className={`study-quote ${selection.type}`} onClick={() => openScripture(reference)} key={selection.id}>“{selection.quote}”</button>)}
+      {mark.question?.trim() && <div className="study-question"><MessageCircleQuestion /><span><small>YOUR QUESTION</small><p>{mark.question}</p></span><button disabled={submitted[reference]} onClick={() => sendQuestion(reference, mark.question || "")}>{submitted[reference] ? "Submitted" : userEmail ? "Ask instructor" : "Sign in to ask"}</button></div>}
+    </article>)}</section>}
+
+    {devotionalEntries.length > 0 && <section className="study-library-section devotional-library"><header><small>DEVOTIONAL JOURNAL</small><h2>Reflections from the week</h2></header>{devotionalEntries.map(({ day, index, note, reflection }) => <button className="devotional-library-card" key={day.title} onClick={() => openDay(index)}><img src={DEEP_ART[index]} alt="" /><span><small>DAY {index + 1} · {day.eyebrow}</small><b>{day.cover}</b><p>{reflection || note}</p></span><ChevronRight /></button>)}</section>}
+    <footer className="my-study-privacy"><LockKeyhole /><span><b>Your private writing belongs to you.</b><small>Only questions you deliberately submit can be seen by an instructor.</small></span></footer>
+    </div>
+  </SheetContent></Sheet>;
 }
 
 function DeepReader({ open, dayIndex, day, completed, reflection, notes, onClose, onScripture, onInsight, onReflection, onNotes, onComplete }: {
