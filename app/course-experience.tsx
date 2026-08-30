@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
-  ArrowDown, ArrowRight, BookOpen, CalendarDays, Check, ChevronRight,
+  ArrowDown, ArrowLeft, ArrowRight, BookOpen, CalendarDays, Check, ChevronRight,
   Link2, LockKeyhole, MapPin, Minus, Sparkles, UserRound,
 } from "lucide-react";
 import WeekOne from "./week-one";
@@ -67,29 +67,26 @@ const RHYTHM: { label: string; description: string; icon: ReactNode }[] = [
   { label: "Devotion", description: "Carry the lesson into seven days of deeper study.", icon: <Sparkles /> },
 ];
 
-export default function CourseExperience() {
-  const [view, setView] = useState<CourseView>("intro");
-
-  useEffect(() => {
-    if (sessionStorage.getItem("ttb-course-active-view") !== "week1") return;
-    const restore = window.setTimeout(() => setView("week1"), 0);
-    return () => window.clearTimeout(restore);
-  }, []);
+export default function CourseExperience({ initialView = "intro", initialOpenStudy = false, onProductHome }: {
+  initialView?: CourseView;
+  initialOpenStudy?: boolean;
+  onProductHome?: () => void;
+}) {
+  const [view, setView] = useState<CourseView>(initialView);
 
   function enterWeekOne() {
-    sessionStorage.setItem("ttb-course-active-view", "week1");
     setView("week1");
   }
 
   function returnToCourse() {
-    sessionStorage.removeItem("ttb-course-active-view");
-    setView("intro");
+    if (onProductHome) onProductHome();
+    else setView("intro");
   }
 
-  return view === "week1" ? <WeekOne onCourseHome={returnToCourse} /> : <CourseIntro enterWeekOne={enterWeekOne} />;
+  return view === "week1" ? <WeekOne onCourseHome={returnToCourse} initialOpenStudy={initialOpenStudy} /> : <CourseIntro enterWeekOne={enterWeekOne} onProductHome={onProductHome} />;
 }
 
-function CourseIntro({ enterWeekOne }: { enterWeekOne: () => void }) {
+function CourseIntro({ enterWeekOne, onProductHome }: { enterWeekOne: () => void; onProductHome?: () => void }) {
   const scroller = useRef<HTMLDivElement>(null);
   const [activeMovement, setActiveMovement] = useState("creation");
   const { user, openAccount } = useStudyAccount();
@@ -115,6 +112,7 @@ function CourseIntro({ enterWeekOne }: { enterWeekOne: () => void }) {
   return (
     <main className="product-shell course-shell">
       <aside className="course-desktop-rail">
+        {onProductHome ? <button className="course-product-home" onClick={onProductHome}><ArrowLeft />Back to Today</button> : null}
         <div className="course-wordmark"><BookOpen /><span><b>THROUGH THE BIBLE</b><small>THE BIG STORY · COURSE INTRODUCTION</small></span></div>
         <div className="course-rail-copy"><span>ONE BIBLE · ONE UNFOLDING STORY</span><h1>See the whole story before you enter the first week.</h1><p>Creation. Fall. Redemption. Restoration. This is the map we will return to for ten weeks.</p></div>
         <nav aria-label="Course introduction sections">
@@ -131,7 +129,7 @@ function CourseIntro({ enterWeekOne }: { enterWeekOne: () => void }) {
           <section className="course-hero" id="course-top">
             <img src="/images/course-intro-hero-v2.webp" alt="An ancient traveler overlooking a vast landscape that moves from garden to radiant city" />
             <span className="course-hero-shade" />
-            <header className="course-mobile-header"><BookOpen /><span><b>THROUGH THE BIBLE</b><small>COURSE INTRODUCTION</small></span><button aria-label={user ? "Open my account" : "Sign in"} onClick={openAccount}><UserRound /></button></header>
+            <header className="course-mobile-header">{onProductHome ? <button aria-label="Back to Today" onClick={onProductHome}><ArrowLeft /></button> : <BookOpen />}<span><b>THROUGH THE BIBLE</b><small>COURSE INTRODUCTION</small></span><button aria-label={user ? "Open my account" : "Sign in"} onClick={openAccount}><UserRound /></button></header>
             <div className="course-hero-copy">
               <p>ONE BIBLE · ONE UNFOLDING STORY</p>
               <h1>See the story whole.</h1>

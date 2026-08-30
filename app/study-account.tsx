@@ -11,7 +11,12 @@ type StudyAccountContextValue = {
   user: User | null;
   loading: boolean;
   cloudConfigured: boolean;
+  authMessage: string;
+  authSending: boolean;
   openAccount: () => void;
+  clearAuthMessage: () => void;
+  sendMagicLink: (email: string, displayName?: string) => Promise<boolean>;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   loadPortfolio: () => Promise<StudyPortfolio | null>;
   savePortfolio: (portfolio: StudyPortfolio) => Promise<void>;
@@ -28,6 +33,7 @@ export function StudyAccountProvider({ children }: { children: ReactNode }) {
   const [accountOpen, setAccountOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
+  const [authSending, setAuthSending] = useState(false);
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -51,15 +57,22 @@ export function StudyAccountProvider({ children }: { children: ReactNode }) {
     if (error) setMessage(error.message);
   }
 
-  async function sendMagicLink() {
+  async function sendMagicLink(emailAddress: string, displayName?: string) {
     const supabase = getSupabaseBrowserClient();
-    if (!supabase || !email.trim()) return;
+    const normalizedEmail = emailAddress.trim();
+    if (!supabase || !normalizedEmail) return false;
+    setAuthSending(true);
     setMessage("Sending your secure sign-in link…");
     const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      email: normalizedEmail,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        data: displayName?.trim() ? { full_name: displayName.trim() } : undefined,
+      },
     });
     setMessage(error ? error.message : "Check your email. Your sign-in link is on its way.");
+    setAuthSending(false);
+    return !error;
   }
 
   async function signOut() {
@@ -96,10 +109,12 @@ export function StudyAccountProvider({ children }: { children: ReactNode }) {
   }
 
   const value = useMemo<StudyAccountContextValue>(() => ({
-    user, loading, cloudConfigured, openAccount: () => { setMessage(""); setAccountOpen(true); },
+    user, loading, cloudConfigured, authMessage: message, authSending,
+    openAccount: () => { setMessage(""); setAccountOpen(true); },
+    clearAuthMessage: () => setMessage(""), sendMagicLink, signInWithGoogle,
     signOut, loadPortfolio, savePortfolio, submitQuestion,
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [user, loading, cloudConfigured]);
+  }), [user, loading, cloudConfigured, message, authSending]);
 
   return <StudyAccountContext.Provider value={value}>{children}
     <Sheet open={accountOpen} onOpenChange={setAccountOpen}><SheetContent side="right" className="account-sheet">
@@ -109,7 +124,7 @@ export function StudyAccountProvider({ children }: { children: ReactNode }) {
         <p><ShieldCheck />Private notes and reflections remain visible only to you.</p><button onClick={signOut}>Sign out <LogOut /></button></div>
       : cloudConfigured ? <div className="account-signin">{googleEnabled && <><button className="google-signin" onClick={signInWithGoogle}><span>G</span>Continue with Google<ArrowRight /></button>
         <div className="account-divider"><span>OR USE EMAIL</span></div></>}<label><span>Email address</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" /></label>
-        <button className="email-signin" onClick={sendMagicLink} disabled={!email.trim()}><Mail />Email me a secure link<ArrowRight /></button>{message && <p className="account-message">{message}</p>}</div>
+        <button className="email-signin" onClick={() => sendMagicLink(email)} disabled={!email.trim() || authSending}><Mail />{authSending ? "Sending secure link…" : "Email me a secure link"}<ArrowRight /></button>{message && <p className="account-message">{message}</p>}</div>
       : <div className="account-awaiting"><LockKeyhole /><h3>Account connection is ready.</h3><p>The student experience has been built. Connect the Supabase project to activate secure sign-in and cross-device saving.</p></div>}
       <footer className="account-privacy"><LockKeyhole /><span><b>Private by design</b><small>Nothing is shared with an instructor unless you deliberately submit it.</small></span></footer>
     </SheetContent></Sheet>

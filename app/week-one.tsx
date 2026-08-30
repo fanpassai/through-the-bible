@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type UIEvent } from "react";
 import {
   ArrowLeft, ArrowRight, Bookmark, BookOpen, Check, ChevronDown, ChevronRight, CircleHelp,
   GripVertical, Highlighter, Info, Link2, LockKeyhole, MapPin, Minus,
@@ -10,7 +10,8 @@ import {
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import lesson from "./week1-data.json";
 import { useStudyAccount } from "./study-account";
-import type { ScriptureMark, ScriptureSelection, StudyPortfolio } from "@/lib/study-types";
+import { announceStudyUpdate, mergePortfolios, PERSONAL_STORAGE_KEY } from "@/lib/study-progress";
+import type { ScriptureMark, ScriptureReading, ScriptureSelection, StudyActivityEvent, StudyActivityType, StudyPortfolio } from "@/lib/study-types";
 
 type ToolName = "place" | "fill" | "connect" | "unlock";
 type StudyDockName = ToolName | "deep";
@@ -29,6 +30,7 @@ type AppState = {
   connect: number; teachback: string[]; teachbackComplete: boolean;
   deepCompleted: Record<string, boolean>; deepNotes: Record<string, string>;
   deepReflections: Record<string, string>; scriptureTools: Record<string, ScriptureMark>;
+  readingHistory: Record<string, ScriptureReading>; activityEvents: StudyActivityEvent[];
 };
 
 const STORY = lesson.STORY as [string, string, string[], string, string][];
@@ -46,10 +48,9 @@ const SCRAMBLED_PLACE = [PLACE[4], PLACE[1], PLACE[5], PLACE[2], PLACE[0], PLACE
 const DEFAULT_STATE: AppState = {
   started: false, story: 0, place: [], placeOrder: SCRAMBLED_PLACE, fillAnswers: {}, fillCorrect: {}, connect: 0,
   teachback: ["", "", "", ""], teachbackComplete: false, deepCompleted: {},
-  deepNotes: {}, deepReflections: {}, scriptureTools: {},
+  deepNotes: {}, deepReflections: {}, scriptureTools: {}, readingHistory: {}, activityEvents: [],
 };
 const SESSION_STORAGE_KEY = "ttb-week01-active-study-session-v1";
-const PERSONAL_STORAGE_KEY = "ttb-week01-saved-study-v1";
 const LEGACY_STORAGE_KEYS = ["ttb-week01-living-atlas-v2", "ttb-week01-living-atlas-v1"];
 const HOME_HERO = "/images/week1-cinematic-master-v4.webp";
 const CINEMA_HERO = "/images/week1-hero-cinematic.png";
@@ -172,6 +173,35 @@ function normalize(value: string) {
   return value.toLowerCase().trim().replace(/[.,!?;:'"“”‘’]/g, "").replace(/\s+/g, " ");
 }
 
+function annotateScriptureHtml(html: string, annotations: ScriptureSelection[]) {
+  if (!annotations.length) return html;
+  let offset = 0;
+  return (html.match(/<[^>]+>|[^<]+/g) || []).map((token) => {
+    if (token.startsWith("<")) return token;
+    const start = offset;
+    const end = start + token.length;
+    offset = end;
+    const local = annotations.filter((item) => item.start < end && item.end > start);
+    if (!local.length) return token;
+    const boundaries = new Set<number>([0, token.length]);
+    local.forEach((item) => {
+      boundaries.add(Math.max(0, item.start - start));
+      boundaries.add(Math.min(token.length, item.end - start));
+    });
+    const points = [...boundaries].sort((a, b) => a - b);
+    return points.slice(0, -1).map((from, index) => {
+      const to = points[index + 1];
+      const text = token.slice(from, to);
+      const active = local.filter((item) => item.start < start + to && item.end > start + from);
+      if (!active.length) return text;
+      const classes = ["scripture-selection"];
+      if (active.some((item) => item.type === "highlight")) classes.push("is-highlighted");
+      if (active.some((item) => item.type === "underline")) classes.push("is-underlined");
+      return `<span class="${classes.join(" ")}">${text}</span>`;
+    }).join("");
+  }).join("");
+}
+
 function restoreState(saved: unknown): AppState {
   if (!saved || typeof saved !== "object") return DEFAULT_STATE;
   const candidate = saved as Partial<AppState>;
@@ -198,10 +228,14 @@ function restoreState(saved: unknown): AppState {
     deepNotes: candidate.deepNotes && typeof candidate.deepNotes === "object" ? candidate.deepNotes : {},
     deepReflections: candidate.deepReflections && typeof candidate.deepReflections === "object" ? candidate.deepReflections : {},
     scriptureTools: candidate.scriptureTools && typeof candidate.scriptureTools === "object" ? candidate.scriptureTools : {},
+    readingHistory: candidate.readingHistory && typeof candidate.readingHistory === "object" ? candidate.readingHistory : {},
+    activityEvents: Array.isArray(candidate.activityEvents)
+      ? candidate.activityEvents.filter((event): event is StudyActivityEvent => Boolean(event && typeof event === "object")).slice(-500)
+      : [],
   };
 }
 
-export default function WeekOne({ onCourseHome }: { onCourseHome?: () => void }) {
+export default function WeekOne({ onCourseHome, initialOpenStudy = false }: { onCourseHome?: () => void; initialOpenStudy?: boolean }) {
   const [state, setState] = useState<AppState>(DEFAULT_STATE);
   const [ready, setReady] = useState(false);
   const [screen, setScreen] = useState<Screen>("home");
@@ -219,9 +253,23 @@ export default function WeekOne({ onCourseHome }: { onCourseHome?: () => void })
   const [teachbackSummary, setTeachbackSummary] = useState("");
   const [showModel, setShowModel] = useState(false);
   const [teachbackMessage, setTeachbackMessage] = useState("");
-  const [myStudyOpen, setMyStudyOpen] = useState(false);
+  const [myStudyOpen, setMyStudyOpen] = useState(initialOpenStudy);
   const cloudLoadedFor = useRef<string | null>(null);
   const { user, cloudConfigured, loading: accountLoading, openAccount, loadPortfolio, savePortfolio, submitQuestion } = useStudyAccount();
+
+  function makeActivity(type: StudyActivityType, reference?: string, detail?: StudyActivityEvent["detail"]): StudyActivityEvent {
+    return {
+      id: crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`,
+      type,
+      createdAt: new Date().toISOString(),
+      reference,
+      detail,
+    };
+  }
+
+  function keepActivity(events: StudyActivityEvent[], event: StudyActivityEvent) {
+    return [...events, event].slice(-500);
+  }
 
   useEffect(() => {
     const loadSavedProgress = window.setTimeout(() => {
@@ -237,6 +285,8 @@ export default function WeekOne({ onCourseHome }: { onCourseHome?: () => void })
           deepNotes: personalRecord.deepNotes || {},
           deepReflections: personalRecord.deepReflections || {},
           scriptureTools: personalRecord.scriptureTools || {},
+          readingHistory: personalRecord.readingHistory || {},
+          activityEvents: personalRecord.activityEvents || [],
         }));
         LEGACY_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
       } catch { /* malformed local progress must never block the lesson */ }
@@ -263,7 +313,10 @@ export default function WeekOne({ onCourseHome }: { onCourseHome?: () => void })
         deepNotes: state.deepNotes,
         deepReflections: state.deepReflections,
         scriptureTools: state.scriptureTools,
+        readingHistory: state.readingHistory,
+        activityEvents: state.activityEvents,
       }));
+      announceStudyUpdate();
     } catch { /* storage restrictions must never block the lesson */ }
   }, [ready, state]);
 
@@ -272,12 +325,11 @@ export default function WeekOne({ onCourseHome }: { onCourseHome?: () => void })
     let cancelled = false;
     loadPortfolio().then((cloud) => {
       if (cancelled) return;
-      setState((current) => cloud ? ({ ...current,
-        deepCompleted: { ...cloud.deepCompleted, ...current.deepCompleted },
-        deepNotes: { ...cloud.deepNotes, ...current.deepNotes },
-        deepReflections: { ...cloud.deepReflections, ...current.deepReflections },
-        scriptureTools: { ...cloud.scriptureTools, ...current.scriptureTools },
-      }) : current);
+      setState((current) => {
+        if (!cloud) return current;
+        const merged = mergePortfolios(cloud, current);
+        return { ...current, ...merged };
+      });
       cloudLoadedFor.current = user.id;
     }).catch(() => { cloudLoadedFor.current = user.id; });
     return () => { cancelled = true; };
@@ -290,10 +342,12 @@ export default function WeekOne({ onCourseHome }: { onCourseHome?: () => void })
       deepNotes: state.deepNotes,
       deepReflections: state.deepReflections,
       scriptureTools: state.scriptureTools,
+      readingHistory: state.readingHistory,
+      activityEvents: state.activityEvents,
     };
     const timer = window.setTimeout(() => savePortfolio(portfolio).catch(() => undefined), 700);
     return () => window.clearTimeout(timer);
-  }, [ready, user, state.deepCompleted, state.deepNotes, state.deepReflections, state.scriptureTools, savePortfolio]);
+  }, [ready, user, state.deepCompleted, state.deepNotes, state.deepReflections, state.scriptureTools, state.readingHistory, state.activityEvents, savePortfolio]);
 
   const progress = useMemo(() => {
     const story = state.started ? ((Math.max(state.story, 0) + 1) / STORY.length) * 20 : 0;
@@ -312,7 +366,57 @@ export default function WeekOne({ onCourseHome }: { onCourseHome?: () => void })
     setState((current) => ({ ...current, started: true }));
     navigate("roadmap");
   }
-  function openScripture(ref: string) { if (SCRIPTURES[ref]) setScriptureRef(ref); }
+  function openScripture(ref: string) {
+    if (!SCRIPTURES[ref]) return;
+    const now = new Date().toISOString();
+    setState((current) => {
+      const prior = current.readingHistory[ref];
+      return {
+        ...current,
+        readingHistory: {
+          ...current.readingHistory,
+          [ref]: {
+            reference: ref,
+            opens: (prior?.opens || 0) + 1,
+            reads: prior?.reads || 0,
+            firstOpenedAt: prior?.firstOpenedAt || now,
+            lastOpenedAt: now,
+            completedAt: prior?.completedAt,
+            lastReadAt: prior?.lastReadAt,
+            verseCount: prior?.verseCount,
+          },
+        },
+        activityEvents: keepActivity(current.activityEvents, makeActivity("scripture_opened", ref)),
+      };
+    });
+    setScriptureRef(ref);
+  }
+
+  function markScriptureRead(ref: string, verseCount: number) {
+    const now = new Date().toISOString();
+    setState((current) => {
+      const prior = current.readingHistory[ref];
+      const alreadyReadThisOpen = prior?.lastReadAt && prior.lastOpenedAt && prior.lastReadAt >= prior.lastOpenedAt;
+      if (alreadyReadThisOpen) return current;
+      return {
+        ...current,
+        readingHistory: {
+          ...current.readingHistory,
+          [ref]: {
+            reference: ref,
+            opens: Math.max(1, prior?.opens || 0),
+            reads: (prior?.reads || 0) + 1,
+            firstOpenedAt: prior?.firstOpenedAt || now,
+            lastOpenedAt: prior?.lastOpenedAt || now,
+            completedAt: prior?.completedAt || now,
+            lastReadAt: now,
+            verseCount,
+          },
+        },
+        activityEvents: keepActivity(current.activityEvents, makeActivity("scripture_read", ref, { verseCount })),
+      };
+    });
+  }
   function selectStory(index: number) {
     setStoryIndex(index);
     setState((current) => ({ ...current, started: true, story: Math.max(current.story, index) }));
@@ -324,7 +428,8 @@ export default function WeekOne({ onCourseHome }: { onCourseHome?: () => void })
   function checkPlaceOrder() {
     const correct = state.placeOrder.every((item, index) => item === PLACE[index]);
     if (correct) {
-      setState((current) => ({ ...current, place: [...PLACE] }));
+      setState((current) => ({ ...current, place: [...PLACE],
+        activityEvents: keepActivity(current.activityEvents, makeActivity("place_completed")) }));
       setPlaceMessage("You rebuilt the beginning. All six movements are in their biblical order.");
     } else {
       setState((current) => ({ ...current, place: [] }));
@@ -334,11 +439,17 @@ export default function WeekOne({ onCourseHome }: { onCourseHome?: () => void })
   function submitFill() {
     const item = FILL[fillIndex];
     const answer = state.fillAnswers[String(fillIndex)] || "";
-    if ([item.answer, ...item.accepted].map(normalize).includes(normalize(answer))) {
-      setState((current) => ({ ...current, fillCorrect: { ...current.fillCorrect, [fillIndex]: true } }));
+    const correct = [item.answer, ...item.accepted].map(normalize).includes(normalize(answer));
+    if (correct) {
+      setState((current) => ({ ...current, fillCorrect: { ...current.fillCorrect, [fillIndex]: true },
+        activityEvents: keepActivity(current.activityEvents, makeActivity("fill_attempt", undefined, { question: fillIndex + 1, correct: true })) }));
       setFillHint(false);
       setFillMessage(item.why);
-    } else setFillMessage("Read the sentence once more. Use the hint if you need it.");
+    } else {
+      setState((current) => ({ ...current,
+        activityEvents: keepActivity(current.activityEvents, makeActivity("fill_attempt", undefined, { question: fillIndex + 1, correct: false })) }));
+      setFillMessage("Read the sentence once more. Use the hint if you need it.");
+    }
   }
   function saveTeachback() {
     const answer = state.teachback[teachbackStep]?.trim();
@@ -360,26 +471,42 @@ export default function WeekOne({ onCourseHome }: { onCourseHome?: () => void })
       return;
     }
     setTeachbackMessage("");
-    setState((current) => ({ ...current, teachbackComplete: true }));
+    setState((current) => ({ ...current, teachbackComplete: true,
+      activityEvents: keepActivity(current.activityEvents, makeActivity("unlock_completed")) }));
   }
   function updateScriptureTool(key: "highlight" | "underline" | "bookmark") {
     if (!scriptureRef) return;
-    setState((current) => ({ ...current, scriptureTools: { ...current.scriptureTools,
-      [scriptureRef]: { ...current.scriptureTools[scriptureRef], [key]: !current.scriptureTools[scriptureRef]?.[key] } } }));
+    setState((current) => {
+      const nextValue = !current.scriptureTools[scriptureRef]?.[key];
+      return { ...current, scriptureTools: { ...current.scriptureTools,
+        [scriptureRef]: { ...current.scriptureTools[scriptureRef], [key]: nextValue } },
+        activityEvents: key === "bookmark" && nextValue
+          ? keepActivity(current.activityEvents, makeActivity("bookmark_saved", scriptureRef))
+          : current.activityEvents };
+    });
   }
   function updateScriptureText(key: "notes" | "question", value: string) {
     if (!scriptureRef) return;
-    setState((current) => ({ ...current, scriptureTools: { ...current.scriptureTools,
-      [scriptureRef]: { ...current.scriptureTools[scriptureRef], [key]: value } } }));
+    setState((current) => {
+      const wasEmpty = !current.scriptureTools[scriptureRef]?.[key]?.trim();
+      const eventType = key === "notes" ? "note_written" : "question_written";
+      return { ...current, scriptureTools: { ...current.scriptureTools,
+        [scriptureRef]: { ...current.scriptureTools[scriptureRef], [key]: value } },
+        activityEvents: wasEmpty && value.trim()
+          ? keepActivity(current.activityEvents, makeActivity(eventType, scriptureRef))
+          : current.activityEvents };
+    });
   }
   function addScriptureSelection(selection: ScriptureSelection) {
     if (!scriptureRef) return;
     setState((current) => ({ ...current, scriptureTools: { ...current.scriptureTools,
-      [scriptureRef]: { ...current.scriptureTools[scriptureRef], selections: [...(current.scriptureTools[scriptureRef]?.selections || []), selection] } } }));
+      [scriptureRef]: { ...current.scriptureTools[scriptureRef], selections: [...(current.scriptureTools[scriptureRef]?.selections || []), selection] } },
+      activityEvents: keepActivity(current.activityEvents, makeActivity(selection.type === "highlight" ? "highlight_created" : "underline_created", scriptureRef)) }));
   }
   function completeDeepDay() {
     if ((state.deepReflections[String(deepDay)] || "").trim().length < 15) return;
-    setState((current) => ({ ...current, deepCompleted: { ...current.deepCompleted, [deepDay]: true } }));
+    setState((current) => ({ ...current, deepCompleted: { ...current.deepCompleted, [deepDay]: true },
+      activityEvents: keepActivity(current.activityEvents, makeActivity("devotional_completed", undefined, { day: deepDay + 1 })) }));
     setDeepOpen(false);
     if (deepDay < 6) setDeepDay((day) => day + 1);
     else navigate("complete");
@@ -412,7 +539,8 @@ export default function WeekOne({ onCourseHome }: { onCourseHome?: () => void })
             setFillMessage("");
           }} submit={submitFill} navigate={navigate} />}
         {screen === "connect" && <ConnectScreen step={state.connect}
-          advance={() => setState((current) => ({ ...current, connect: Math.min(4, current.connect + 1) }))} {...common} />}
+          advance={() => setState((current) => { const next = Math.min(4, current.connect + 1); return { ...current, connect: next,
+            activityEvents: next === 4 && current.connect < 4 ? keepActivity(current.activityEvents, makeActivity("connect_completed")) : current.activityEvents }; })} {...common} />}
         {screen === "unlock" && <UnlockScreen state={state} step={teachbackStep} summary={teachbackSummary}
           showModel={showModel} message={teachbackMessage} setStep={(nextStep) => { setTeachbackStep(nextStep); setTeachbackMessage(""); }}
           setSummary={(value) => { setTeachbackSummary(value); setTeachbackMessage(""); }} setShowModel={setShowModel}
@@ -422,9 +550,11 @@ export default function WeekOne({ onCourseHome }: { onCourseHome?: () => void })
           openDay={(index) => { setDeepDay(index); setDeepOpen(true); }} navigate={navigate} />}
         {screen === "complete" && <WeekCompleteScreen state={state} navigate={navigate} />}
 
-        <ScriptureReader reference={scriptureRef} scripture={scriptureRef ? SCRIPTURES[scriptureRef] : null}
+        <ScriptureReader key={scriptureRef || "closed-scripture"} reference={scriptureRef} scripture={scriptureRef ? SCRIPTURES[scriptureRef] : null}
           mark={scriptureRef ? state.scriptureTools[scriptureRef] || {} : {}} onClose={() => setScriptureRef(null)}
-          onTool={updateScriptureTool} onText={updateScriptureText} onSelection={addScriptureSelection} />
+          onTool={updateScriptureTool} onText={updateScriptureText} onSelection={addScriptureSelection}
+          reading={scriptureRef ? state.readingHistory[scriptureRef] : undefined}
+          onRead={markScriptureRead} onNavigate={openScripture} />
         <DeepReader key={`deep-reader-${deepDay}`} open={deepOpen} dayIndex={deepDay} day={DEEP_DAYS[deepDay]}
           completed={Boolean(state.deepCompleted[deepDay])} reflection={state.deepReflections[deepDay] || ""}
           notes={state.deepNotes[deepDay] || ""} onClose={() => setDeepOpen(false)} onScripture={openScripture}
@@ -1020,51 +1150,55 @@ function DesktopRail({ screen, progress, navigate }: { screen: Screen; progress:
     <blockquote>“Hope appears before Eden closes.”</blockquote></aside>;
 }
 
-function ScriptureReader({ reference, scripture, mark, onClose, onTool, onText, onSelection }: {
-  reference: string | null; scripture: Scripture | null; mark: ScriptureMark; onClose: () => void;
+function ScriptureReader({ reference, scripture, mark, reading, onClose, onTool, onText, onSelection, onRead, onNavigate }: {
+  reference: string | null; scripture: Scripture | null; mark: ScriptureMark; reading?: ScriptureReading; onClose: () => void;
   onTool: (key: "highlight" | "underline" | "bookmark") => void; onText: (key: "notes" | "question", value: string) => void;
-  onSelection: (selection: ScriptureSelection) => void;
+  onSelection: (selection: ScriptureSelection) => void; onRead: (reference: string, verseCount: number) => void;
+  onNavigate: (reference: string) => void;
 }) {
   const articleRef = useRef<HTMLElement>(null);
   const [pendingSelection, setPendingSelection] = useState<{ quote: string; start: number; end: number } | null>(null);
+  const [studyOpen, setStudyOpen] = useState(false);
+  const [readReference, setReadReference] = useState<string | null>(null);
+  const readReportedFor = useRef<string | null>(reading?.lastReadAt && reference ? reference : null);
+  const onReadRef = useRef(onRead);
+  const references = Object.keys(SCRIPTURES);
+  const referenceIndex = reference ? references.indexOf(reference) : -1;
+  const previousReference = referenceIndex > 0 ? references[referenceIndex - 1] : null;
+  const nextReference = referenceIndex >= 0 && referenceIndex < references.length - 1 ? references[referenceIndex + 1] : null;
+  const verseCount = Math.max(1, scripture?.html.match(/<sup>/g)?.length || 0);
+  const scriptureHtml = useMemo(() => annotateScriptureHtml(
+    scripture?.html || '<p class="scripture-unavailable">This passage could not be loaded. Close the reader and try again.</p>',
+    mark.selections || [],
+  ), [scripture?.html, mark.selections]);
+  const readLogged = Boolean(reading?.lastReadAt || readReference === reference);
+
+  useEffect(() => { onReadRef.current = onRead; }, [onRead]);
 
   useEffect(() => {
+    if (!reference) return;
+    const timer = window.setTimeout(() => {
+      if (readReportedFor.current === reference) return;
+      readReportedFor.current = reference;
+      setReadReference(reference);
+      onReadRef.current(reference, verseCount);
+    }, 10000);
+    return () => window.clearTimeout(timer);
+  }, [reference, reading?.lastReadAt, verseCount]);
+
+  function reportRead() {
+    if (!reference || readReportedFor.current === reference) return;
+    readReportedFor.current = reference;
+    setReadReference(reference);
+    onReadRef.current(reference, verseCount);
+  }
+
+  function handleReaderScroll(event: UIEvent<HTMLDivElement>) {
     const article = articleRef.current;
     if (!article) return;
-    article.innerHTML = scripture?.html || "";
-    const annotations = mark.selections || [];
-    if (!annotations.length) return;
-    const walker = document.createTreeWalker(article, NodeFilter.SHOW_TEXT);
-    const nodes: { node: Text; start: number; end: number }[] = [];
-    let offset = 0;
-    while (walker.nextNode()) {
-      const node = walker.currentNode as Text;
-      const length = node.data.length;
-      nodes.push({ node, start: offset, end: offset + length });
-      offset += length;
-    }
-    nodes.forEach(({ node, start, end }) => {
-      const local = annotations.filter((item) => item.start < end && item.end > start);
-      if (!local.length) return;
-      const boundaries = new Set<number>([0, node.data.length]);
-      local.forEach((item) => { boundaries.add(Math.max(0, item.start - start)); boundaries.add(Math.min(node.data.length, item.end - start)); });
-      const points = [...boundaries].sort((a, b) => a - b);
-      const fragment = document.createDocumentFragment();
-      points.slice(0, -1).forEach((from, index) => {
-        const to = points[index + 1];
-        const text = node.data.slice(from, to);
-        const active = local.filter((item) => item.start < start + to && item.end > start + from);
-        if (!active.length) fragment.append(text);
-        else {
-          const span = document.createElement("span");
-          span.className = `scripture-selection ${active.some((item) => item.type === "highlight") ? "is-highlighted" : ""} ${active.some((item) => item.type === "underline") ? "is-underlined" : ""}`;
-          span.textContent = text;
-          fragment.append(span);
-        }
-      });
-      node.replaceWith(fragment);
-    });
-  }, [scripture?.html, mark.selections]);
+    const viewport = event.currentTarget.getBoundingClientRect();
+    if (article.getBoundingClientRect().bottom <= viewport.bottom + 72) reportRead();
+  }
 
   function captureSelection() {
     const article = articleRef.current;
@@ -1089,12 +1223,19 @@ function ScriptureReader({ reference, scripture, mark, onClose, onTool, onText, 
   }
 
   return <Sheet open={Boolean(reference)} onOpenChange={(open) => !open && onClose()}><SheetContent side="right" className="scripture-sheet">
-    <SheetHeader className="scripture-header"><MicroLabel>{scripture?.translation}</MicroLabel><SheetTitle>{reference}</SheetTitle><SheetDescription>Read, mark, question and keep what you notice.</SheetDescription></SheetHeader>
-    <div className="scripture-toolbar" aria-label="Scripture study tools"><span><Highlighter />Select exact words to mark them</span><button className={mark.bookmark ? "active" : ""} onClick={() => onTool("bookmark")}><Bookmark />{mark.bookmark ? "Saved" : "Save"}</button></div>
+    <SheetHeader className="scripture-header"><div className="scripture-kicker"><MicroLabel>{scripture?.translation || "KING JAMES VERSION (KJV)"}</MicroLabel><span className={readLogged ? "read" : ""}>{readLogged ? <><Check />READ</> : "READING"}</span></div><SheetTitle>{reference || "Scripture"}</SheetTitle><SheetDescription>The text comes first. Read slowly; keep only what asks you to stay.</SheetDescription></SheetHeader>
+    <div className="scripture-toolbar" aria-label="Scripture study tools"><span><Highlighter />Select exact words to mark them</span><button className={mark.bookmark ? "active" : ""} onClick={() => onTool("bookmark")}><Bookmark />{mark.bookmark ? "Saved" : "Save passage"}</button></div>
     {pendingSelection && <div className="selection-actionbar"><span>“{pendingSelection.quote.length > 46 ? `${pendingSelection.quote.slice(0, 46)}…` : pendingSelection.quote}”</span><div><button onClick={() => saveSelection("highlight")}><Highlighter />Highlight</button><button onClick={() => saveSelection("underline")}><Underline />Underline</button><button onClick={() => setPendingSelection(null)}><X />Cancel</button></div></div>}
-    <div className="scripture-scroll"><article ref={articleRef} onMouseUp={captureSelection} onTouchEnd={() => window.setTimeout(captureSelection, 0)} className={`scripture-text ${mark.highlight ? "highlighted" : ""} ${mark.underline ? "underlined" : ""}`} />
-      <WhyCard>{scripture?.study}</WhyCard><label className="study-field"><span><MessageCircleQuestion />ASK A QUESTION</span><textarea value={mark.question || ""} onChange={(event) => onText("question", event.target.value)} placeholder="What do you want to understand about this text?" /></label>
-      <label className="study-field"><span><NotebookPen />PRIVATE NOTES</span><textarea value={mark.notes || ""} onChange={(event) => onText("notes", event.target.value)} placeholder="Capture an observation, connection or question…" /></label><p className="saved-note"><Check />Saved automatically on this device</p>
+    <div className="scripture-scroll" onScroll={handleReaderScroll}>
+      <article ref={articleRef} onMouseUp={captureSelection} onTouchEnd={() => window.setTimeout(captureSelection, 0)}
+        className={`scripture-text ${mark.highlight ? "highlighted" : ""} ${mark.underline ? "underlined" : ""}`}
+        dangerouslySetInnerHTML={{ __html: scriptureHtml }} />
+      <section className={`scripture-context ${studyOpen ? "open" : ""}`}><button onClick={() => setStudyOpen((value) => !value)}><span><Sparkles /><small>UNDERSTAND THE TEXT</small><b>Why this passage matters</b></span><ChevronDown /></button>{studyOpen ? <WhyCard>{scripture?.study || "Read the passage in the movement of the larger biblical story."}</WhyCard> : null}</section>
+      <section className="scripture-response"><header><small>KEEP WHAT YOU NOTICE</small><h2>Turn attention into a record.</h2><p>Your question and note remain attached to {reference}.</p></header>
+        <label className="study-field"><span><MessageCircleQuestion />ASK A QUESTION</span><textarea value={mark.question || ""} onChange={(event) => onText("question", event.target.value)} placeholder="What do you want to understand about this text?" /></label>
+        <label className="study-field"><span><NotebookPen />PRIVATE NOTES</span><textarea value={mark.notes || ""} onChange={(event) => onText("notes", event.target.value)} placeholder="Capture an observation, connection or question…" /></label><p className="saved-note"><Check />Saved automatically to My Study</p>
+      </section>
+      <nav className="scripture-passage-nav" aria-label="Move between Scripture passages">{previousReference ? <button onClick={() => onNavigate(previousReference)}><ArrowLeft /><span><small>PREVIOUS</small><b>{previousReference}</b></span></button> : <span />}{nextReference ? <button onClick={() => onNavigate(nextReference)}><span><small>NEXT</small><b>{nextReference}</b></span><ArrowRight /></button> : <span />}</nav>
     </div></SheetContent></Sheet>;
 }
 
@@ -1104,7 +1245,11 @@ function MyStudySheet({ open, onOpenChange, state, userEmail, cloudConfigured, a
   submitQuestion: (reference: string, question: string) => Promise<boolean>;
 }) {
   const [submitted, setSubmitted] = useState<Record<string, boolean>>({});
-  const scriptureEntries = Object.entries(state.scriptureTools).filter(([, mark]) => mark.bookmark || mark.notes?.trim() || mark.question?.trim() || mark.selections?.length);
+  const keptReferences = new Set([
+    ...Object.keys(state.readingHistory),
+    ...Object.entries(state.scriptureTools).filter(([, mark]) => mark.bookmark || mark.notes?.trim() || mark.question?.trim() || mark.selections?.length).map(([reference]) => reference),
+  ]);
+  const scriptureEntries: [string, ScriptureMark][] = [...keptReferences].map((reference) => [reference, state.scriptureTools[reference] || {}]);
   const devotionalEntries = DEEP_DAYS.map((day, index) => ({ day, index, note: state.deepNotes[index] || "", reflection: state.deepReflections[index] || "" }))
     .filter((item) => item.note.trim() || item.reflection.trim());
   const highlightCount = scriptureEntries.reduce((total, [, mark]) => total + (mark.selections?.length || 0), 0);
@@ -1120,12 +1265,12 @@ function MyStudySheet({ open, onOpenChange, state, userEmail, cloudConfigured, a
     <div className="my-study-scroll"><section className="my-study-hero"><small>YOUR PRIVATE STUDY LIBRARY</small><h1>Everything you<br />didn’t want to lose.</h1><p>Notes, marked Scripture, questions and devotional reflections—kept together and linked to their original context.</p>
       <div className={`study-sync-state ${userEmail ? "synced" : ""}`}><span>{userEmail ? <Check /> : <LockKeyhole />}</span><div><small>{userEmail ? "CLOUD SYNC ACTIVE" : cloudConfigured ? "SAVED ON THIS DEVICE" : "ACCOUNT CONNECTION PENDING"}</small><b>{accountLoading ? "Checking your account…" : userEmail || "Protect this study across every device"}</b></div>{!userEmail && <button onClick={() => { onOpenChange(false); openAccount(); }}>Protect it <ArrowRight /></button>}</div>
     </section>
-    <section className="study-overview"><article><b>{scriptureEntries.length}</b><span>SCRIPTURES</span></article><article><b>{highlightCount}</b><span>MARKS</span></article><article><b>{questionCount}</b><span>QUESTIONS</span></article><article><b>{devotionalEntries.length}</b><span>JOURNAL DAYS</span></article></section>
+    <section className="study-overview"><article><b>{scriptureEntries.length}</b><span>PASSAGES</span></article><article><b>{highlightCount}</b><span>MARKS</span></article><article><b>{questionCount}</b><span>QUESTIONS</span></article><article><b>{devotionalEntries.length}</b><span>JOURNAL DAYS</span></article></section>
 
     {!scriptureEntries.length && !devotionalEntries.length ? <section className="my-study-empty"><NotebookPen /><h2>Your study library is waiting.</h2><p>Highlight a phrase, save a Scripture or write inside a devotional. It will appear here automatically.</p></section> : null}
 
     {scriptureEntries.length > 0 && <section className="study-library-section"><header><small>SCRIPTURE STUDY</small><h2>Saved from the text</h2></header>{scriptureEntries.map(([reference, mark]) => <article className="study-library-card" key={reference}>
-      <button className="study-card-main" onClick={() => openScripture(reference)}><span><Bookmark /></span><div><small>{reference}</small><b>{mark.notes?.trim() || mark.question?.trim() || mark.selections?.[0]?.quote || "Saved Scripture"}</b><em>{mark.selections?.length || 0} text mark{mark.selections?.length === 1 ? "" : "s"}{mark.notes?.trim() ? " · note" : ""}{mark.question?.trim() ? " · question" : ""}</em></div><ChevronRight /></button>
+      <button className="study-card-main" onClick={() => openScripture(reference)}><span>{state.readingHistory[reference]?.completedAt ? <Check /> : <Bookmark />}</span><div><small>{reference}</small><b>{mark.notes?.trim() || mark.question?.trim() || mark.selections?.[0]?.quote || (state.readingHistory[reference]?.completedAt ? "Read in full" : "Opened in your study")}</b><em>{state.readingHistory[reference]?.opens || 0} visit{state.readingHistory[reference]?.opens === 1 ? "" : "s"}{mark.selections?.length ? ` · ${mark.selections.length} text mark${mark.selections.length === 1 ? "" : "s"}` : ""}{mark.notes?.trim() ? " · note" : ""}{mark.question?.trim() ? " · question" : ""}</em></div><ChevronRight /></button>
       {mark.selections?.map((selection) => <button className={`study-quote ${selection.type}`} onClick={() => openScripture(reference)} key={selection.id}>“{selection.quote}”</button>)}
       {mark.question?.trim() && <div className="study-question"><MessageCircleQuestion /><span><small>YOUR QUESTION</small><p>{mark.question}</p></span><button disabled={submitted[reference]} onClick={() => sendQuestion(reference, mark.question || "")}>{submitted[reference] ? "Submitted" : userEmail ? "Ask instructor" : "Sign in to ask"}</button></div>}
     </article>)}</section>}

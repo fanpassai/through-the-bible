@@ -1,6 +1,6 @@
-import CourseExperience from "./course-experience";
+import ProductExperience from "./product-experience";
 import { StudyAccountProvider } from "./study-account";
 
 export default function Home() {
-  return <StudyAccountProvider><CourseExperience /></StudyAccountProvider>;
+  return <StudyAccountProvider><ProductExperience /></StudyAccountProvider>;
 }
