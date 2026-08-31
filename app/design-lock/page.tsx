@@ -6,18 +6,21 @@ import {
   CalendarDays,
   Check,
   ChevronRight,
+  CircleHelp,
   Clock3,
+  Copy,
   FileText,
   Highlighter,
   Home,
   Languages,
   Library,
   Map,
+  Menu,
   MessageCircleQuestion,
   MoreHorizontal,
   PenLine,
-  Play,
   Search,
+  Share2,
   Sparkles,
   Type,
   Underline,
@@ -27,51 +30,34 @@ import {
 import styles from "./design-lock.module.css";
 
 type NavKey = "home" | "today" | "study" | "bible" | "profile";
+type AppIcon = typeof Home;
 
-const navItems = [
-  { key: "home" as const, label: "Home", icon: Home },
-  { key: "today" as const, label: "Today", icon: CalendarDays },
-  { key: "study" as const, label: "Study", icon: BookOpen },
-  { key: "bible" as const, label: "My Bible", icon: Library },
-  { key: "profile" as const, label: "Profile", icon: UserRound },
+const navItems: Array<{ key: NavKey; label: string; icon: AppIcon }> = [
+  { key: "home", label: "Home", icon: Home },
+  { key: "today", label: "Today", icon: CalendarDays },
+  { key: "study", label: "Study", icon: BookOpen },
+  { key: "bible", label: "My Bible", icon: Library },
+  { key: "profile", label: "Profile", icon: UserRound },
 ];
 
 function BottomNav({ active }: { active: NavKey }) {
   return (
     <nav className={styles.bottomNav} aria-label="Product navigation">
       {navItems.map(({ key, label, icon: Icon }) => (
-        <div className={key === active ? styles.navActive : styles.navItem} key={key}>
-          <Icon size={20} strokeWidth={1.8} />
-          <span>{label}</span>
-        </div>
+        <span className={key === active ? styles.navActive : styles.navItem} key={key}>
+          <Icon size={18} strokeWidth={1.65} />
+          <small>{label}</small>
+        </span>
       ))}
     </nav>
   );
 }
 
-function Phone({
-  number,
-  name,
-  mode,
-  children,
-  dark = false,
-}: {
-  number: string;
-  name: string;
-  mode: string;
-  children: React.ReactNode;
-  dark?: boolean;
-}) {
+function Phone({ number, name, children }: { number: string; name: string; children: React.ReactNode }) {
   return (
     <article className={styles.screenCard} data-screen={name}>
-      <div className={styles.screenMeta}>
-        <span>{number}</span>
-        <div>
-          <h2>{name}</h2>
-          <p>{mode}</p>
-        </div>
-      </div>
-      <div className={`${styles.phone} ${dark ? styles.phoneDark : ""}`}>
+      <div className={styles.screenMeta}><span>{number}. {name}</span></div>
+      <div className={styles.phone}>
         <div className={styles.statusBar}><strong>9:41</strong><span>● ● ▰</span></div>
         {children}
       </div>
@@ -79,304 +65,169 @@ function Phone({
   );
 }
 
-function AppHeader({ title, action }: { title: string; action?: React.ReactNode }) {
+function AppHeader({ title, back = false, menu = false, action }: { title: string; back?: boolean; menu?: boolean; action?: React.ReactNode }) {
   return (
     <header className={styles.appHeader}>
-      <ArrowLeft size={21} />
-      <strong>{title}</strong>
-      <span className={styles.headerAction}>{action ?? <span />}</span>
+      <span>{back ? <ArrowLeft size={20} /> : menu ? <Menu size={19} /> : null}</span>
+      <div><strong>{title}</strong></div>
+      <span className={styles.headerActions}>{action ?? <MoreHorizontal size={19} />}</span>
     </header>
   );
 }
 
-function Opening() {
+function BrandMark({ compact = false }: { compact?: boolean }) {
   return (
-    <Phone number="01" name="Opening" mode="Atmosphere · deliberate entry" dark>
-      <div className={styles.opening}>
-        <div className={styles.openingImage} />
-        <div className={styles.openingWash} />
-        <div className={styles.openingBrand}>
-          <BookOpen size={38} strokeWidth={1.35} />
-          <h3>Through the Bible</h3>
-          <p>Your journey. His story.</p>
-        </div>
-        <div className={styles.openingAction}>
-          <span>Understand · Connect · Live</span>
-          <button>Enter <ArrowRight size={18} /></button>
+    <div className={compact ? styles.brandCompact : styles.brandMark}>
+      <BookOpen size={compact ? 22 : 37} strokeWidth={1.35} />
+      <span>Through<br />the Bible</span>
+    </div>
+  );
+}
+
+function SplashScreen() {
+  return (
+    <Phone number="1" name="Splash screen">
+      <div className={styles.splash}>
+        <div className={styles.splashImage} /><div className={styles.splashWash} />
+        <div className={styles.splashBrand}><BrandMark /><p>Your Journey · His Story.</p></div>
+        <div className={styles.splashFooter}><span>Understand · Connect · Live.</span><button type="button">Enter <ArrowRight size={16} /></button></div>
+      </div>
+    </Phone>
+  );
+}
+
+function SignInScreen() {
+  return (
+    <Phone number="2" name="Sign in">
+      <div className={styles.signIn}>
+        <BrandMark compact />
+        <section className={styles.signInCopy}><span className={styles.eyebrow}>YOUR STUDY · REMEMBERED</span><h2>Welcome back to the story.</h2><p>Save highlights, notes, questions, devotionals and progress across every device.</p></section>
+        <div className={styles.authStack}>
+          <button className={styles.outlineButton} type="button"><b>G</b> Continue with Google</button>
+          <div className={styles.dividerText}><span />or<span /></div>
+          <label>Email address<input aria-label="Email address" placeholder="you@example.com" /></label>
+          <button className={styles.blackButton} type="button">Email me a secure link <ArrowRight size={16} /></button>
+          <small>Private by default. Your personal study stays yours.</small>
         </div>
       </div>
     </Phone>
   );
 }
 
-function SignIn() {
+function ListRow({ icon: Icon, title, subtitle, state, done = false }: { icon: AppIcon; title: string; subtitle: string; state?: string; done?: boolean }) {
   return (
-    <Phone number="02" name="Sign in" mode="Trust · account-first">
-      <div className={styles.signIn}>
-        <div className={styles.smallBrand}><BookOpen size={22} /><span>Through the Bible</span></div>
-        <div className={styles.signInLead}>
-          <span className={styles.eyebrow}>YOUR STUDY · REMEMBERED</span>
-          <h3>Welcome to a Bible you can return to.</h3>
-          <p>Your highlights, questions, notes and progress stay with you across every device.</p>
-        </div>
-        <div className={styles.authStack}>
-          <button className={styles.googleButton}><span className={styles.googleMark}>G</span>Continue with Google</button>
-          <div className={styles.or}><span />or<span /></div>
-          <label>Email address<input placeholder="you@example.com" /></label>
-          <button className={styles.primaryButton}>Email me a secure link <ArrowRight size={18} /></button>
-          <p className={styles.privacy}>Private by default. Nothing is shared with your instructor unless you choose.</p>
-        </div>
-      </div>
-    </Phone>
+    <div className={`${styles.listRow} ${done ? styles.rowDone : ""}`}>
+      <span className={styles.iconTile}>{done ? <Check size={16} /> : <Icon size={16} />}</span>
+      <div><strong>{title}</strong><small>{subtitle}</small></div>
+      {state ? <em>{state}</em> : <ChevronRight size={16} />}
+    </div>
   );
 }
 
 function HomeScreen() {
   return (
-    <Phone number="03" name="Home" mode="Orientation · one next step">
+    <Phone number="3" name="Home">
       <div className={styles.appBody}>
-        <div className={styles.homeTop}>
-          <div><span className={styles.kicker}>GOOD EVENING</span><h3>Jasmine</h3></div>
-          <div className={styles.avatar}>J</div>
-        </div>
+        <div className={styles.greeting}><div><span>Good Evening,</span><h2>Jasmine</h2></div><span className={styles.avatar}>J</span></div>
         <section className={styles.journeyCard}>
-          <div className={styles.cardLabel}>CONTINUE YOUR JOURNEY <span>60%</span></div>
-          <h4>Week 01 · The Beginning</h4>
-          <p>Creation, rupture and the first promise.</p>
-          <div className={styles.progressTrack}><span style={{ width: "60%" }} /></div>
-          <div className={styles.timeLine}><Clock3 size={14} /> 12 minutes remaining today</div>
-          <button className={styles.inkButton}>Continue study <ArrowRight size={17} /></button>
+          <span className={styles.cardKicker}>CONTINUE YOUR JOURNEY</span><h3>Week 01: The Beginning</h3><p>Creation, rupture and the first promise.</p>
+          <div className={styles.progressLine}><span style={{ width: "60%" }} /></div>
+          <div className={styles.cardMeta}><span><Clock3 size={13} />12 min remaining today</span><b>60%</b></div>
+          <button className={styles.blackButton} type="button">Continue Reading <ArrowRight size={16} /></button>
         </section>
-        <div className={styles.sectionTitle}><h4>Today</h4><span>SUNDAY · AUG 31</span></div>
-        <div className={styles.dailyList}>
-          <Daily icon={BookOpen} title="Daily reading" subtitle="Genesis 2:15–17" state="8 min" />
-          <Daily icon={Sparkles} title="Devotional" subtitle="Intentional God" state="6 min" />
-          <Daily icon={Check} title="Review" subtitle="2 passages ready" state="3 min" />
-        </div>
-        <div className={styles.snapshot}>
-          <strong>Your week</strong>
-          <div><span><b>4</b> passages</span><span><b>6</b> highlights</span><span><b>2</b> notes</span></div>
-        </div>
-      </div>
-      <BottomNav active="home" />
+        <div className={styles.sectionHeading}><h3>Today</h3><span>SUNDAY, AUG 31</span></div>
+        <div className={styles.listCard}><ListRow icon={BookOpen} title="Daily Reading" subtitle="Genesis 2:15–17" /><ListRow icon={Sparkles} title="Devotional" subtitle="Intentional God" /><ListRow icon={Check} title="Review" subtitle="2 passages to review" /></div>
+        <div className={styles.weekStrip}><span><b>4</b>passages</span><span><b>6</b>highlights</span><span><b>2</b>notes</span><span><b>3</b>days</span></div>
+      </div><BottomNav active="home" />
     </Phone>
-  );
-}
-
-function Daily({ icon: Icon, title, subtitle, state, done }: { icon: typeof BookOpen; title: string; subtitle: string; state: string; done?: boolean }) {
-  return (
-    <div className={`${styles.dailyRow} ${done ? styles.done : ""}`}>
-      <span className={styles.iconTile}>{done ? <Check size={18} /> : <Icon size={18} />}</span>
-      <div><strong>{title}</strong><small>{subtitle}</small></div>
-      <span className={styles.rowState}>{state}</span>
-    </div>
   );
 }
 
 function TodayScreen() {
   return (
-    <Phone number="04" name="Today" mode="Rhythm · no choice paralysis">
-      <div className={styles.appBody}>
-        <div className={styles.simpleTop}><div><span className={styles.kicker}>SUNDAY · AUGUST 31</span><h3>Today</h3><p>Three quiet steps. Begin where you are.</p></div></div>
-        <section className={styles.nextAction}>
-          <div className={styles.stepCount}>1 of 3</div>
-          <span className={styles.bigIcon}><BookOpen size={23} /></span>
-          <div><span className={styles.eyebrow}>NEXT</span><h4>Read Genesis 2:15–17</h4><p>Notice the gift, the work and the boundary.</p></div>
-          <button className={styles.primaryButton}>Begin reading <Play size={16} fill="currentColor" /></button>
-        </section>
-        <div className={styles.rhythmList}>
-          <Daily icon={Check} title="Orientation" subtitle="Week 01 overview" state="Done" done />
-          <Daily icon={Sparkles} title="Reflect" subtitle="Intentional God" state="6 min" />
-          <Daily icon={Check} title="Review" subtitle="Two passages" state="3 min" />
-        </div>
-        <div className={styles.quoteNote}>“The next unfinished action should be the strongest thing on the screen.”</div>
+    <Phone number="4" name="Today">
+      <AppHeader title="Today" menu />
+      <div className={styles.todayBody}>
+        <div className={styles.dateLine}>SUNDAY, AUGUST 31</div>
+        <section className={styles.todayHero}><div className={styles.todayImage} /><div className={styles.todayShade} /><div className={styles.todayCopy}><span>GENESIS 2:15–17</span><h2>Placed with purpose.</h2><p>Read the gift, the work and the boundary.</p><button type="button">Read Passage <ArrowRight size={15} /></button></div></section>
+        <h3 className={styles.yourDay}>Your Day</h3>
+        <div className={styles.listCard}><ListRow icon={BookOpen} title="Daily Reading" subtitle="Genesis 2:15–17" state="8 min" /><ListRow icon={Sparkles} title="Devotional" subtitle="Intentional God" state="6 min" /><ListRow icon={PenLine} title="Reflection & Prayer" subtitle="One guided response" state="5 min" /><ListRow icon={FileText} title="Your Notes" subtitle="Continue writing…" /></div>
+      </div><BottomNav active="today" />
+    </Phone>
+  );
+}
+
+const scriptureParagraphs = [
+  ["8", "So Abram moved his tents and went and lived near the oaks of Mamre at Hebron, and there he built an altar to the Lord."],
+  ["9", "And the Lord God called unto Abram, and asked him to trust the promise before he could see it."],
+  ["10", "The land could not support every certainty he wanted to carry, so he learned to walk by promise."],
+] as const;
+
+function ReaderDock() {
+  const tools: Array<[AppIcon, string]> = [[Highlighter,"Highlight"],[PenLine,"Note"],[Underline,"Underline"],[Bookmark,"Bookmark"],[MoreHorizontal,"More"]];
+  return <div className={styles.readerDock}>{tools.map(([Icon,label])=><span key={label}><Icon size={18} /><small>{label}</small></span>)}</div>;
+}
+
+function ScriptureReader({ actions = false }: { actions?: boolean }) {
+  return (
+    <Phone number={actions ? "6" : "5"} name={actions ? "Scripture actions" : "Scripture reader"}>
+      <AppHeader title="Genesis 13" back action={<span className={styles.readerHeaderTools}>ESV <Search size={16} /><Type size={17} /></span>} />
+      <div className={styles.readerPage}>
+        <div className={styles.scriptureCopy}>{scriptureParagraphs.map(([verse,text],i)=><p className={i===0 ? styles.highlightedText : ""} key={verse}><sup>{verse}</sup>{text}</p>)}</div>
+        {!actions && <ReaderDock />}
+        {actions && <><div className={styles.readerDim} /><div className={styles.actionSheet}><span className={styles.sheetHandle} /><div className={styles.actionGrid}>{[[Highlighter,"Highlight"],[Underline,"Underline"],[PenLine,"Note"],[Bookmark,"Bookmark"],[CircleHelp,"Question"],[Languages,"Word Study"],[Share2,"Share"],[Copy,"Copy"],[MoreHorizontal,"More"]].map(([Icon,label])=>{const Tool=Icon as AppIcon;return <span key={label as string}><i><Tool size={18} /></i><small>{label as string}</small></span>;})}</div><button type="button">Cancel</button></div></>}
       </div>
-      <BottomNav active="today" />
+    </Phone>
+  );
+}
+
+function NoteScreen() {
+  return (
+    <Phone number="7" name="Note view">
+      <AppHeader title="My Notes" back />
+      <div className={styles.noteBody}><section className={styles.notePaper}><h2>Trusting God&apos;s Plan</h2><span>Genesis 13</span><small>August 31, 2026</small><p>God&apos;s plan is always better than mine. Abram trusted God even when he didn&apos;t see the full picture.</p><p>I need to keep my heart surrendered daily.</p><div><em>#Trust</em><em>#Faith</em><em>#Genesis13</em></div></section><div className={styles.noteActions}><PenLine size={18} /><Share2 size={18} /><Bookmark size={18} /><MoreHorizontal size={18} /></div></div>
     </Phone>
   );
 }
 
 function StudyScreen() {
-  const items = [
-    [BookOpen, "Bible Study", "Courses and lessons"],
-    [Clock3, "Timeline", "See God’s story"],
-    [Map, "Maps", "Explore locations"],
-    [Languages, "Word Studies", "Language and context"],
-    [Users, "People & Places", "Profiles and background"],
-    [FileText, "Resources", "Articles, charts and video"],
-  ] as const;
-  return (
-    <Phone number="05" name="Study" mode="Tools · structured exploration">
-      <div className={styles.appBody}>
-        <div className={styles.simpleTop}><div><span className={styles.kicker}>YOUR STUDY CENTER</span><h3>Study</h3><p>Go deeper without losing your place.</p></div><Search size={21} /></div>
-        <section className={styles.studyResume}>
-          <div><span className={styles.eyebrow}>IN PROGRESS</span><h4>Week 01 · The Beginning</h4><p>Place · Fill · Connect · Unlock</p></div>
-          <button><ChevronRight size={20} /></button>
-        </section>
-        <div className={styles.studyMenu}>
-          {items.map(([Icon, title, sub]) => <div className={styles.menuRow} key={title}><span className={styles.iconTile}><Icon size={18} /></span><div><strong>{title}</strong><small>{sub}</small></div><ChevronRight size={17} /></div>)}
-        </div>
-      </div>
-      <BottomNav active="study" />
-    </Phone>
-  );
-}
-
-function LessonScreen() {
-  const steps = ["Place", "Fill", "Connect", "Unlock", "Devotion"];
-  return (
-    <Phone number="06" name="Lesson workspace" mode="Learning · contextual steps">
-      <AppHeader title="Week 01" action={<MoreHorizontal size={21} />} />
-      <div className={styles.lessonBody}>
-        <span className={styles.kicker}>THE BEGINNING · GENESIS 1–3</span>
-        <h3>See the story before studying the pieces.</h3>
-        <p>Creation, rupture and promise form the first movement of the biblical story.</p>
-        <div className={styles.lessonProgress}><span style={{ width: "42%" }} /></div>
-        <div className={styles.lessonSteps}>
-          {steps.map((step, i) => <div className={i === 1 ? styles.stepActive : i < 1 ? styles.stepDone : styles.step} key={step}><span>{i < 1 ? <Check size={13} /> : i + 1}</span><small>{step}</small></div>)}
-        </div>
-        <section className={styles.activityCard}>
-          <div className={styles.activityTop}><span className={styles.eyebrow}>FILL · GUIDED NOTES</span><span>1 / 10</span></div>
-          <h4>The Bible begins with <u>________</u>, not with humanity.</h4>
-          <label>Your answer<input value="God" readOnly /></label>
-          <div className={styles.correctBox}><span><Check size={17} /></span><div><strong>Correct</strong><p>Scripture begins with God as Creator. Everything else enters a story He initiates.</p></div></div>
-          <button className={styles.primaryButton}>Next question <ArrowRight size={17} /></button>
-        </section>
-      </div>
-      <BottomNav active="study" />
-    </Phone>
-  );
-}
-
-function ScriptureScreen() {
-  return (
-    <Phone number="07" name="Scripture Reader" mode="Reading · selection-driven tools">
-      <AppHeader title="Genesis 2:15–17" action={<Type size={21} />} />
-      <div className={styles.readerBody}>
-        <div className={styles.readerMeta}><span>KING JAMES VERSION</span><span><Search size={16} /> <Bookmark size={16} /></span></div>
-        <div className={styles.scriptureText}>
-          <p><sup>15</sup> And the Lord God took the man, and put him into the garden of Eden to dress it and to keep it.</p>
-          <p className={styles.selectedVerse}><sup>16</sup> And the Lord God commanded the man, saying, Of every tree of the garden thou mayest freely eat:</p>
-          <p><sup>17</sup> But of the tree of the knowledge of good and evil, thou shalt not eat of it.</p>
-        </div>
-        <div className={styles.selectionSheet}>
-          <div className={styles.sheetHandle} />
-          <div className={styles.selectedQuote}>“And the Lord God commanded the man…”</div>
-          <div className={styles.toolGrid}>
-            {[[Highlighter,"Highlight"],[Underline,"Underline"],[PenLine,"Note"],[Bookmark,"Save"],[MessageCircleQuestion,"Ask"],[Languages,"Study"]].map(([Icon,label]) => {
-              const ToolIcon = Icon as typeof Highlighter;
-              return <div key={label as string}><span><ToolIcon size={19} /></span><small>{label as string}</small></div>;
-            })}
-          </div>
-        </div>
-      </div>
-    </Phone>
-  );
+  const rows: Array<[AppIcon,string,string]> = [[BookOpen,"Bible Study","Courses & Lessons"],[Clock3,"Timeline","See God's Story"],[Map,"Maps","Explore Locations"],[Languages,"Word Studies","Original Language"],[Users,"People & Places","Profiles & Background"],[FileText,"Resources","Articles, Videos, Charts"]];
+  return <Phone number="8" name="Study center"><div className={styles.appBody}><h2 className={styles.screenTitle}>Study</h2><p className={styles.screenSub}>Your Study Center</p><div className={styles.tallList}>{rows.map(([Icon,title,subtitle])=><ListRow icon={Icon} title={title} subtitle={subtitle} key={title} />)}</div></div><BottomNav active="study" /></Phone>;
 }
 
 function MyBibleScreen() {
-  const items = [
-    [Highlighter,"Highlights","26 passages"], [Underline,"Underlined","13 passages"], [PenLine,"My Notes","18 notes"],
-    [MessageCircleQuestion,"Questions I Asked","7 questions"], [Bookmark,"Saved Scriptures","22 passages"], [Languages,"Word Studies","9 studies"]
-  ] as const;
-  return (
-    <Phone number="08" name="My Bible" mode="Memory · personal knowledge vault">
-      <div className={styles.appBody}>
-        <div className={styles.simpleTop}><div><span className={styles.kicker}>YOUR STUDY · REMEMBERED</span><h3>My Bible</h3><p>Everything you marked, asked and kept.</p></div><Search size={21} /></div>
-        <div className={styles.libraryGrid}>
-          {items.map(([Icon,title,count]) => <div className={styles.libraryTile} key={title}><span><Icon size={19} /></span><strong>{title}</strong><small>{count}</small><ChevronRight size={15} /></div>)}
-        </div>
-        <section className={styles.memoryCard}>
-          <span className={styles.eyebrow}>FROM YOUR STUDY</span>
-          <p>“Everything else enters a story that God initiates.”</p>
-          <small>Your note on Genesis 1:1 · 4 weeks ago</small>
-        </section>
-        <div className={styles.recentRow}><div><span className={styles.eyebrow}>RECENTLY STUDIED</span><strong>Genesis 2:15–17</strong></div><ChevronRight size={18} /></div>
-      </div>
-      <BottomNav active="bible" />
-    </Phone>
-  );
+  const rows: Array<[AppIcon,string,string]> = [[Highlighter,"Highlights","28 Highlights"],[Underline,"Underlined","13 Underlined"],[PenLine,"My Notes","18 Notes"],[MessageCircleQuestion,"Questions I Asked","7 Questions"],[Bookmark,"Saved Scriptures","22 Passages"],[Languages,"Word Studies","9 Studies"],[Clock3,"Recently Studied","Genesis 12–15"]];
+  return <Phone number="9" name="My Bible"><div className={styles.appBody}><h2 className={styles.screenTitle}>My Bible</h2><div className={styles.tallList}>{rows.map(([Icon,title,subtitle])=><ListRow icon={Icon} title={title} subtitle={subtitle} key={title} />)}</div><section className={styles.memoryStrip}><span>FROM YOUR STUDY</span><p>“God&apos;s promise does not need visible proof to remain true.”</p><small>Genesis 13 · 4 weeks ago</small></section></div><BottomNav active="bible" /></Phone>;
 }
 
 function DevotionalScreen() {
-  return (
-    <Phone number="09" name="Devotional" mode="Reflection · immersive reading">
-      <div className={styles.devotional}>
-        <div className={styles.devImage} />
-        <div className={styles.devTop}><ArrowLeft size={21} /><span>DAY 01 · WEEK 01</span><Bookmark size={20} /></div>
-        <div className={styles.devTitle}><span>INTENTIONAL GOD</span><h3>Nothing here is accidental.</h3><p>Creation reveals a God who forms before He fills—and prepares before He places.</p></div>
-        <div className={styles.devArticle}>
-          <div className={styles.readTime}>8 MIN READ <span>Genesis 1:1–31</span></div>
-          <p>Before humanity was asked to cultivate the earth, God had already shaped a world capable of receiving life.</p>
-          <blockquote>What if the order you cannot yet understand is preparation, not delay?</blockquote>
-          <button className={styles.primaryButton}>Continue reading <ArrowRight size={17} /></button>
-        </div>
-      </div>
-    </Phone>
-  );
+  return <Phone number="10" name="Devotional"><div className={styles.devotional}><div className={styles.devImage} /><div className={styles.devShade} /><div className={styles.devTools}><ArrowLeft size={19} /><span><Bookmark size={18} /><Share2 size={18} /></span></div><div className={styles.devTitle}><span>DAY 01 · WEEK 01</span><h2>Intentional God</h2><p>Genesis 1:1–31</p></div><article className={styles.devArticle}><p>Before humanity was asked to cultivate the earth, God had already shaped a world capable of receiving life.</p><p>Formation came before filling. Preparation came before placement. God&apos;s order was never accidental.</p><button className={styles.goldButton} type="button">Reflection & Prayer <ArrowRight size={16} /></button></article></div></Phone>;
 }
 
-function RecapScreen() {
-  return (
-    <Phone number="10" name="Your Week" mode="Progress · personal storytelling">
-      <AppHeader title="Your Week" action={<UserRound size={20} />} />
-      <div className={styles.recapBody}>
-        <span className={styles.kicker}>WEEK 01 · AUG 25–31</span>
-        <h3>You returned to the beginning—and stayed with the story.</h3>
-        <div className={styles.weekRing}><div><strong>4</strong><span>study days</span></div></div>
-        <div className={styles.statGrid}>
-          <div><strong>7</strong><span>passages read</span></div><div><strong>24</strong><span>verses read</span></div>
-          <div><strong>6</strong><span>highlights</span></div><div><strong>2</strong><span>notes written</span></div>
-        </div>
-        <section className={styles.insightCard}>
-          <span className={styles.eyebrow}>YOUR MOST REVISITED PASSAGE</span>
-          <h4>Genesis 2:15–17</h4>
-          <p>You returned to the relationship between gift, responsibility and boundary three times.</p>
-        </section>
-        <div className={styles.weekMessage}><Sparkles size={20} /><p>Next week, watch how God’s promise begins moving through one family.</p></div>
-      </div>
-      <BottomNav active="profile" />
-    </Phone>
-  );
+function ReflectionScreen() {
+  return <Phone number="11" name="Reflection & prayer"><AppHeader title="" back action={<span className={styles.readerHeaderTools}><Share2 size={17} /><Bookmark size={17} /></span>} /><div className={styles.reflectionBody}><span className={styles.eyebrow}>REFLECTION</span><h2>Trust the One who calls.</h2><small>Genesis 12:1–3</small><section><h3>Reflection</h3><p>What is God asking you to leave behind so He can lead you forward?</p><textarea aria-label="Your reflection" placeholder="Write your reflection…" /></section><section><h3>Prayer</h3><p>Lord, help me trust You completely and walk in obedience to Your call. Amen.</p></section><button className={styles.blackButton} type="button">Save & Close</button></div></Phone>;
+}
+
+function StatsScreen() {
+  return <Phone number="12" name="Weekly stats"><div className={styles.statsBody}><div className={styles.statsTop}><div><h2>Your Week</h2><p>AUG 25–31</p></div><Clock3 size={18} /></div><section className={styles.encouragement}><span><Sparkles size={18} /></span><div><strong>Great job, Jasmine!</strong><p>You stayed consistent in your study.</p></div></section><div className={styles.statList}><span><b>24</b><small>Passages Read</small></span><span><b>68</b><small>Verses Read</small></span><span><b>7</b><small>Highlights</small></span><span><b>3</b><small>Notes Written</small></span><span><b>2</b><small>Questions Asked</small></span><span><b>4</b><small>Study Days</small></span></div><section className={styles.revisit}><span>MOST REVISITED</span><h3>Genesis 2:15–17</h3><p>You returned to gift, responsibility and boundary three times.</p></section></div><BottomNav active="profile" /></Phone>;
+}
+
+function ProfileScreen() {
+  return <Phone number="13" name="Profile"><div className={styles.profileBody}><span className={styles.profileAvatar}>J</span><h2>Jasmine</h2><p>Joined April 2026</p><h3>Your Journey</h3><div className={styles.profileStats}><span><b>10</b>Weeks</span><span><b>68</b>Days</span><span><b>3</b>Courses</span></div><h3>Achievements</h3><div className={styles.achievementRow}>{[BookOpen,Highlighter,PenLine,Bookmark].map((Icon,i)=><span key={i}><Icon size={21} /></span>)}</div><div className={styles.profileLinks}><span>Account settings <ChevronRight size={16} /></span><span>Privacy & sharing <ChevronRight size={16} /></span><span>Reading preferences <ChevronRight size={16} /></span></div></div><BottomNav active="profile" /></Phone>;
+}
+
+function TimelineScreen() {
+  const eras: Array<[AppIcon,string,string]> = [[Sparkles,"Creation","Beginnings"],[Users,"Patriarchs","Promises Made"],[Map,"Exodus","Deliverance"],[BookOpen,"Kings & Kingdom","The Nation Grows"],[MessageCircleQuestion,"Prophets","Call to Return"],[Sparkles,"Jesus","The Promise Fulfilled"],[Users,"Church","The Mission Continues"]];
+  return <Phone number="14" name="Timeline"><div className={styles.appBody}><h2 className={styles.screenTitle}>Timeline</h2><p className={styles.screenSub}>God&apos;s Story</p><div className={styles.timelineList}>{eras.map(([Icon,title,subtitle])=><div key={title}><span><Icon size={16} /></span><p><strong>{title}</strong><small>{subtitle}</small></p></div>)}</div></div><BottomNav active="study" /></Phone>;
 }
 
 export default function DesignLockPage() {
   return (
     <main className={styles.lockPage}>
-      <header className={styles.boardHeader}>
-        <div>
-          <span className={styles.boardEyebrow}>THROUGH THE BIBLE · PRODUCT DESIGN CONTRACT</span>
-          <h1>Ten screens.<br />One coherent system.</h1>
-        </div>
-        <div className={styles.boardSummary}>
-          <p>A personal Bible-learning environment—not a magazine, course website or repeated article template.</p>
-          <div className={styles.tokenRow}>
-            <span><i className={styles.tokenPaper} />Paper</span><span><i className={styles.tokenInk} />Ink</span><span><i className={styles.tokenBlue} />Action</span><span><i className={styles.tokenGold} />Sacred accent only</span>
-          </div>
-        </div>
-      </header>
-      <section className={styles.systemRules}>
-        <div><b>GLOBAL NAVIGATION</b><span>Home · Today · Study · My Bible · Profile</span></div>
-        <div><b>LESSON RHYTHM</b><span>Place · Fill · Connect · Unlock · Devotion</span></div>
-        <div><b>DAILY LOOP</b><span>Read · Reflect · Review</span></div>
-        <div><b>VISUAL RULE</b><span>One token system; different composition for every task</span></div>
-      </section>
-      <section className={styles.screenGrid}>
-        <Opening />
-        <SignIn />
-        <HomeScreen />
-        <TodayScreen />
-        <StudyScreen />
-        <LessonScreen />
-        <ScriptureScreen />
-        <MyBibleScreen />
-        <DevotionalScreen />
-        <RecapScreen />
-      </section>
-      <footer className={styles.boardFooter}>
-        <BookOpen size={24} />
-        <div><strong>Locked system principle</strong><p>Consistency comes from shared type, spacing, color, navigation and behavior—not from repeating the same page layout.</p></div>
-      </footer>
+      <header className={styles.boardHeader}><BrandMark compact /><div><h1>Through the Bible</h1><p>Your Journey. His Story.</p></div><span>APPROVED PRODUCT SYSTEM · TYPE + COLOR CORRECTED</span></header>
+      <section className={styles.systemRules}><div><b>TYPE</b><span>SF Pro system stack · Inter equivalent</span></div><div><b>PALETTE</b><span>Warm white · Ink · Gold only</span></div><div><b>NAVIGATION</b><span>Home · Today · Study · My Bible · Profile</span></div><div><b>LESSON RHYTHM</b><span>Place · Fill · Connect · Unlock · Devotion</span></div></section>
+      <section className={styles.screenGrid}><SplashScreen /><SignInScreen /><HomeScreen /><TodayScreen /><ScriptureReader /><ScriptureReader actions /><NoteScreen /><StudyScreen /><MyBibleScreen /><DevotionalScreen /><ReflectionScreen /><StatsScreen /><ProfileScreen /><TimelineScreen /></section>
+      <footer className={styles.boardFooter}><span><Highlighter size={19} /> Read, highlight and underline Scripture</span><span><PenLine size={19} /> Take notes and ask questions</span><span><Library size={19} /> A real Study Center for everything</span><span><CalendarDays size={19} /> Track weekly progress</span></footer>
     </main>
   );
 }
