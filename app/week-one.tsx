@@ -1157,7 +1157,9 @@ function ScriptureReader({ reference, scripture, mark, reading, onClose, onTool,
   onNavigate: (reference: string) => void;
 }) {
   const articleRef = useRef<HTMLElement>(null);
+  const responseRef = useRef<HTMLElement>(null);
   const [pendingSelection, setPendingSelection] = useState<{ quote: string; start: number; end: number } | null>(null);
+  const [toolMessage, setToolMessage] = useState("");
   const [studyOpen, setStudyOpen] = useState(false);
   const [readReference, setReadReference] = useState<string | null>(null);
   const readReportedFor = useRef<string | null>(reading?.lastReadAt && reference ? reference : null);
@@ -1203,35 +1205,72 @@ function ScriptureReader({ reference, scripture, mark, reading, onClose, onTool,
   function captureSelection() {
     const article = articleRef.current;
     const selection = window.getSelection();
-    if (!article || !selection || selection.rangeCount === 0 || selection.isCollapsed) return;
+    if (!article || !selection || selection.rangeCount === 0 || selection.isCollapsed) return null;
     const range = selection.getRangeAt(0);
-    if (!article.contains(range.commonAncestorContainer)) return;
+    if (!article.contains(range.commonAncestorContainer)) return null;
     const quote = selection.toString().trim();
-    if (quote.length < 2) return;
+    if (quote.length < 2) return null;
     const before = document.createRange();
     before.selectNodeContents(article);
     before.setEnd(range.startContainer, range.startOffset);
     const start = before.toString().length;
-    setPendingSelection({ quote, start, end: start + selection.toString().length });
+    const captured = { quote, start, end: start + selection.toString().length };
+    setPendingSelection(captured);
+    setToolMessage("");
+    return captured;
   }
 
   function saveSelection(type: "highlight" | "underline") {
-    if (!pendingSelection) return;
-    onSelection({ ...pendingSelection, type, id: globalThis.crypto?.randomUUID?.() || `${Date.now()}`, createdAt: new Date().toISOString() });
+    const captured = pendingSelection || captureSelection();
+    if (!captured) {
+      setToolMessage(`Select a word or phrase in the Scripture, then tap ${type}.`);
+      articleRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    onSelection({ ...captured, type, id: globalThis.crypto?.randomUUID?.() || `${Date.now()}`, createdAt: new Date().toISOString() });
     window.getSelection()?.removeAllRanges();
     setPendingSelection(null);
+    setToolMessage(type === "highlight" ? "Highlight saved to My Study." : "Underline saved to My Study.");
   }
+
+  useEffect(() => {
+    if (!reference) return;
+    const handleSelectionChange = () => {
+      const selection = window.getSelection();
+      const article = articleRef.current;
+      if (!article || !selection || selection.rangeCount === 0 || selection.isCollapsed) return;
+      const range = selection.getRangeAt(0);
+      if (!article.contains(range.commonAncestorContainer)) return;
+      const quote = selection.toString().trim();
+      if (quote.length < 2) return;
+      const before = document.createRange();
+      before.selectNodeContents(article);
+      before.setEnd(range.startContainer, range.startOffset);
+      const start = before.toString().length;
+      setPendingSelection({ quote, start, end: start + selection.toString().length });
+      setToolMessage("");
+    };
+    document.addEventListener("selectionchange", handleSelectionChange);
+    return () => document.removeEventListener("selectionchange", handleSelectionChange);
+  }, [reference]);
 
   return <Sheet open={Boolean(reference)} onOpenChange={(open) => !open && onClose()}><SheetContent side="right" className="scripture-sheet">
     <SheetHeader className="scripture-header"><div className="scripture-kicker"><MicroLabel>{scripture?.translation || "KING JAMES VERSION (KJV)"}</MicroLabel><span className={readLogged ? "read" : ""}>{readLogged ? <><Check />READ</> : "READING"}</span></div><SheetTitle>{reference || "Scripture"}</SheetTitle><SheetDescription>The text comes first. Read slowly; keep only what asks you to stay.</SheetDescription></SheetHeader>
-    <div className="scripture-toolbar" aria-label="Scripture study tools"><span><Highlighter />Select exact words to mark them</span><button className={mark.bookmark ? "active" : ""} onClick={() => onTool("bookmark")}><Bookmark />{mark.bookmark ? "Saved" : "Save passage"}</button></div>
-    {pendingSelection && <div className="selection-actionbar"><span>“{pendingSelection.quote.length > 46 ? `${pendingSelection.quote.slice(0, 46)}…` : pendingSelection.quote}”</span><div><button onClick={() => saveSelection("highlight")}><Highlighter />Highlight</button><button onClick={() => saveSelection("underline")}><Underline />Underline</button><button onClick={() => setPendingSelection(null)}><X />Cancel</button></div></div>}
+    <div className="scripture-toolbar-v35" aria-label="Scripture study tools">
+      <button className={pendingSelection ? "ready" : ""} onMouseDown={(event) => event.preventDefault()} onClick={() => saveSelection("highlight")}><Highlighter /><span>Highlight</span></button>
+      <button className={pendingSelection ? "ready" : ""} onMouseDown={(event) => event.preventDefault()} onClick={() => saveSelection("underline")}><Underline /><span>Underline</span></button>
+      <button className={mark.bookmark ? "active" : ""} onClick={() => onTool("bookmark")}><Bookmark /><span>{mark.bookmark ? "Saved" : "Save"}</span></button>
+      <button onClick={() => responseRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}><NotebookPen /><span>Notes</span></button>
+    </div>
+    <div className={`scripture-tool-status ${pendingSelection ? "has-selection" : ""}`} aria-live="polite">
+      {pendingSelection ? <><span>Selected</span><p>“{pendingSelection.quote.length > 70 ? `${pendingSelection.quote.slice(0, 70)}…` : pendingSelection.quote}”</p><button onClick={() => { window.getSelection()?.removeAllRanges(); setPendingSelection(null); }} aria-label="Clear selection"><X /></button></> : <><span>{toolMessage || "Select any words in the passage, then choose Highlight or Underline."}</span></>}
+    </div>
     <div className="scripture-scroll" onScroll={handleReaderScroll}>
       <article ref={articleRef} onMouseUp={captureSelection} onTouchEnd={() => window.setTimeout(captureSelection, 0)}
         className={`scripture-text ${mark.highlight ? "highlighted" : ""} ${mark.underline ? "underlined" : ""}`}
         dangerouslySetInnerHTML={{ __html: scriptureHtml }} />
       <section className={`scripture-context ${studyOpen ? "open" : ""}`}><button onClick={() => setStudyOpen((value) => !value)}><span><Sparkles /><small>UNDERSTAND THE TEXT</small><b>Why this passage matters</b></span><ChevronDown /></button>{studyOpen ? <WhyCard>{scripture?.study || "Read the passage in the movement of the larger biblical story."}</WhyCard> : null}</section>
-      <section className="scripture-response"><header><small>KEEP WHAT YOU NOTICE</small><h2>Turn attention into a record.</h2><p>Your question and note remain attached to {reference}.</p></header>
+      <section ref={responseRef} className="scripture-response"><header><small>KEEP WHAT YOU NOTICE</small><h2>Turn attention into a record.</h2><p>Your question and note remain attached to {reference}.</p></header>
         <label className="study-field"><span><MessageCircleQuestion />ASK A QUESTION</span><textarea value={mark.question || ""} onChange={(event) => onText("question", event.target.value)} placeholder="What do you want to understand about this text?" /></label>
         <label className="study-field"><span><NotebookPen />PRIVATE NOTES</span><textarea value={mark.notes || ""} onChange={(event) => onText("notes", event.target.value)} placeholder="Capture an observation, connection or question…" /></label><p className="saved-note"><Check />Saved automatically to My Study</p>
       </section>

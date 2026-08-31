@@ -57,15 +57,16 @@ export default function ProductExperience() {
 }
 
 function LaunchScreen({ userName, loading, onEnter }: { userName: string | null; loading: boolean; onEnter: () => void }) {
-  return <main className="launch-v34" aria-label="Through the Bible entrance">
-    <div className="launch-thread" aria-hidden="true"><i className="launch-line" /><i className="launch-cross" /><i className="launch-point" /></div>
-    <div className="launch-lockup">
-      <h1><span>Through</span><span>the Bible</span></h1>
+  return <main className="launch-v35" aria-label="Through the Bible entrance">
+    <div className="launch-v35-lockup">
+      <small>GENESIS → REVELATION</small>
+      <h1>Through the Bible</h1>
       <p>One story. One Redeemer. One hope.</p>
     </div>
-    <button className="launch-enter" onClick={onEnter} disabled={loading}>
+    <button className="launch-v35-enter" onClick={onEnter} disabled={loading}>
       <span>{loading ? "Preparing your study" : userName ? `Continue as ${userName}` : "Enter"}</span><ArrowRight />
     </button>
+    <p className="launch-v35-edition">THE STORY OF SCRIPTURE · WEEK BY WEEK</p>
   </main>;
 }
 
@@ -82,20 +83,29 @@ function SignInScreen({ onBack, onPreview }: { onBack: () => void; onPreview: ()
     if (succeeded) setSent(true);
   }
 
-  return <main className="signin-v34">
-    <section className="signin-story">
-      <header><button onClick={onBack} aria-label="Return to entrance"><ArrowLeft /></button><b>THROUGH THE BIBLE</b></header>
-      <div className="signin-story-copy">
-        <div className="signin-threadmark" aria-hidden="true"><i /><span /></div>
-        <small>YOUR STUDY · REMEMBERED</small>
-        <h1>Your study.<br />Remembered.</h1>
-        <p>Read closely. Keep what matters. Return to the story without losing your place.</p>
-      </div>
-      <p className="signin-story-note">One account for your reading, notes, questions and progress.</p>
+  if (sent) return <main className="signin-sent-v35">
+    <header><button onClick={onBack} aria-label="Return to entrance"><ArrowLeft /></button><b>THROUGH THE BIBLE</b></header>
+    <section>
+      <span><Mail /></span><small>SECURE LINK SENT</small><h1>Check your email.</h1>
+      <p>We sent a private sign-in link to <b>{email}</b>. Open it to return directly to your study.</p>
+      <div><Check />No password to remember</div>
+      <button onClick={() => setSent(false)}>Use a different email</button>
     </section>
-    <section className="signin-form-panel">
-      {!sent ? <div className="signin-form-inner">
-        <div className="signin-form-heading"><small>WELCOME</small><h2>Enter your study.</h2><p>We will email you a secure link. No password to create or remember.</p></div>
+  </main>;
+
+  return <main className="signin-v35">
+    <section className="signin-brand-v35">
+      <header><button onClick={onBack} aria-label="Return to entrance"><ArrowLeft /></button><b>THROUGH THE BIBLE</b></header>
+      <div className="signin-brand-copy-v35">
+        <small>YOUR STUDY · REMEMBERED</small>
+        <h1>Read deeply.<br />Keep what<br />you find.</h1>
+        <p>Scripture, questions, highlights and reflections—kept together as the story unfolds.</p>
+      </div>
+      <p className="signin-brand-foot-v35">FROM THE BEGINNING · TOWARD CHRIST · INTO THE WORLD</p>
+    </section>
+    <section className="signin-panel-v35">
+      <div className="signin-form-v35">
+        <div className="signin-form-heading-v35"><small>WELCOME</small><h2>Enter your study.</h2><p>We will email you a secure link. No password to create or remember.</p></div>
         {googleEnabled ? <><button className="signin-google" onClick={signInWithGoogle}><span>G</span>Continue with Google<ArrowRight /></button><div className="signin-divider"><span>OR USE EMAIL</span></div></> : null}
         <form onSubmit={submit} className="signin-form">
           <label><span>First name</span><input value={name} onChange={(event) => setName(event.target.value)} autoComplete="given-name" placeholder="How should we greet you?" /></label>
@@ -105,9 +115,7 @@ function SignInScreen({ onBack, onPreview }: { onBack: () => void; onPreview: ()
         {authMessage ? <p className="signin-message">{authMessage}</p> : null}
         <div className="signin-assurance"><ShieldCheck /><span><b>Private by design</b><small>Your notes and highlights belong to you.</small></span></div>
         <button className="signin-preview" onClick={onPreview}>Preview the course without saving <ChevronRight /></button>
-      </div> : <div className="signin-sent">
-        <span><Mail /></span><small>SECURE LINK SENT</small><h2>Open your email to enter.</h2><p>We sent a private sign-in link to <b>{email}</b>. Tap it and you will return directly to your study.</p><div><Check />No password to remember</div><button onClick={() => setSent(false)}>Use a different email</button>
-      </div>}
+      </div>
     </section>
   </main>;
 }
