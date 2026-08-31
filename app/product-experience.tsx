@@ -45,15 +45,17 @@ export default function ProductExperience() {
 }
 
 function Launch({ loading, onEnter }: { loading: boolean; onEnter: () => void }) {
-  useEffect(() => {
-    if (loading) return;
-    const timer = window.setTimeout(onEnter, window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 250 : 1450);
-    return () => window.clearTimeout(timer);
-  }, [loading, onEnter]);
-
-  return <main className="ttb-product"><section className="ttb-mobile ttb-launch">
-    <div className="ttb-launch-lockup"><span className="ttb-launch-mark"><BookOpen /></span><h1>Through the Bible</h1><p>YOUR JOURNEY · HIS STORY</p></div>
-    <small>{loading ? "Preparing your study" : "Understand · Connect · Live"}</small>
+  return <main className="ttb-product"><section className="ttb-mobile ttb-launch ttb-launch-v2">
+    <div className="ttb-launch-lockup">
+      <span className="ttb-launch-mark"><BookOpen /></span>
+      <h1><span>Through the</span><span>Bible</span></h1>
+      <i className="ttb-launch-divider" aria-hidden="true" />
+      <p>YOUR JOURNEY · HIS STORY</p>
+    </div>
+    <div className="ttb-launch-bottom">
+      <small>UNDERSTAND · CONNECT · LIVE</small>
+      <button type="button" onClick={onEnter} disabled={loading}>{loading ? "Preparing…" : "Enter"}<ArrowRight /></button>
+    </div>
   </section></main>;
 }
 
