@@ -48,11 +48,11 @@
 .opening { position: absolute; inset: 0; }
 .openingImage { position: absolute; inset: 0; background: url('/images/course-intro-hero-v2.webp') center/cover no-repeat; }
 .openingWash { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(255,255,255,.52) 0%, rgba(255,255,255,.06) 46%, rgba(3,11,19,.74) 100%); }
-.openingBrand { position: absolute; z-index: 2; top: 155px; left: 38px; right: 38px; text-align: center; color: #111820; }
+.openingBrand { position: absolute; z-index: 2; top: 155px; left: 38px; right: 38px; text-align: center; color: #111820; animation: openingSettle 1s cubic-bezier(.2,.8,.2,1) both; }
 .openingBrand svg { color: var(--gold); }
 .openingBrand h3 { margin: 17px 0 7px; font-size: 27px; font-weight: 570; letter-spacing: .105em; text-transform: uppercase; line-height: 1.06; }
 .openingBrand p { margin: 0; font-size: 13px; letter-spacing: .03em; color: #475467; }
-.openingAction { position: absolute; z-index: 2; left: 36px; right: 36px; bottom: 50px; text-align: center; }
+.openingAction { position: absolute; z-index: 2; left: 36px; right: 36px; bottom: 50px; text-align: center; animation: openingActionIn .55s ease-out .72s both; }
 .openingAction > span { display: block; margin-bottom: 18px; font-size: 9px; letter-spacing: .16em; text-transform: uppercase; color: rgba(255,255,255,.82); }
 .openingAction button { width: 145px; height: 46px; border: 1px solid rgba(255,255,255,.56); border-radius: 24px; color: white; background: rgba(7,12,18,.54); backdrop-filter: blur(16px); font: inherit; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 14px; }
 
@@ -110,7 +110,7 @@
 .nextAction h4 { margin: 7px 0 6px; font-size: 21px; letter-spacing: -.035em; }
 .nextAction p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
 .rhythmList { margin-top: 18px; }
-.quoteNote { margin-top: 24px; padding-left: 14px; border-left: 2px solid var(--blue); color: #7a8290; font-size: 11px; line-height: 1.55; }
+.quoteNote { margin-top: 24px; padding: 13px 14px; border-radius: 12px; background: #eef1f5; color: #667085; font-size: 11px; line-height: 1.55; }
 
 .studyResume { margin-top: 27px; display: flex; align-items: center; justify-content: space-between; padding: 16px; border-radius: 16px; color: white; background: var(--ink); }
 .studyResume h4 { margin: 6px 0 3px; font-size: 15px; }.studyResume p { margin: 0; color: #b9c0cb; font-size: 9px; }
@@ -158,7 +158,11 @@
 .devImage { height: 390px; background: linear-gradient(to bottom,transparent 48%,rgba(7,16,23,.86)),url('/images/week1-deep-day-01.jpg') center/cover no-repeat; }
 .devTop { position: absolute; z-index: 3; top: 51px; left: 20px; right: 20px; display: grid; grid-template-columns: 30px 1fr 30px; align-items: center; color: white; }.devTop span { text-align: center; font-size: 9px; font-weight: 700; letter-spacing: .11em; }
 .devTitle { position: absolute; z-index: 3; top: 208px; left: 22px; right: 22px; color: white; }.devTitle > span { font-size: 9px; font-weight: 700; letter-spacing: .14em; }.devTitle h3 { margin: 10px 0 9px; font-size: 32px; line-height: .98; letter-spacing: -.045em; }.devTitle p { margin: 0; max-width: 315px; color: rgba(255,255,255,.82); font-size: 12px; line-height: 1.4; }
-.devArticle { padding: 22px; }.readTime { color: #667085; font-size: 9px; font-weight: 700; letter-spacing: .1em; }.readTime span { float: right; color: var(--blue); }.devArticle > p { margin: 23px 0 17px; color: #344054; font-family: Georgia,serif; font-size: 16px; line-height: 1.65; }.devArticle blockquote { margin: 0; padding: 13px 0 13px 15px; border-left: 2px solid var(--blue); color: #344054; font-size: 13px; line-height: 1.45; }
+.devArticle { padding: 22px; }.readTime { color: #667085; font-size: 9px; font-weight: 700; letter-spacing: .1em; }.readTime span { float: right; color: var(--blue); }.devArticle > p { margin: 23px 0 17px; color: #344054; font-family: Georgia,serif; font-size: 16px; line-height: 1.65; }.devArticle blockquote { margin: 0; padding: 14px 15px; border-radius: 12px; background: #f2f4f7; color: #344054; font-size: 13px; line-height: 1.45; }
+
+@keyframes openingSettle { from { opacity: 0; transform: translateY(14px) scale(.985); filter: blur(5px); } to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); } }
+@keyframes openingActionIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .openingBrand,.openingAction { animation: none; } }
 
 .recapBody { height: calc(100% - 87px); padding: 25px 21px 89px; overflow: hidden; background: var(--paper); }.recapBody > h3 { margin: 11px 0 0; max-width: 330px; font-size: 28px; line-height: 1.06; letter-spacing: -.05em; }
 .weekRing { width: 130px; height: 130px; margin: 27px auto 20px; padding: 8px; border-radius: 50%; background: conic-gradient(var(--blue) 0 57%,#e4e9f0 57%); }.weekRing > div { width: 100%; height: 100%; border-radius: 50%; display: grid; place-content: center; text-align: center; background: white; }.weekRing strong { font-size: 36px; line-height: 1; }.weekRing span { margin-top: 4px; color: #667085; font-size: 8px; text-transform: uppercase; letter-spacing: .08em; }
