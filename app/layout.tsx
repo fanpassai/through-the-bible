@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./product-ui.css";
 import "./product-visual-match.css";
+import "./opening-v2.css";
 
 export const metadata: Metadata = {
   title: "Through the Bible — The Big Story",
