@@ -1,0 +1,194 @@
+/* Cinematic app-opening experience — final interactive splash direction */
+.ttb-launch-v2 {
+  position: relative;
+  height: 100svh;
+  min-height: 100svh;
+  overflow: hidden;
+  isolation: isolate;
+  background: #181713;
+}
+
+.ttb-launch-v2::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -3;
+  background-image: url('/images/week1-cinematic-master-v4.webp');
+  background-size: cover;
+  background-position: 50% 56%;
+  transform: scale(1.025);
+  filter: saturate(.83) contrast(.96) brightness(1.05);
+  animation: ttbOpeningImage 1600ms cubic-bezier(.22,.8,.24,1) both;
+}
+
+.ttb-launch-v2::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background:
+    linear-gradient(180deg,
+      rgba(250,248,243,.93) 0%,
+      rgba(250,248,243,.86) 17%,
+      rgba(250,248,243,.63) 31%,
+      rgba(250,248,243,.14) 51%,
+      rgba(13,14,13,.08) 66%,
+      rgba(8,9,8,.62) 100%);
+}
+
+.ttb-launch-v2 .ttb-launch-lockup {
+  position: absolute;
+  top: 18.5%;
+  left: 50%;
+  width: min(88%, 420px);
+  margin: 0;
+  transform: translateX(-50%);
+  text-align: center;
+  animation: ttbOpeningCopy 900ms 180ms cubic-bezier(.22,.8,.24,1) both;
+}
+
+.ttb-launch-v2 .ttb-launch-mark {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 19px;
+  display: grid;
+  place-items: center;
+  color: #b98234;
+}
+
+.ttb-launch-v2 .ttb-launch-mark svg {
+  width: 46px;
+  height: 46px;
+  stroke-width: 1.25;
+}
+
+.ttb-launch-v2 h1 {
+  margin: 0;
+  color: #121210;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: .16em;
+  line-height: 1.22;
+}
+
+.ttb-launch-v2 h1 span {
+  display: block;
+  font-size: clamp(24px, 7vw, 32px);
+}
+
+.ttb-launch-v2 h1 span + span {
+  margin-top: 6px;
+  font-size: clamp(29px, 8.4vw, 38px);
+  letter-spacing: .20em;
+}
+
+.ttb-launch-divider {
+  display: block;
+  width: 42px;
+  height: 1px;
+  margin: 20px auto 17px;
+  background: #bd8739;
+  transform-origin: center;
+  animation: ttbOpeningLine 700ms 650ms ease both;
+}
+
+.ttb-launch-v2 .ttb-launch-lockup p {
+  margin: 0;
+  color: #625e56;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: .105em;
+}
+
+.ttb-launch-bottom {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: calc(29px + env(safe-area-inset-bottom));
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: ttbOpeningBottom 850ms 620ms cubic-bezier(.22,.8,.24,1) both;
+}
+
+.ttb-launch-v2 .ttb-launch-bottom small {
+  position: static;
+  margin: 0 0 17px;
+  color: rgba(255,255,255,.92);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: .125em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 12px rgba(0,0,0,.4);
+}
+
+.ttb-launch-bottom button {
+  width: min(100%, 316px);
+  height: 54px;
+  border: 1px solid rgba(210,157,73,.72);
+  border-radius: 999px;
+  background: rgba(12,12,11,.94);
+  box-shadow: 0 12px 34px rgba(0,0,0,.24), 0 0 0 1px rgba(255,255,255,.03) inset;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 13px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.ttb-launch-bottom button svg {
+  width: 18px;
+  height: 18px;
+  color: #d49a42;
+  stroke-width: 1.8;
+}
+
+.ttb-launch-bottom button:active {
+  transform: scale(.985);
+  background: #080807;
+}
+
+.ttb-launch-bottom button:disabled {
+  opacity: .72;
+  cursor: wait;
+}
+
+@keyframes ttbOpeningImage {
+  from { opacity: .35; transform: scale(1.06); filter: saturate(.72) contrast(.9) brightness(.96) blur(2px); }
+  to { opacity: 1; transform: scale(1.025); filter: saturate(.83) contrast(.96) brightness(1.05) blur(0); }
+}
+
+@keyframes ttbOpeningCopy {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@keyframes ttbOpeningBottom {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ttbOpeningLine {
+  from { opacity: 0; transform: scaleX(.2); }
+  to { opacity: 1; transform: scaleX(1); }
+}
+
+@media (max-height: 720px) {
+  .ttb-launch-v2 .ttb-launch-lockup { top: 14%; }
+  .ttb-launch-v2 .ttb-launch-mark { margin-bottom: 13px; }
+  .ttb-launch-divider { margin-top: 14px; margin-bottom: 13px; }
+  .ttb-launch-bottom { bottom: calc(18px + env(safe-area-inset-bottom)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ttb-launch-v2::before,
+  .ttb-launch-v2 .ttb-launch-lockup,
+  .ttb-launch-bottom,
+  .ttb-launch-divider { animation: none; }
+}
