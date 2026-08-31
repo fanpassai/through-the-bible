@@ -238,7 +238,7 @@ function restoreState(saved: unknown): AppState {
 export default function WeekOne({ onCourseHome, initialOpenStudy = false }: { onCourseHome?: () => void; initialOpenStudy?: boolean }) {
   const [state, setState] = useState<AppState>(DEFAULT_STATE);
   const [ready, setReady] = useState(false);
-  const [screen, setScreen] = useState<Screen>("home");
+  const [screen, setScreen] = useState<Screen>("roadmap");
   const [storyIndex, setStoryIndex] = useState(0);
   const [movementIndex, setMovementIndex] = useState(0);
   const [fillIndex, setFillIndex] = useState(0);
@@ -620,7 +620,7 @@ function RoadmapScreen({ navigate, openMovement }: { navigate: (screen: Screen) 
             onClick={() => openMovement(index)}
             aria-label={`Open chapter ${index + 1}: ${movement.roadmapTitle}`}
           >
-            <span className="roadmap-image-frame"><img src={ROADMAP_ART[index]} alt="" aria-hidden="true" /><span className="roadmap-cinema-shade" /><b>0{index + 1}</b></span>
+            <span className="roadmap-image-frame"><img src={ROADMAP_ART[index]} alt="" aria-hidden="true" /><span className="roadmap-cinema-shade" /></span>
             <span className="roadmap-cinema-copy">
               <span className="roadmap-cinema-meta">CHAPTER {String(index + 1).padStart(2, "0")} · OPEN STORY</span>
               <strong>{movement.roadmapTitle}</strong>

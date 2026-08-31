@@ -1,10 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
-  ArrowLeft, ArrowRight, BarChart3, BookMarked, BookOpen, Check, ChevronRight,
-  Compass, Flame, Highlighter, Home, Mail, NotebookPen,
+  ArrowLeft, ArrowRight, BarChart3, BookOpen, Check, ChevronRight,
+  Compass, Flame, Home, Mail, NotebookPen,
   ShieldCheck, Sparkles, UserRound, X,
 } from "lucide-react";
 import CourseExperience from "./course-experience";
@@ -12,7 +11,9 @@ import { useStudyAccount } from "./study-account";
 import { getWeeklyStudyStats, mergePortfolios, readLocalPortfolio, STUDY_UPDATED_EVENT } from "@/lib/study-progress";
 import type { StudyPortfolio } from "@/lib/study-types";
 
-type ProductStage = "launch" | "auth" | "today" | "journey" | "week1";
+type ProductStage = "launch" | "auth" | "orientation" | "today" | "journey" | "week1";
+
+const ORIENTATION_KEY = "ttb-product-orientation-v2";
 
 function studentName(email: string | undefined, metadataName: unknown) {
   if (typeof metadataName === "string" && metadataName.trim()) return metadataName.trim().split(/\s+/)[0];
@@ -28,7 +29,17 @@ export default function ProductExperience() {
 
   function enterProduct() {
     if (loading) return;
-    setStage(user ? "today" : "auth");
+    setStage(user ? nextSignedInStage() : "auth");
+  }
+
+  function nextSignedInStage(): ProductStage {
+    if (typeof window === "undefined") return "today";
+    return window.localStorage.getItem(ORIENTATION_KEY) === "complete" ? "today" : "orientation";
+  }
+
+  function finishOrientation() {
+    window.localStorage.setItem(ORIENTATION_KEY, "complete");
+    setStage("today");
   }
 
   function enterWeek(openStudy = false) {
@@ -36,24 +47,25 @@ export default function ProductExperience() {
     setStage("week1");
   }
 
-  const visibleStage = stage === "auth" && user ? "today" : stage;
+  const visibleStage = stage === "auth" && user ? nextSignedInStage() : stage;
   if (visibleStage === "launch") return <LaunchScreen userName={user ? studentName(user.email, user.user_metadata?.full_name) : null} loading={loading} onEnter={enterProduct} />;
   if (visibleStage === "auth") return <SignInScreen onBack={() => setStage("launch")} onPreview={() => setStage("journey")} />;
+  if (visibleStage === "orientation") return <OrientationScreen onComplete={finishOrientation} />;
   if (visibleStage === "today") return <TodayScreen onJourney={() => setStage("journey")} onWeek={() => enterWeek(false)} onStudy={() => enterWeek(true)} />;
   if (visibleStage === "journey") return <CourseExperience initialView="intro" onProductHome={() => setStage(user ? "today" : "launch")} />;
   return <CourseExperience initialView="week1" initialOpenStudy={openStudyOnEntry} onProductHome={() => setStage(user ? "today" : "launch")} />;
 }
 
 function LaunchScreen({ userName, loading, onEnter }: { userName: string | null; loading: boolean; onEnter: () => void }) {
-  return <main className="launch-screen" aria-label="Through the Bible entrance">
-    <div className="launch-storyline" aria-hidden="true"><span /><i /></div>
-    <div className="launch-wordmark" aria-label="Through the Bible">
-      <span>THROUGH</span><span>THE</span><span>BIBLE</span>
+  return <main className="launch-v34" aria-label="Through the Bible entrance">
+    <div className="launch-thread" aria-hidden="true"><i className="launch-line" /><i className="launch-cross" /><i className="launch-point" /></div>
+    <div className="launch-lockup">
+      <h1><span>Through</span><span>the Bible</span></h1>
+      <p>One story. One Redeemer. One hope.</p>
     </div>
-    <div className="launch-finale">
-      <p>ONE STORY · YOUR PLACE IN IT</p>
-      <button onClick={onEnter} disabled={loading}><span>{loading ? "Preparing your study" : userName ? `Continue as ${userName}` : "Enter"}</span><ArrowRight /></button>
-    </div>
+    <button className="launch-enter" onClick={onEnter} disabled={loading}>
+      <span>{loading ? "Preparing your study" : userName ? `Continue as ${userName}` : "Enter"}</span><ArrowRight />
+    </button>
   </main>;
 }
 
@@ -70,16 +82,20 @@ function SignInScreen({ onBack, onPreview }: { onBack: () => void; onPreview: ()
     if (succeeded) setSent(true);
   }
 
-  return <main className="signin-screen">
-    <section className="signin-art" aria-label="An open Bible becoming a path toward a radiant horizon">
-      <Image src="/images/signin-story-path-v33.webp" alt="An open Bible becoming a luminous path toward a radiant horizon" fill priority sizes="(max-width: 900px) 100vw, 52vw" />
-      <span className="signin-art-shade" />
-      <header><button onClick={onBack} aria-label="Return to entrance"><ArrowLeft /></button><div><BookOpen /><b>THROUGH THE BIBLE</b></div></header>
-      <div className="signin-art-copy"><small>YOUR STUDY · KEPT TOGETHER</small><h1>Keep your place<br />in the story.</h1><p>Your reading, discoveries and questions should travel with you.</p></div>
+  return <main className="signin-v34">
+    <section className="signin-story">
+      <header><button onClick={onBack} aria-label="Return to entrance"><ArrowLeft /></button><b>THROUGH THE BIBLE</b></header>
+      <div className="signin-story-copy">
+        <div className="signin-threadmark" aria-hidden="true"><i /><span /></div>
+        <small>YOUR STUDY · REMEMBERED</small>
+        <h1>Your study.<br />Remembered.</h1>
+        <p>Read closely. Keep what matters. Return to the story without losing your place.</p>
+      </div>
+      <p className="signin-story-note">One account for your reading, notes, questions and progress.</p>
     </section>
-    <section className="signin-panel">
-      {!sent ? <div className="signin-panel-inner">
-        <div className="signin-panel-heading"><span><Sparkles /></span><small>WELCOME</small><h2>Begin with an account that remembers.</h2><p>Sign in once. Every Scripture, note, highlight and devotional reflection will remain connected to you.</p></div>
+    <section className="signin-form-panel">
+      {!sent ? <div className="signin-form-inner">
+        <div className="signin-form-heading"><small>WELCOME</small><h2>Enter your study.</h2><p>We will email you a secure link. No password to create or remember.</p></div>
         {googleEnabled ? <><button className="signin-google" onClick={signInWithGoogle}><span>G</span>Continue with Google<ArrowRight /></button><div className="signin-divider"><span>OR USE EMAIL</span></div></> : null}
         <form onSubmit={submit} className="signin-form">
           <label><span>First name</span><input value={name} onChange={(event) => setName(event.target.value)} autoComplete="given-name" placeholder="How should we greet you?" /></label>
@@ -87,11 +103,33 @@ function SignInScreen({ onBack, onPreview }: { onBack: () => void; onPreview: ()
           <button type="submit" disabled={!cloudConfigured || !email.trim() || authSending}><Mail />{authSending ? "Sending your secure link…" : "Continue securely"}<ArrowRight /></button>
         </form>
         {authMessage ? <p className="signin-message">{authMessage}</p> : null}
-        <div className="signin-assurance"><ShieldCheck /><span><b>Private by design</b><small>Your writing is yours. Only questions you submit are shared.</small></span></div>
+        <div className="signin-assurance"><ShieldCheck /><span><b>Private by design</b><small>Your notes and highlights belong to you.</small></span></div>
         <button className="signin-preview" onClick={onPreview}>Preview the course without saving <ChevronRight /></button>
       </div> : <div className="signin-sent">
         <span><Mail /></span><small>SECURE LINK SENT</small><h2>Open your email to enter.</h2><p>We sent a private sign-in link to <b>{email}</b>. Tap it and you will return directly to your study.</p><div><Check />No password to remember</div><button onClick={() => setSent(false)}>Use a different email</button>
       </div>}
+    </section>
+  </main>;
+}
+
+function OrientationScreen({ onComplete }: { onComplete: () => void }) {
+  const steps = [
+    { icon: BookOpen, number: "01", title: "Read the story", text: "Open the actual Scripture. Highlight, underline and save what arrests your attention." },
+    { icon: Compass, number: "02", title: "Work the truth", text: "Place the story, fill the truth, connect its threads and unlock what you understand." },
+    { icon: NotebookPen, number: "03", title: "Carry it with you", text: "Write notes, keep questions and take one devotional truth into the rest of your week." },
+  ];
+  return <main className="orientation-v34">
+    <header><BookOpen /><b>THROUGH THE BIBLE</b></header>
+    <section>
+      <small>BEFORE YOU BEGIN</small>
+      <h1>A simple rhythm<br />for going deeper.</h1>
+      <div className="orientation-steps">
+        {steps.map(({ icon: Icon, number, title, text }) => <article key={number}>
+          <span>{number}</span><Icon /><div><h2>{title}</h2><p>{text}</p></div>
+        </article>)}
+      </div>
+      <button onClick={onComplete}>Take me to my study <ArrowRight /></button>
+      <p className="orientation-note">You will only see this introduction once.</p>
     </section>
   </main>;
 }
@@ -112,30 +150,35 @@ function TodayScreen({ onJourney, onWeek, onStudy }: { onJourney: () => void; on
     return () => { cancelled = true; window.removeEventListener(STUDY_UPDATED_EVENT, refreshLocal); };
   }, [user, loadPortfolio]);
 
-  return <main className="today-screen">
-    <header className="today-header"><div><span><BookOpen /></span><b>THROUGH THE BIBLE</b></div><button onClick={openAccount} aria-label="Open account"><UserRound />{user ? <i /> : null}</button></header>
-    <div className="today-scroll">
-      <section className="today-greeting"><small>{loading ? "PREPARING YOUR STUDY" : "YOUR PLACE IN THE STORY"}</small><h1>Good to see you,<br />{name}.</h1><p>{stats.passagesRead ? "Your Week 01 study is waiting exactly where you left it." : "Your first week begins with creation, rupture and the first promise."}</p></section>
+  return <main className="today-v34">
+    <header className="today-v34-header"><div><BookOpen /><b>THROUGH THE BIBLE</b></div><button onClick={openAccount} aria-label="Open account"><UserRound />{user ? <i /> : null}</button></header>
+    <div className="today-v34-scroll">
+      <section className="today-v34-greeting"><small>{loading ? "PREPARING YOUR STUDY" : "TODAY"}</small><h1>Good to see you, {name}.</h1><p>{stats.passagesRead ? "Your study is ready where you left it." : "Begin Week 01 with the text itself."}</p></section>
 
-      <section className="today-continue-card">
-        <div className="today-continue-art"><Image src="/images/today-week01-v33.webp" alt="A cobalt river winding through an ancient landscape toward a golden horizon" fill sizes="(max-width: 900px) 100vw, 640px" /><span /></div>
-        <div className="today-continue-copy"><div><small>WEEK 01 · GENESIS 1–3</small><span>{stats.progress}%</span></div><h2>Creation, Rupture &amp;<br />the First Promise</h2><p>{stats.mostRevisited ? `Return to ${stats.mostRevisited}, your most revisited passage.` : "Begin where every human story begins."}</p><div className="today-progress"><i style={{ width: `${Math.max(4, stats.progress)}%` }} /></div><button onClick={onWeek}>{stats.progress ? "Continue Week 01" : "Begin Week 01"}<ArrowRight /></button></div>
+      <section className="today-v34-week">
+        <header><small>WEEK 01 · GENESIS 1–3</small><span>{stats.progress}%</span></header>
+        <h2>The beginning changes everything.</h2>
+        <p>Creation, rupture and the first promise—read as one unfolding story.</p>
+        <div className="today-v34-progress"><i style={{ width: `${Math.max(3, stats.progress)}%` }} /></div>
+        <button onClick={onWeek}>{stats.progress ? "Continue Week 01" : "Begin Week 01"}<ArrowRight /></button>
       </section>
 
-      <section className="today-pulse">
-        <header><div><small>YOUR SCRIPTURE WEEK</small><h2>A living record—not a score.</h2></div><button onClick={() => setRecapOpen(true)}>View your week <ChevronRight /></button></header>
-        <div className="today-stat-grid">
-          <article><BookMarked /><strong>{stats.passagesRead}</strong><span>passages read</span></article>
-          <article><BookOpen /><strong>{stats.versesRead}</strong><span>verses explored</span></article>
-          <article><Highlighter /><strong>{stats.marks}</strong><span>truths marked</span></article>
-          <article><NotebookPen /><strong>{stats.notes + stats.questions}</strong><span>notes + questions</span></article>
+      <section className="today-v34-stats">
+        <header><small>THIS WEEK</small><button onClick={() => setRecapOpen(true)}>Personal recap <ChevronRight /></button></header>
+        <div>
+          <article><strong>{stats.passagesRead}</strong><span>passages</span></article>
+          <article><strong>{stats.versesRead}</strong><span>verses</span></article>
+          <article><strong>{stats.marks}</strong><span>marks</span></article>
+          <article><strong>{stats.notes + stats.questions}</strong><span>notes</span></article>
         </div>
-        <div className="today-theme"><span><Sparkles /></span><div><small>THEME TAKING SHAPE</small><b>{stats.theme}</b><p>{stats.passagesRead ? "The pattern emerging from the passages you have opened this week." : "Read your first passage and your personal study pattern will begin here."}</p></div></div>
       </section>
 
-      <section className="today-next"><small>NEXT BEST STEP</small><div><span><Flame /></span><div><h2>{stats.devotionalDays ? "Carry the story into today." : "Read before you retrieve."}</h2><p>{stats.devotionalDays ? `${stats.devotionalDays} of 7 devotional days completed.` : "Open the Week 01 story, then let Place and Fill test what remained."}</p></div><button onClick={onWeek} aria-label="Continue studying"><ArrowRight /></button></div></section>
+      <section className="today-v34-actions">
+        <button onClick={onWeek}><span><Flame /></span><div><small>NEXT STEP</small><b>{stats.devotionalDays ? "Carry the story into today" : "Read before you retrieve"}</b><p>{stats.devotionalDays ? `${stats.devotionalDays} of 7 devotional days complete.` : "Open Scripture, then work through Place and Fill."}</p></div><ArrowRight /></button>
+        <button onClick={onStudy}><span><NotebookPen /></span><div><small>MY STUDY</small><b>Everything you kept</b><p>Notes, highlights, questions and devotional reflections.</p></div><ArrowRight /></button>
+      </section>
     </div>
-    <nav className="today-nav" aria-label="Main navigation">
+    <nav className="today-v34-nav" aria-label="Main navigation">
       <button className="active"><Home /><span>Today</span></button>
       <button onClick={onJourney}><Compass /><span>Journey</span></button>
       <button onClick={onStudy}><NotebookPen /><span>My Study</span></button>
