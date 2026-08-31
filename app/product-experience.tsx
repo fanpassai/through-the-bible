@@ -57,16 +57,19 @@ export default function ProductExperience() {
 }
 
 function LaunchScreen({ userName, loading, onEnter }: { userName: string | null; loading: boolean; onEnter: () => void }) {
-  return <main className="launch-v35" aria-label="Through the Bible entrance">
-    <div className="launch-v35-lockup">
-      <small>GENESIS → REVELATION</small>
-      <h1>Through the Bible</h1>
-      <p>One story. One Redeemer. One hope.</p>
+  useEffect(() => {
+    if (loading) return;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const timer = window.setTimeout(onEnter, reducedMotion ? 350 : 1900);
+    return () => window.clearTimeout(timer);
+  }, [loading, onEnter]);
+
+  return <main className="launch-v36" aria-label="Through the Bible is opening">
+    <div className="launch-v36-lockup">
+      <span className="launch-v36-mark" aria-hidden="true"><BookOpen /></span>
+      <div><h1>Through the Bible</h1><p>One story. One Redeemer. One hope.</p></div>
     </div>
-    <button className="launch-v35-enter" onClick={onEnter} disabled={loading}>
-      <span>{loading ? "Preparing your study" : userName ? `Continue as ${userName}` : "Enter"}</span><ArrowRight />
-    </button>
-    <p className="launch-v35-edition">THE STORY OF SCRIPTURE · WEEK BY WEEK</p>
+    <small>{loading ? "Preparing your study" : userName ? `Welcome back, ${userName}` : "YOUR PLACE IN THE STORY"}</small>
   </main>;
 }
 
