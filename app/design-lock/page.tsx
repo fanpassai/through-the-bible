@@ -63,7 +63,7 @@ function Phone({
   dark?: boolean;
 }) {
   return (
-    <article className={styles.screenCard}>
+    <article className={styles.screenCard} data-screen={name}>
       <div className={styles.screenMeta}>
         <span>{number}</span>
         <div>
