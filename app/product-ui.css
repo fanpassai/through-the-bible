@@ -1,0 +1,160 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Libre+Caslon+Display&display=swap');
+
+:root {
+  --ttb-ink: #15130f;
+  --ttb-muted: #777168;
+  --ttb-paper: #f8f6f1;
+  --ttb-card: #fffefa;
+  --ttb-line: #e8e2d8;
+  --ttb-gold: #bd8536;
+  --ttb-gold-soft: #f5e4bd;
+  --ttb-shadow: 0 16px 50px rgba(32, 26, 18, .08);
+}
+
+.ttb-product, .ttb-product * { box-sizing: border-box; }
+.ttb-product { min-height: 100dvh; background: var(--ttb-paper); color: var(--ttb-ink); font-family: 'DM Sans', system-ui, sans-serif; }
+.ttb-product button, .ttb-product input { font: inherit; }
+.ttb-product button { cursor: pointer; }
+.ttb-serif { font-family: 'Libre Caslon Display', Georgia, serif; font-weight: 400; letter-spacing: -.025em; }
+.ttb-mobile { width: min(100%, 520px); min-height: 100dvh; margin: 0 auto; background: var(--ttb-paper); position: relative; overflow-x: hidden; }
+.ttb-page { padding: 24px 20px 112px; }
+.ttb-eyebrow { margin: 0 0 7px; font-size: 11px; font-weight: 700; letter-spacing: .13em; color: var(--ttb-gold); text-transform: uppercase; }
+.ttb-muted { color: var(--ttb-muted); }
+
+.ttb-launch { min-height: 100dvh; overflow: hidden; display: grid; place-items: center; position: relative; background: #f4f2ed; }
+.ttb-launch::before { content: ''; position: absolute; inset: 45% 0 0; background: linear-gradient(to top, rgba(13,20,24,.4), transparent), url('https://raw.githubusercontent.com/fanpassai/through-the-bible/main/assets/hero-approved.jpg') center bottom/cover no-repeat; opacity: .62; filter: saturate(.72); }
+.ttb-launch::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(248,246,241,.98) 0%, rgba(248,246,241,.86) 48%, rgba(248,246,241,.08) 82%); }
+.ttb-launch-lockup { position: relative; z-index: 1; margin-top: -13vh; text-align: center; animation: ttbReveal 1.2s cubic-bezier(.2,.8,.2,1) both; }
+.ttb-launch-mark { width: 58px; height: 58px; margin: 0 auto 20px; color: var(--ttb-gold); display: grid; place-items: center; }
+.ttb-launch-mark svg { width: 50px; height: 50px; stroke-width: 1.25; }
+.ttb-launch h1 { margin: 0; font-size: clamp(34px, 10vw, 48px); text-transform: uppercase; letter-spacing: .12em; font-weight: 500; }
+.ttb-launch p { margin: 11px 0 0; color: #5f5b54; font-size: 13px; letter-spacing: .08em; }
+.ttb-launch small { position: absolute; z-index: 2; left: 0; right: 0; bottom: 34px; text-align: center; color: white; letter-spacing: .12em; font-size: 10px; text-transform: uppercase; }
+@keyframes ttbReveal { from { opacity: 0; transform: translateY(10px) scale(.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+.ttb-signin { min-height: 100dvh; background: #fbfaf7; padding: 26px 22px 36px; display: flex; flex-direction: column; }
+.ttb-signin-top { display: flex; align-items: center; justify-content: space-between; }
+.ttb-icon-button { width: 42px; height: 42px; border: 1px solid var(--ttb-line); background: white; border-radius: 50%; display: grid; place-items: center; color: var(--ttb-ink); }
+.ttb-icon-button svg { width: 18px; }
+.ttb-brand-mini { font-size: 11px; font-weight: 700; letter-spacing: .12em; }
+.ttb-signin-hero { margin: 82px 0 42px; }
+.ttb-signin-hero h1 { margin: 8px 0 14px; font-size: clamp(43px, 12vw, 62px); line-height: .98; }
+.ttb-signin-hero p { margin: 0; max-width: 390px; color: var(--ttb-muted); line-height: 1.65; }
+.ttb-signin-card { background: white; border: 1px solid var(--ttb-line); border-radius: 26px; padding: 22px; box-shadow: var(--ttb-shadow); }
+.ttb-signin-card h2 { margin: 0 0 6px; font-size: 24px; }
+.ttb-signin-card > p { margin: 0 0 22px; color: var(--ttb-muted); font-size: 13px; line-height: 1.55; }
+.ttb-field { display: grid; gap: 7px; margin-bottom: 14px; }
+.ttb-field span { font-size: 11px; font-weight: 700; color: #4b4740; }
+.ttb-field input { width: 100%; height: 51px; padding: 0 15px; border: 1px solid var(--ttb-line); border-radius: 14px; background: #fbfaf8; outline: none; }
+.ttb-field input:focus { border-color: #cab07c; box-shadow: 0 0 0 3px rgba(189,133,54,.08); }
+.ttb-primary { width: 100%; min-height: 52px; padding: 0 18px; border: 0; border-radius: 15px; background: #11100e; color: white; display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: 700; }
+.ttb-primary svg { width: 17px; }
+.ttb-auth-message { font-size: 12px; color: var(--ttb-muted); margin: 12px 2px 0; }
+.ttb-private { display: flex; gap: 10px; align-items: center; margin-top: 20px; color: var(--ttb-muted); font-size: 11px; line-height: 1.4; }
+.ttb-private svg { width: 18px; color: var(--ttb-gold); }
+.ttb-preview { border: 0; background: none; margin: 22px auto 0; color: #6d675e; font-size: 12px; text-decoration: underline; text-underline-offset: 3px; }
+
+.ttb-topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+.ttb-greeting small { display: block; font-size: 11px; color: var(--ttb-muted); margin-bottom: 5px; }
+.ttb-greeting h1 { margin: 0; font-size: 33px; line-height: 1; }
+.ttb-avatar { width: 40px; height: 40px; border: 1px solid var(--ttb-line); background: #ece6da; border-radius: 50%; display: grid; place-items: center; font-weight: 700; color: #544c40; position: relative; }
+.ttb-avatar i { position: absolute; right: -1px; top: -1px; width: 9px; height: 9px; background: #3c875e; border: 2px solid var(--ttb-paper); border-radius: 50%; }
+
+.ttb-journey { background: var(--ttb-card); border: 1px solid var(--ttb-line); border-radius: 24px; padding: 19px; box-shadow: 0 8px 30px rgba(32,26,18,.05); }
+.ttb-journey-row { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.ttb-journey h2 { margin: 4px 0 6px; font-size: 25px; line-height: 1.03; }
+.ttb-journey p { margin: 0; color: var(--ttb-muted); font-size: 13px; }
+.ttb-progress-value { font-size: 12px; font-weight: 700; color: var(--ttb-gold); }
+.ttb-progress { height: 5px; margin: 18px 0 16px; background: #eee9df; border-radius: 10px; overflow: hidden; }
+.ttb-progress i { display: block; height: 100%; min-width: 4px; background: var(--ttb-gold); border-radius: inherit; }
+.ttb-journey button { width: 100%; height: 48px; border: 0; border-radius: 14px; background: #11100e; color: white; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; }
+.ttb-journey button svg { width: 17px; }
+
+.ttb-section-head { display: flex; align-items: end; justify-content: space-between; margin: 28px 0 12px; }
+.ttb-section-head h2 { margin: 0; font-size: 18px; }
+.ttb-section-head button { border: 0; background: none; color: var(--ttb-muted); font-size: 12px; display: flex; align-items: center; gap: 2px; }
+.ttb-section-head button svg { width: 15px; }
+.ttb-daily-list { border: 1px solid var(--ttb-line); border-radius: 19px; background: var(--ttb-card); overflow: hidden; }
+.ttb-daily-item { width: 100%; padding: 16px; border: 0; border-bottom: 1px solid var(--ttb-line); background: transparent; display: grid; grid-template-columns: 38px 1fr 18px; gap: 12px; text-align: left; align-items: center; }
+.ttb-daily-item:last-child { border-bottom: 0; }
+.ttb-daily-icon { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 12px; background: #f9f0df; color: var(--ttb-gold); }
+.ttb-daily-icon svg { width: 18px; }
+.ttb-daily-item b { display: block; font-size: 13px; margin-bottom: 3px; }
+.ttb-daily-item small { color: var(--ttb-muted); font-size: 11px; }
+.ttb-daily-item > svg { width: 15px; color: #afa79b; }
+
+.ttb-stats-strip { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
+.ttb-stat-mini { background: white; border: 1px solid var(--ttb-line); border-radius: 15px; padding: 14px 8px; text-align: center; }
+.ttb-stat-mini strong { display: block; font-size: 20px; font-family: 'Libre Caslon Display', Georgia, serif; }
+.ttb-stat-mini span { display: block; margin-top: 3px; font-size: 9px; color: var(--ttb-muted); text-transform: uppercase; letter-spacing: .05em; }
+
+.ttb-nav { position: fixed; z-index: 20; left: 50%; transform: translateX(-50%); bottom: 0; width: min(100%, 520px); height: calc(74px + env(safe-area-inset-bottom)); padding: 8px 10px max(8px, env(safe-area-inset-bottom)); background: rgba(251,250,247,.96); backdrop-filter: blur(18px); border-top: 1px solid var(--ttb-line); display: grid; grid-template-columns: repeat(5,1fr); }
+.ttb-nav button { border: 0; background: none; color: #777168; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 9px; }
+.ttb-nav button svg { width: 19px; height: 19px; stroke-width: 1.65; }
+.ttb-nav button.active { color: var(--ttb-ink); font-weight: 700; }
+.ttb-nav button.active svg { color: var(--ttb-gold); stroke-width: 2; }
+
+.ttb-screen-title { margin: 4px 0 28px; }
+.ttb-screen-title small { color: var(--ttb-muted); font-size: 11px; }
+.ttb-screen-title h1 { margin: 5px 0 0; font-size: 38px; line-height: 1; }
+.ttb-today-hero { height: 238px; border-radius: 24px; overflow: hidden; position: relative; background: url('https://raw.githubusercontent.com/fanpassai/through-the-bible/main/assets/hero-approved.jpg') center/cover; margin-bottom: 22px; }
+.ttb-today-hero::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(14,12,9,.82), rgba(14,12,9,.04) 70%); }
+.ttb-today-hero > div { position: absolute; z-index: 1; left: 18px; right: 18px; bottom: 18px; color: white; }
+.ttb-today-hero small { opacity: .76; font-size: 10px; }
+.ttb-today-hero h2 { margin: 5px 0 0; max-width: 330px; font-size: 31px; line-height: 1; }
+
+.ttb-menu-list { display: grid; gap: 10px; }
+.ttb-menu { width: 100%; border: 1px solid var(--ttb-line); background: var(--ttb-card); border-radius: 17px; padding: 14px; display: grid; grid-template-columns: 42px 1fr 18px; gap: 12px; align-items: center; text-align: left; }
+.ttb-menu-icon { width: 42px; height: 42px; background: #f4efe6; border-radius: 12px; display: grid; place-items: center; color: #776b58; }
+.ttb-menu-icon svg { width: 19px; }
+.ttb-menu b { display: block; font-size: 13px; }
+.ttb-menu small { display: block; color: var(--ttb-muted); margin-top: 3px; font-size: 10px; }
+.ttb-menu > svg { width: 15px; color: #aaa298; }
+
+.ttb-library-counts { display: grid; gap: 9px; }
+.ttb-library-card { width: 100%; border: 1px solid var(--ttb-line); background: white; padding: 16px; border-radius: 16px; display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 12px; text-align: left; }
+.ttb-library-card span:first-child { width: 36px; height: 36px; background: #faf5ec; color: var(--ttb-gold); border-radius: 11px; display: grid; place-items: center; }
+.ttb-library-card svg { width: 17px; }
+.ttb-library-card b { font-size: 13px; }
+.ttb-library-card small { display: block; color: var(--ttb-muted); margin-top: 2px; font-size: 10px; }
+.ttb-library-card strong { font-size: 19px; font-family: 'Libre Caslon Display', Georgia, serif; }
+.ttb-saved-note { background: white; border: 1px solid var(--ttb-line); border-radius: 18px; padding: 17px; margin-top: 10px; }
+.ttb-saved-note small { color: var(--ttb-gold); font-size: 10px; font-weight: 700; }
+.ttb-saved-note p { margin: 9px 0 0; font-family: 'Libre Caslon Display', Georgia, serif; font-size: 18px; line-height: 1.45; }
+.ttb-empty { text-align: center; padding: 38px 20px; border: 1px dashed #d8d0c4; border-radius: 18px; color: var(--ttb-muted); font-size: 12px; line-height: 1.6; }
+
+.ttb-profile-card { background: white; border: 1px solid var(--ttb-line); border-radius: 24px; padding: 25px; text-align: center; }
+.ttb-profile-avatar { width: 76px; height: 76px; margin: 0 auto 14px; border-radius: 50%; background: #ece5d9; display: grid; place-items: center; font-family: 'Libre Caslon Display', Georgia, serif; font-size: 30px; color: #62594b; }
+.ttb-profile-card h1 { margin: 0; font-size: 30px; }
+.ttb-profile-card p { margin: 5px 0 0; color: var(--ttb-muted); font-size: 11px; }
+.ttb-week-card { background: #12110f; color: white; border-radius: 23px; padding: 22px; margin-top: 16px; }
+.ttb-week-card small { color: #c9bfaf; font-size: 10px; letter-spacing: .08em; }
+.ttb-week-card h2 { margin: 7px 0 4px; font-size: 29px; }
+.ttb-week-card > p { margin: 0 0 18px; color: #aaa195; font-size: 12px; line-height: 1.5; }
+.ttb-week-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; }
+.ttb-week-grid div { background: #1e1c18; border: 1px solid #2e2a24; border-radius: 14px; padding: 14px; }
+.ttb-week-grid strong { display: block; font-family: 'Libre Caslon Display', Georgia, serif; font-size: 28px; }
+.ttb-week-grid span { color: #aaa195; font-size: 9px; text-transform: uppercase; }
+.ttb-achievement { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding: 14px; border: 1px solid var(--ttb-line); background: white; border-radius: 15px; }
+.ttb-achievement > span { width: 38px; height: 38px; border-radius: 50%; background: #f5ead6; display: grid; place-items: center; color: var(--ttb-gold); }
+.ttb-achievement svg { width: 18px; }
+.ttb-achievement b { display: block; font-size: 12px; }
+.ttb-achievement small { color: var(--ttb-muted); font-size: 10px; }
+
+.ttb-backbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; }
+.ttb-backbar button { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--ttb-line); background: white; display: grid; place-items: center; }
+.ttb-backbar button svg { width: 17px; }
+.ttb-backbar b { font-size: 11px; letter-spacing: .1em; }
+.ttb-sent { min-height: 100dvh; padding: 25px; display: grid; align-content: center; text-align: center; background: #fbfaf7; }
+.ttb-sent span { width: 64px; height: 64px; margin: 0 auto 18px; border-radius: 50%; background: #f5ead6; display: grid; place-items: center; color: var(--ttb-gold); }
+.ttb-sent h1 { font-size: 43px; margin: 0 0 14px; }
+.ttb-sent p { color: var(--ttb-muted); line-height: 1.6; }
+
+@media (min-width: 760px) {
+  .ttb-product { background: #eeeae2; padding: 18px 0; }
+  .ttb-mobile { min-height: calc(100dvh - 36px); border-radius: 30px; overflow: hidden; box-shadow: 0 30px 100px rgba(35,28,19,.14); }
+  .ttb-nav { bottom: 18px; border-radius: 0 0 30px 30px; }
+  .ttb-launch, .ttb-signin, .ttb-sent { min-height: calc(100dvh - 36px); }
+}
+
+@media (prefers-reduced-motion: reduce) { .ttb-launch-lockup { animation: none; } }
