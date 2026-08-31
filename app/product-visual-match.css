@@ -1,0 +1,294 @@
+/* Approved-board visual match pass — splash + home. Loaded after product-ui.css. */
+
+.ttb-product {
+  --ttb-paper: #fbfaf7;
+  --ttb-card: #fffefa;
+  --ttb-ink: #161511;
+  --ttb-muted: #7b766e;
+  --ttb-line: #ebe7df;
+  --ttb-gold: #c28a37;
+  background: var(--ttb-paper);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+}
+
+.ttb-mobile { background: var(--ttb-paper); }
+
+/* SPLASH — restrained lockup over a light cinematic landscape, matching the approved board. */
+.ttb-launch {
+  height: 100svh;
+  min-height: 100svh;
+  display: block;
+  overflow: hidden;
+  background: #f8f7f4;
+  isolation: isolate;
+}
+
+.ttb-launch::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background-image: url('/images/course-intro-hero-v2.webp');
+  background-size: cover;
+  background-position: 50% 62%;
+  opacity: 1;
+  filter: saturate(.78) brightness(1.05) contrast(.88);
+}
+
+.ttb-launch::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(180deg,
+      rgba(250,249,246,.98) 0%,
+      rgba(250,249,246,.94) 23%,
+      rgba(250,249,246,.72) 40%,
+      rgba(250,249,246,.20) 61%,
+      rgba(18,22,23,.15) 100%);
+}
+
+.ttb-launch-lockup {
+  position: absolute;
+  z-index: 2;
+  top: 18.5%;
+  left: 50%;
+  width: 76%;
+  margin: 0;
+  transform: translateX(-50%);
+  text-align: center;
+  animation: ttbApprovedReveal 900ms cubic-bezier(.22,.8,.25,1) both;
+}
+
+.ttb-launch-mark {
+  width: 42px;
+  height: 42px;
+  margin: 0 auto 17px;
+  color: var(--ttb-gold);
+}
+
+.ttb-launch-mark svg {
+  width: 42px;
+  height: 42px;
+  stroke-width: 1.35;
+}
+
+.ttb-launch h1 {
+  width: 100%;
+  margin: 0;
+  color: #171613;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+  font-size: clamp(20px, 6.15vw, 28px);
+  line-height: 1.28;
+  font-weight: 560;
+  letter-spacing: .155em;
+  text-transform: uppercase;
+  white-space: normal;
+}
+
+.ttb-launch p {
+  margin: 10px 0 0;
+  color: #625e56;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 500;
+  letter-spacing: .085em;
+  text-transform: none;
+}
+
+.ttb-launch small {
+  position: absolute;
+  z-index: 2;
+  bottom: calc(34px + env(safe-area-inset-bottom));
+  left: 0;
+  right: 0;
+  color: rgba(255,255,255,.96);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: .09em;
+  text-transform: none;
+  text-shadow: 0 1px 8px rgba(0,0,0,.18);
+}
+
+@keyframes ttbApprovedReveal {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* HOME — exact approved-board proportions: small greeting, thin card borders, almost no shadow. */
+.ttb-page { padding: 25px 20px 108px; }
+
+.ttb-topbar {
+  align-items: flex-start;
+  margin-bottom: 22px;
+}
+
+.ttb-greeting small {
+  margin: 0 0 2px;
+  color: #514f4a;
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 500;
+}
+
+.ttb-greeting h1,
+.ttb-greeting .ttb-serif {
+  margin: 0;
+  color: #151411;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+  font-size: 25px;
+  line-height: 1.06;
+  font-weight: 700;
+  letter-spacing: -.035em;
+}
+
+.ttb-avatar {
+  width: 34px;
+  height: 34px;
+  border: 1px solid #e6e0d7;
+  background: #e9e3d8;
+  color: #4e493f;
+  font-size: 12px;
+}
+
+.ttb-avatar i { width: 8px; height: 8px; }
+
+.ttb-journey {
+  border: 1px solid #e6e2da;
+  border-radius: 15px;
+  padding: 15px;
+  background: #fff;
+  box-shadow: 0 2px 9px rgba(40,32,22,.025);
+}
+
+.ttb-journey-row { gap: 8px; }
+
+.ttb-journey .ttb-eyebrow {
+  margin-bottom: 7px;
+  color: #55514a;
+  font-size: 9px;
+  line-height: 1.1;
+  font-weight: 650;
+  letter-spacing: .015em;
+}
+
+.ttb-journey h2,
+.ttb-journey .ttb-serif {
+  margin: 0 0 3px;
+  max-width: 280px;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+  font-size: 18px;
+  line-height: 1.08;
+  font-weight: 700;
+  letter-spacing: -.025em;
+}
+
+.ttb-journey p {
+  color: #716c63;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.ttb-progress-value {
+  margin-top: 29px;
+  color: #5f5a52;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.ttb-progress {
+  width: calc(100% - 1px);
+  height: 4px;
+  margin: 13px 0 10px;
+  background: #ece7df;
+}
+
+.ttb-progress i { background: #d4a049; }
+
+.ttb-journey button {
+  height: 40px;
+  border-radius: 10px;
+  background: #0e0e0d;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.ttb-journey button svg { width: 14px; }
+
+.ttb-section-head { margin: 24px 0 10px; }
+.ttb-section-head h2 {
+  color: #1c1b18;
+  font-size: 17px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -.02em;
+}
+.ttb-section-head button { font-size: 10px; }
+
+.ttb-daily-list {
+  border: 1px solid #e8e3db;
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: none;
+}
+
+.ttb-daily-item {
+  min-height: 59px;
+  padding: 10px 12px;
+  grid-template-columns: 32px 1fr 14px;
+  gap: 10px;
+}
+
+.ttb-daily-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: #fff5e8;
+  color: #d69b43;
+}
+
+.ttb-daily-icon svg { width: 15px; height: 15px; stroke-width: 1.7; }
+.ttb-daily-item b { margin: 0 0 2px; font-size: 11px; line-height: 1.15; font-weight: 650; }
+.ttb-daily-item small { font-size: 9px; line-height: 1.2; }
+.ttb-daily-item > svg { width: 13px; }
+
+.ttb-stats-strip { gap: 6px; }
+.ttb-stat-mini {
+  border-radius: 12px;
+  padding: 11px 5px;
+  box-shadow: none;
+}
+.ttb-stat-mini strong {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+}
+.ttb-stat-mini span { font-size: 7.5px; letter-spacing: .02em; }
+
+.ttb-nav {
+  height: calc(65px + env(safe-area-inset-bottom));
+  padding: 6px 8px max(5px, env(safe-area-inset-bottom));
+  background: rgba(251,250,247,.985);
+  border-top-color: #ebe6de;
+  backdrop-filter: blur(20px);
+}
+
+.ttb-nav button { gap: 2px; font-size: 8px; }
+.ttb-nav button svg { width: 17px; height: 17px; stroke-width: 1.55; }
+.ttb-nav button.active { font-weight: 600; }
+.ttb-nav button.active svg { color: #c18b3f; stroke-width: 1.85; }
+
+@media (max-width: 390px) {
+  .ttb-launch-lockup { top: 17%; width: 82%; }
+  .ttb-launch h1 { font-size: 21px; }
+  .ttb-page { padding-left: 17px; padding-right: 17px; }
+}
+
+@media (min-width: 760px) {
+  .ttb-launch { height: calc(100svh - 36px); min-height: calc(100svh - 36px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ttb-launch-lockup { animation: none; }
+}
