@@ -119,6 +119,7 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
   const [largeText, setLargeText] = useState(false);
   const [reachedEnd, setReachedEnd] = useState(false);
   const articleRef = useRef<HTMLElement>(null);
+  const selectionDraftRef = useRef<SelectionDraft | null>(null);
   const cloudLoadedFor = useRef<string | null>(null);
   const openedFor = useRef<string | null>(null);
 
@@ -228,11 +229,13 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
       before.selectNodeContents(article);
       before.setEnd(range.startContainer, range.startOffset);
       const start = before.toString().length;
-      setPendingSelection({
+      const captured = {
         quote,
         start,
         end: start + selection.toString().length,
-      });
+      };
+      selectionDraftRef.current = captured;
+      setPendingSelection(captured);
       setToolMessage("");
     };
 
@@ -259,15 +262,16 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
       start,
       end: start + selection.toString().length,
     };
+    selectionDraftRef.current = captured;
     setPendingSelection(captured);
     setToolMessage("");
     return captured;
   }
 
   function applySelection(type: "highlight" | "underline") {
-    const captured = pendingSelection || captureSelection();
+    const captured = pendingSelection || selectionDraftRef.current || captureSelection();
     if (!captured) {
-      setToolMessage("Select exact words in the passage first.");
+      setToolMessage("Press and hold a word, then drag the handles to select a phrase.");
       articleRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
@@ -298,6 +302,7 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
     });
 
     window.getSelection()?.removeAllRanges();
+    selectionDraftRef.current = null;
     setPendingSelection(null);
     setToolMessage(type === "highlight" ? "Highlight saved." : "Underline saved.");
   }
@@ -418,14 +423,13 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
 
           <div className={styles.instruction}>
             <Highlighter />
-            <span><strong>Mark exact words</strong>Select a phrase, then choose Highlight or Underline below.</span>
+            <span><strong>Mark exact words</strong>Press and hold a word, drag to select a phrase, then choose a tool below.</span>
           </div>
 
           <article
             ref={articleRef}
             className={[styles.scriptureText, largeText ? styles.largeText : ""].join(" ")}
             onMouseUp={captureSelection}
-            onTouchEnd={() => window.setTimeout(captureSelection, 0)}
             dangerouslySetInnerHTML={{ __html: scriptureHtml }}
           />
 
@@ -463,6 +467,7 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
               type="button"
               onClick={() => {
                 window.getSelection()?.removeAllRanges();
+                selectionDraftRef.current = null;
                 setPendingSelection(null);
               }}
               aria-label="Clear selection"
@@ -482,7 +487,7 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
           <button
             type="button"
             className={pendingSelection ? styles.actionReady : ""}
-            onMouseDown={(event) => event.preventDefault()}
+            onPointerDown={(event) => event.preventDefault()}
             onClick={() => applySelection("highlight")}
           >
             <Highlighter />
@@ -491,7 +496,7 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
           <button
             type="button"
             className={pendingSelection ? styles.actionReady : ""}
-            onMouseDown={(event) => event.preventDefault()}
+            onPointerDown={(event) => event.preventDefault()}
             onClick={() => applySelection("underline")}
           >
             <Underline />

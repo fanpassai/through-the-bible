@@ -163,10 +163,10 @@
 .readerHeader h1 {
   margin: 24px 0 0;
   color: var(--ink);
-  font-size: 34px;
+  font-size: 29px;
   font-weight: 720;
   letter-spacing: -.045em;
-  line-height: 1.02;
+  line-height: 1.08;
 }
 
 .readerHeader p {
@@ -216,10 +216,16 @@
   letter-spacing: -.01em;
   user-select: text;
   -webkit-user-select: text;
+  -webkit-touch-callout: default;
+  touch-action: pan-y pinch-zoom;
+  cursor: text;
 }
 
 .scriptureText :global(.scripture-line) {
   margin: 0 0 1.22em;
+  user-select: text;
+  -webkit-user-select: text;
+  -webkit-touch-callout: default;
 }
 
 .scriptureText :global(sup) {
