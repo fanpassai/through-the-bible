@@ -20,8 +20,9 @@ import {
   UserRound,
   Waypoints,
 } from "lucide-react";
-import { readLocalPortfolio, STUDY_UPDATED_EVENT } from "@/lib/study-progress";
+import { mergePortfolios, readLocalPortfolio, STUDY_UPDATED_EVENT } from "@/lib/study-progress";
 import type { StudyPortfolio } from "@/lib/study-types";
+import { useStudyAccount } from "@/app/study-account";
 import {
   getWeekOneTracking,
   readWeekOneSession,
@@ -66,6 +67,7 @@ function statusLabel(status: TrackingStatus) {
 }
 
 export default function TodayExperience() {
+  const { user, loadPortfolio } = useStudyAccount();
   const [portfolio, setPortfolio] = useState<StudyPortfolio>(emptyPortfolio);
   const [session, setSession] = useState<ReturnType<typeof readWeekOneSession>>({});
   const [filter, setFilter] = useState<"progress" | "next" | "complete">("progress");
@@ -76,15 +78,24 @@ export default function TodayExperience() {
       setSession(readWeekOneSession());
     };
     refresh();
+    let cancelled = false;
+    if (user) {
+      loadPortfolio()
+        .then((cloud) => {
+          if (!cancelled && cloud) setPortfolio(mergePortfolios(cloud, readLocalPortfolio()));
+        })
+        .catch(() => undefined);
+    }
     window.addEventListener("storage", refresh);
     window.addEventListener(STUDY_UPDATED_EVENT, refresh);
     document.addEventListener("visibilitychange", refresh);
     return () => {
+      cancelled = true;
       window.removeEventListener("storage", refresh);
       window.removeEventListener(STUDY_UPDATED_EVENT, refresh);
       document.removeEventListener("visibilitychange", refresh);
     };
-  }, []);
+  }, [user, loadPortfolio]);
 
   const tracking = useMemo<WeekOneTracking>(() => getWeekOneTracking(session, portfolio), [session, portfolio]);
   const visibleUnits = tracking.units.filter((unit) => {

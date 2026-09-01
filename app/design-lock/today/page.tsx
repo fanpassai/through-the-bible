@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { StudyAccountProvider } from "@/app/study-account";
 import TodayExperience from "./today-experience";
 
 export const metadata: Metadata = {
@@ -7,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function TodayPage() {
-  return <TodayExperience />;
+  return <StudyAccountProvider><TodayExperience /></StudyAccountProvider>;
 }
