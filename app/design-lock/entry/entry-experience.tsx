@@ -120,7 +120,7 @@ export default function EntryExperience() {
                 <p className={styles.eyebrow}>YOUR STUDY IS READY</p>
                 <h1>Welcome back.</h1>
                 <p>Your highlights, notes, questions, devotionals and progress are connected to <strong>{user.email}</strong>.</p>
-                <Link className={styles.primaryAction} href="/">Continue your journey <ArrowRight /></Link>
+                <Link className={styles.primaryAction} href="/design-lock/home">Continue your journey <ArrowRight /></Link>
               </section>
             ) : sent ? (
               <section className={styles.linkSent}>
