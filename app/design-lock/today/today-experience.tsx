@@ -168,8 +168,8 @@ export default function TodayExperience() {
         <div className={styles.content}>
           <section className={styles.hero} aria-label="Week 1 course focus">
             <Image
-              src="/images/today-week-01-hero.webp"
-              alt="A river winding through a wide valley at sunrise"
+              src="/images/today-week-1-creation-v2.webp"
+              alt="Morning sunlight over mountains, a winding river and a landscape alive with wildflowers"
               fill
               priority
               sizes="(max-width: 430px) 100vw, 390px"
@@ -249,7 +249,7 @@ export default function TodayExperience() {
           </section>
 
           <section className={styles.lowerGrid}>
-            <article><Clock3 /><span><small>NEXT CLASS</small><strong>Sunday · 5:30 p.m.</strong><p>Haven Central Lobby</p></span></article>
+            <article><Clock3 /><span><small>NEXT LESSON</small><strong>Unlocks Friday · 7:00 a.m.</strong><p>Week 2 opens automatically in your course plan.</p></span></article>
             <article><Bookmark /><span><small>SAVED FROM YOUR STUDY</small><strong>{tracking.savedDiscoveryCount} discoveries</strong><p>{tracking.reviewCount ? tracking.reviewCount + " Fill question" + (tracking.reviewCount === 1 ? "" : "s") + " to review" : "Your notes and marked Scripture stay connected."}</p></span></article>
           </section>
         </div>
