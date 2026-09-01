@@ -138,7 +138,7 @@ export function getWeekOneTracking(sessionValue: unknown, portfolio: StudyPortfo
   const firstUnreadScripture = REQUIRED_SCRIPTURES.findIndex((reference) => !readingHistory[reference]?.completedAt);
   const firstMissingFill = Array.from({ length: lesson.FILL.length }, (_, index) => index).find((index) => !fillQuestions.has(index)) ?? 0;
   const next: ResumeTarget = storyCompleted < storyTotal
-    ? { key: "lesson", eyebrow: "CONTINUE THE LESSON", title: "The Beginning", detail: "Subject " + (storyCompleted + 1) + " of " + storyTotal, screen: "story", index: storyCompleted }
+    ? { key: "lesson", eyebrow: "CONTINUE LESSON", title: String(lesson.STORY[storyCompleted]?.[1] || "The Beginning"), detail: "Subject " + (storyCompleted + 1) + " of " + storyTotal, screen: "story", index: storyCompleted }
     : scriptureCompleted < REQUIRED_SCRIPTURES.length
       ? { key: "scripture", eyebrow: "CONTINUE REQUIRED SCRIPTURE", title: REQUIRED_SCRIPTURES[Math.max(0, firstUnreadScripture)], detail: scriptureCompleted + " of " + REQUIRED_SCRIPTURES.length + " passages complete", screen: "scripture", index: Math.max(0, firstUnreadScripture) }
       : placeCompleted < lesson.PLACE.length
@@ -148,10 +148,10 @@ export function getWeekOneTracking(sessionValue: unknown, portfolio: StudyPortfo
           : connectCompleted < lesson.W1_DISCOVERIES.length
             ? { key: "connect", eyebrow: "CONTINUE COURSE WORK", title: "Connect the Scriptures", detail: connectCompleted + " of " + lesson.W1_DISCOVERIES.length + " discoveries opened", screen: "connect", index: connectCompleted }
             : !unlockCompleted
-              ? { key: "unlock", eyebrow: "COMPLETE THE CORE LESSON", title: "Unlock your understanding", detail: "Teach Week 01 back in your own words", screen: "unlock" }
+              ? { key: "unlock", eyebrow: "COMPLETE THE CORE LESSON", title: "Unlock your understanding", detail: "Teach Week 1 back in your own words", screen: "unlock" }
               : deepCompleted < lesson.DEEP_DAYS.length
                 ? { key: "deeper", eyebrow: "CONTINUE GO DEEPER", title: "Day " + (deepCompleted + 1), detail: deepCompleted + " of " + lesson.DEEP_DAYS.length + " days complete", screen: "deep", index: deepCompleted }
-                : { key: "lesson", eyebrow: "WEEK 01 COMPLETE", title: "Return to the beginning", detail: "Review the complete Week 01 journey", screen: "complete" };
+                : { key: "lesson", eyebrow: "WEEK 1 COMPLETE", title: "Return to the beginning", detail: "Review the complete Week 1 journey", screen: "complete" };
 
   const completed = rawUnits.reduce((sum, unit) => sum + unit.completed, 0);
   const total = rawUnits.reduce((sum, unit) => sum + unit.total, 0);

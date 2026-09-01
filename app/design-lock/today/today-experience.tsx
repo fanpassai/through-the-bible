@@ -162,11 +162,11 @@ export default function TodayExperience() {
             <span>TODAY</span>
             <h1>Your course plan</h1>
           </div>
-          <time>MONDAY · SEPTEMBER 1</time>
+          <time>Monday · September 1</time>
         </header>
 
         <div className={styles.content}>
-          <section className={styles.hero} aria-label="Week 01 course focus">
+          <section className={styles.hero} aria-label="Week 1 course focus">
             <Image
               src="/images/today-week-01-hero.webp"
               alt="A river winding through a wide valley at sunrise"
@@ -176,7 +176,7 @@ export default function TodayExperience() {
             />
             <span className={styles.heroShade} aria-hidden="true" />
             <div className={styles.heroCopy}>
-              <span>WEEK 01 · TODAY&apos;S COURSE</span>
+              <span>WEEK 1 · COURSE</span>
               <h2>The Beginning</h2>
               <p>Creation, the Fall and the First Promise</p>
             </div>
@@ -184,13 +184,13 @@ export default function TodayExperience() {
 
           <section className={styles.weekCard}>
             <div className={styles.weekTop}>
-              <div><span>COURSE PROGRESS</span><h2>Your Week 01 record</h2></div>
+              <span>WEEK PROGRESS</span>
               <strong>{tracking.percentage}%</strong>
             </div>
-            <div className={styles.progress} aria-label={tracking.percentage + "% of Week 01 complete"}>
+            <div className={styles.progress} aria-label={tracking.percentage + "% of Week 1 complete"}>
               <span style={{ width: Math.max(tracking.percentage, 2) + "%" }} />
             </div>
-            <small>{tracking.completed} of {tracking.total} required course steps complete</small>
+            <small>{tracking.completed} of {tracking.total} steps complete</small>
           </section>
 
           <section className={styles.continueCard}>
@@ -209,7 +209,7 @@ export default function TodayExperience() {
 
           <section className={styles.planSection}>
             <div className={styles.sectionHeading}>
-              <div><h2>Your Week 01 structure</h2><p>Nothing is complete until every required part is finished.</p></div>
+              <div><h2>Your Week 1 plan</h2><p>Complete every required item to finish the week.</p></div>
             </div>
 
             <div className={styles.filters} role="tablist" aria-label="Filter course requirements">
