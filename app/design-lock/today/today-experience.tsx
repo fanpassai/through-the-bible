@@ -35,7 +35,7 @@ import {
 import styles from "./today.module.css";
 
 const lessonThumbnails = [
-  "/images/week1-subject-01-pop.png",
+  "/images/week1-subject-01-cover.svg",
   "/images/week1-creation-sea.jpg",
   "/images/week1-eden-couple.jpg",
   "/images/week1-eden-vocation.jpg",

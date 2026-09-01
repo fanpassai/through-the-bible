@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600" role="img" aria-labelledby="title desc">
+  <title id="title">The Beginning</title>
+  <desc id="desc">Week 01 subject cover for Genesis 1</desc>
+  <rect width="600" height="600" rx="42" fill="#2697E8"/>
+  <circle cx="476" cy="112" r="76" fill="#FFE07A"/>
+  <path d="M0 455C101 406 174 421 257 460C349 504 441 510 600 420V600H0Z" fill="#FFFFFF"/>
+  <path d="M0 492C126 451 214 468 299 507C391 550 475 552 600 491" fill="none" stroke="#0F1720" stroke-width="8"/>
+  <text x="48" y="73" fill="#0F1720" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700" letter-spacing="5">GENESIS 1</text>
+  <text x="48" y="272" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="76" font-weight="800" letter-spacing="-2">THE</text>
+  <text x="48" y="350" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="62" font-weight="800" letter-spacing="-2">BEGINNING</text>
+  <rect x="48" y="382" width="76" height="8" rx="4" fill="#FFE07A"/>
+  <text x="48" y="558" fill="#0F1720" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" letter-spacing="3">WEEK 01 · SUBJECT 01</text>
+</svg>
