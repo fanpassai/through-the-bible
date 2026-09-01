@@ -4,7 +4,9 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
-  const response = NextResponse.redirect(new URL("/", request.url));
+  const requestedPath = url.searchParams.get("next");
+  const safePath = requestedPath?.startsWith("/") && !requestedPath.startsWith("//") ? requestedPath : "/";
+  const response = NextResponse.redirect(new URL(safePath, request.url));
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!code || !supabaseUrl || !supabaseKey) return response;
@@ -18,4 +20,3 @@ export async function GET(request: NextRequest) {
   await supabase.auth.exchangeCodeForSession(code);
   return response;
 }
-
