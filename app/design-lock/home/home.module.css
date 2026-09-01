@@ -77,7 +77,7 @@
 
 .content {
   height: calc(100% - 108px);
-  padding: 0 24px 69px;
+  padding: 0 24px 77px;
   overflow-y: auto;
   scrollbar-width: none;
 }
@@ -196,10 +196,10 @@
 
 .activity {
   width: 100%;
-  min-height: 58px;
+  min-height: 66px;
   padding: 8px 12px;
   display: grid;
-  grid-template-columns: 35px 1fr 14px;
+  grid-template-columns: 39px 1fr 14px;
   align-items: center;
   gap: 10px;
   border: 0;
@@ -214,8 +214,8 @@
 .activity:last-child { border-bottom: 0; }
 
 .icon {
-  width: 35px;
-  height: 35px;
+  width: 39px;
+  height: 39px;
   display: grid;
   place-items: center;
   border-radius: 10px;
@@ -234,8 +234,8 @@
   left: 0;
   right: 0;
   bottom: 0;
-  min-height: 62px;
-  padding: 6px 8px max(7px, env(safe-area-inset-bottom));
+  min-height: 70px;
+  padding: 8px 8px max(9px, env(safe-area-inset-bottom));
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   border-top: 1px solid var(--line);
@@ -273,5 +273,5 @@
   .journey { padding: 14px 16px; }
   .cardTopline { margin-bottom: 13px; }
   .sectionHeading { margin-top: 17px; }
-  .activity { min-height: 53px; }
+  .activity { min-height: 62px; }
 }
