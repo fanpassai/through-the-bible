@@ -16,7 +16,6 @@ import {
   LockKeyhole,
   MapPin,
   Minus,
-  RefreshCw,
   Sparkles,
   UserRound,
   Waypoints,
@@ -28,11 +27,46 @@ import {
   getWeekOneTracking,
   readWeekOneSession,
   WEEK_ONE_RESUME_KEY,
+  type ResumeTarget,
   type TrackingKey,
   type TrackingStatus,
   type WeekOneTracking,
 } from "@/lib/week-one-tracking";
 import styles from "./today.module.css";
+
+const lessonThumbnails = [
+  "/images/week1-story-creation.png",
+  "/images/week1-creation-sea.jpg",
+  "/images/week1-eden-couple.jpg",
+  "/images/week1-eden-vocation.jpg",
+  "/images/week1-eden-temptation.jpg",
+  "/images/week1-eden-shame.jpg",
+  "/images/week1-eden-exile-couple.jpg",
+  "/images/week1-hero-cinematic.png",
+] as const;
+
+const scriptureThumbnails = [
+  "/images/week1-story-creation.png",
+  "/images/week1-image-bearers.webp",
+  "/images/week1-eden-vocation.jpg",
+  "/images/week1-eden-temptation.jpg",
+  "/images/week1-roadmap-rupture.png",
+  "/images/week1-eden-exile-couple.jpg",
+  "/images/week1-east-of-eden.webp",
+  "/images/week1-hero-cinematic.png",
+] as const;
+
+function nextThumbnail(next: ResumeTarget) {
+  const index = Math.max(0, next.index ?? 0);
+  if (next.screen === "complete") return "/images/week1-hero-reference-v3-hd.png";
+  if (next.key === "lesson") return lessonThumbnails[Math.min(index, lessonThumbnails.length - 1)];
+  if (next.key === "scripture") return scriptureThumbnails[Math.min(index, scriptureThumbnails.length - 1)];
+  if (next.key === "place") return "/images/place-01-creation-v24.webp";
+  if (next.key === "fill") return "/images/source-01.jpg";
+  if (next.key === "connect") return "/images/week1-cinematic-master-v4.webp";
+  if (next.key === "unlock") return "/images/week1-east-of-eden.webp";
+  return `/images/week1-deep-day-${String(Math.min(index + 1, 7)).padStart(2, "0")}.jpg`;
+}
 
 const unitIcons = {
   lesson: BookOpen,
@@ -150,15 +184,16 @@ export default function TodayExperience() {
           </section>
 
           <section className={styles.continueCard}>
-            <div className={styles.continueIcon}>{tracking.weekComplete ? <Check /> : <RefreshCw />}</div>
+            <div className={styles.continueThumbnail}>
+              <Image src={nextThumbnail(tracking.next)} alt="" fill sizes="58px" />
+            </div>
             <div className={styles.continueCopy}>
               <span>{tracking.next.eyebrow}</span>
               <h2>{tracking.next.title}</h2>
               <p>{tracking.next.detail}</p>
             </div>
             <button type="button" onClick={continueCourse}>
-              {tracking.weekComplete ? "Review Week 01" : "Continue where you stopped"}
-              <ChevronRight />
+              {tracking.weekComplete ? "Review" : "Continue"}
             </button>
           </section>
 

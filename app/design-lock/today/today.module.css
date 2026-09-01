@@ -184,26 +184,32 @@
 
 .continueCard {
   margin-top: 12px;
-  padding: 16px;
+  padding: 12px;
   display: grid;
-  grid-template-columns: 42px 1fr;
-  gap: 13px;
+  grid-template-columns: 58px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
   border: 1px solid var(--line);
   border-radius: 15px;
   background: #fff;
 }
 
-.continueIcon {
-  width: 42px;
-  height: 42px;
-  display: grid;
-  place-items: center;
-  border-radius: 10px;
+.continueThumbnail {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  overflow: hidden;
+  border-radius: 11px;
   background: var(--card-strong);
-  color: var(--ink);
 }
 
-.continueIcon svg { width: 19px; height: 19px; }
+.continueThumbnail img {
+  object-fit: cover;
+}
+
+.continueCopy {
+  min-width: 0;
+}
 
 .continueCopy span {
   color: var(--ink);
@@ -213,11 +219,12 @@
 }
 
 .continueCopy h2 {
-  margin: 4px 0 2px;
+  margin: 3px 0 2px;
   color: var(--ink);
-  font-size: 19px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: -.025em;
+  line-height: 1.15;
 }
 
 .continueCopy p {
@@ -228,24 +235,18 @@
 }
 
 .continueCard > button {
-  grid-column: 1 / -1;
-  height: 48px;
-  margin-top: 3px;
-  padding: 0 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  min-width: 86px;
+  height: 40px;
+  padding: 0 17px;
   border: 0;
-  border-radius: 11px;
+  border-radius: 999px;
   background: #0e0e0d;
   color: #fff;
   font: inherit;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 650;
   cursor: pointer;
 }
-
-.continueCard > button svg { width: 18px; }
 
 .planSection { margin-top: 21px; }
 
