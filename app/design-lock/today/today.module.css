@@ -39,7 +39,7 @@
 .header span {
   display: block;
   color: var(--gold);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 730;
   letter-spacing: .15em;
 }
@@ -56,7 +56,7 @@
 .header time {
   padding-bottom: 2px;
   color: var(--ink);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 650;
   letter-spacing: .08em;
 }
@@ -103,7 +103,7 @@
   display: block;
   margin-bottom: 7px;
   color: #fff;
-  font-size: 7px;
+  font-size: 10px;
   font-weight: 740;
   letter-spacing: .16em;
 }
@@ -111,7 +111,7 @@
 .heroCopy h2 {
   margin: 0;
   color: #fff;
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 720;
   letter-spacing: -.035em;
   line-height: 1;
@@ -121,7 +121,7 @@
   max-width: 220px;
   margin: 7px 0 0;
   color: rgba(255, 255, 255, .9);
-  font-size: 9px;
+  font-size: 13px;
   line-height: 1.4;
 }
 
@@ -144,7 +144,7 @@
   display: block;
   margin-bottom: 5px;
   color: var(--gold);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 720;
   letter-spacing: .14em;
 }
@@ -152,7 +152,7 @@
 .weekTop h2 {
   margin: 0;
   color: var(--ink);
-  font-size: 20px;
+  font-size: 19px;
   font-weight: 710;
   letter-spacing: -.03em;
 }
@@ -181,23 +181,23 @@
 
 .weekCard > small {
   color: var(--ink);
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .continueCard {
   margin-top: 12px;
   padding: 16px;
   display: grid;
-  grid-template-columns: 37px 1fr;
-  gap: 11px;
+  grid-template-columns: 42px 1fr;
+  gap: 13px;
   border: 1px solid var(--line);
   border-radius: 15px;
   background: #fff;
 }
 
 .continueIcon {
-  width: 37px;
-  height: 37px;
+  width: 42px;
+  height: 42px;
   display: grid;
   place-items: center;
   border-radius: 10px;
@@ -205,11 +205,11 @@
   color: var(--gold);
 }
 
-.continueIcon svg { width: 17px; height: 17px; }
+.continueIcon svg { width: 19px; height: 19px; }
 
 .continueCopy span {
   color: var(--gold);
-  font-size: 7px;
+  font-size: 10px;
   font-weight: 730;
   letter-spacing: .13em;
 }
@@ -217,7 +217,7 @@
 .continueCopy h2 {
   margin: 4px 0 2px;
   color: var(--ink);
-  font-size: 17px;
+  font-size: 19px;
   font-weight: 700;
   letter-spacing: -.025em;
 }
@@ -225,12 +225,13 @@
 .continueCopy p {
   margin: 0;
   color: var(--ink);
-  font-size: 9px;
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 .continueCard > button {
   grid-column: 1 / -1;
-  height: 42px;
+  height: 48px;
   margin-top: 3px;
   padding: 0 14px;
   display: flex;
@@ -241,19 +242,19 @@
   background: #0e0e0d;
   color: #fff;
   font: inherit;
-  font-size: 11px;
+  font-size: 15px;
   font-weight: 650;
   cursor: pointer;
 }
 
-.continueCard > button svg { width: 15px; }
+.continueCard > button svg { width: 18px; }
 
 .planSection { margin-top: 21px; }
 
 .sectionHeading h2 {
   margin: 0;
   color: var(--ink);
-  font-size: 17px;
+  font-size: 21px;
   font-weight: 700;
   letter-spacing: -.025em;
 }
@@ -261,8 +262,8 @@
 .sectionHeading p {
   margin: 4px 0 0;
   color: var(--ink);
-  font-size: 8px;
-  line-height: 1.35;
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .filters {
@@ -276,14 +277,14 @@
 }
 
 .filters button {
-  min-height: 31px;
+  min-height: 38px;
   padding: 0 7px;
   border: 0;
   border-radius: 8px;
   background: transparent;
   color: var(--ink);
   font: inherit;
-  font-size: 8px;
+  font-size: 12px;
   font-weight: 650;
   cursor: pointer;
 }
@@ -300,10 +301,10 @@
 
 .unit {
   width: 100%;
-  min-height: 58px;
-  padding: 8px 11px;
+  min-height: 74px;
+  padding: 11px 12px;
   display: grid;
-  grid-template-columns: 35px 1fr auto 13px;
+  grid-template-columns: 42px 1fr auto 16px;
   align-items: center;
   gap: 9px;
   border: 1px solid var(--line);
@@ -316,8 +317,8 @@
 }
 
 .unitIcon {
-  width: 35px;
-  height: 35px;
+  width: 42px;
+  height: 42px;
   display: grid;
   place-items: center;
   border-radius: 10px;
@@ -325,13 +326,13 @@
   color: var(--gold);
 }
 
-.unitIcon svg { width: 15px; height: 15px; }
+.unitIcon svg { width: 18px; height: 18px; }
 .unitIcon.done { background: #fff; color: var(--ink); }
 
 .unitCopy strong {
   display: block;
   color: var(--ink);
-  font-size: 10px;
+  font-size: 15px;
   font-weight: 680;
 }
 
@@ -339,16 +340,17 @@
   display: block;
   margin-top: 2px;
   color: var(--ink);
-  font-size: 8px;
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .unitState {
   color: var(--ink);
-  font-size: 7px;
+  font-size: 10px;
   font-weight: 650;
 }
 
-.endIcon { width: 12px; height: 12px; color: var(--ink); }
+.endIcon { width: 16px; height: 16px; color: var(--ink); }
 
 .emptyState {
   min-height: 104px;
@@ -362,8 +364,8 @@
 }
 
 .emptyState > svg { width: 18px; color: var(--gold); }
-.emptyState strong { margin-top: 7px; color: var(--ink); font-size: 10px; }
-.emptyState p { max-width: 230px; margin: 4px 0 0; color: var(--ink); font-size: 8px; line-height: 1.4; }
+.emptyState strong { margin-top: 7px; color: var(--ink); font-size: 15px; }
+.emptyState p { max-width: 270px; margin: 5px 0 0; color: var(--ink); font-size: 12px; line-height: 1.45; }
 
 .lowerGrid {
   margin: 12px 0 4px;
@@ -372,8 +374,8 @@
 }
 
 .lowerGrid article {
-  min-height: 61px;
-  padding: 12px;
+  min-height: 78px;
+  padding: 15px;
   display: grid;
   grid-template-columns: 24px 1fr;
   gap: 9px;
@@ -383,10 +385,10 @@
   color: var(--ink);
 }
 
-.lowerGrid article > svg { width: 17px; color: var(--gold); }
-.lowerGrid small { display: block; color: var(--gold); font-size: 7px; font-weight: 720; letter-spacing: .11em; }
-.lowerGrid strong { display: block; margin-top: 3px; color: var(--ink); font-size: 10px; }
-.lowerGrid p { margin: 2px 0 0; color: var(--ink); font-size: 8px; line-height: 1.35; }
+.lowerGrid article > svg { width: 19px; color: var(--gold); }
+.lowerGrid small { display: block; color: var(--gold); font-size: 10px; font-weight: 720; letter-spacing: .11em; }
+.lowerGrid strong { display: block; margin-top: 4px; color: var(--ink); font-size: 15px; }
+.lowerGrid p { margin: 3px 0 0; color: var(--ink); font-size: 12px; line-height: 1.4; }
 
 .bottomNav {
   position: absolute;
@@ -415,9 +417,9 @@
 }
 
 .navItem svg,
-.navActive svg { width: 18px; height: 18px; stroke-width: 1.65; }
+.navActive svg { width: 21px; height: 21px; stroke-width: 1.65; }
 .navItem span,
-.navActive span { color: currentColor; font-size: 7px; font-weight: 620; }
+.navActive span { color: currentColor; font-size: 10px; font-weight: 620; }
 .navActive { color: var(--gold); }
 
 @media (min-width: 481px) {
