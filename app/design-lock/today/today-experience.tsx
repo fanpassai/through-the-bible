@@ -35,7 +35,7 @@ import {
 import styles from "./today.module.css";
 
 const lessonThumbnails = [
-  "/images/week1-story-creation.png",
+  "/images/week1-subject-01-pop.png",
   "/images/week1-creation-sea.jpg",
   "/images/week1-eden-couple.jpg",
   "/images/week1-eden-vocation.jpg",
@@ -138,6 +138,16 @@ export default function TodayExperience() {
     if (filter === "next") return unit.status === "up-next";
     return unit.status === "current" || unit.status === "in-progress";
   });
+  const filterCounts = {
+    progress: tracking.units.filter((unit) => unit.status === "current" || unit.status === "in-progress").length,
+    next: tracking.units.filter((unit) => unit.status === "up-next").length,
+    complete: tracking.units.filter((unit) => unit.status === "complete").length,
+  };
+  const filterExplanation = filter === "progress"
+    ? "Started or ready now. Continue from the exact point where you stopped."
+    : filter === "next"
+      ? "Required course sections waiting in order. Finish the active section to move forward."
+      : "Every required item in these sections is finished and recorded.";
 
   function continueCourse() {
     window.sessionStorage.setItem(WEEK_ONE_RESUME_KEY, JSON.stringify(tracking.next));
@@ -203,16 +213,23 @@ export default function TodayExperience() {
             </div>
 
             <div className={styles.filters} role="tablist" aria-label="Filter course requirements">
-              <button className={filter === "progress" ? styles.filterActive : ""} onClick={() => setFilter("progress")} type="button">In Progress</button>
-              <button className={filter === "next" ? styles.filterActive : ""} onClick={() => setFilter("next")} type="button">Up Next</button>
-              <button className={filter === "complete" ? styles.filterActive : ""} onClick={() => setFilter("complete")} type="button">Completed</button>
+              <button className={filter === "progress" ? styles.filterActive : ""} onClick={() => setFilter("progress")} type="button"><span>In Progress</span><small>{filterCounts.progress}</small></button>
+              <button className={filter === "next" ? styles.filterActive : ""} onClick={() => setFilter("next")} type="button"><span>Up Next</span><small>{filterCounts.next}</small></button>
+              <button className={filter === "complete" ? styles.filterActive : ""} onClick={() => setFilter("complete")} type="button"><span>Completed</span><small>{filterCounts.complete}</small></button>
             </div>
+            <p className={styles.filterExplanation}>{filterExplanation}</p>
 
             <div className={styles.unitList}>
               {visibleUnits.length ? visibleUnits.map((unit) => {
                 const Icon = unitIcons[unit.key];
                 return (
-                  <button type="button" className={styles.unit} key={unit.key} onClick={unit.status === "complete" ? undefined : continueCourse}>
+                  <button
+                    type="button"
+                    className={styles.unit}
+                    key={unit.key}
+                    onClick={unit.status === "current" || unit.status === "in-progress" ? continueCourse : undefined}
+                    disabled={unit.status === "up-next" || unit.status === "complete"}
+                  >
                     <span className={[styles.unitIcon, unit.status === "complete" ? styles.done : ""].join(" ")}>
                       {unit.status === "complete" ? <Check /> : <Icon />}
                     </span>
