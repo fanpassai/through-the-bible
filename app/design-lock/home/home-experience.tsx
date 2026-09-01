@@ -15,11 +15,11 @@ import {
 import styles from "./home.module.css";
 
 const nav = [
-  { label: "Home", icon: Home, active: true },
-  { label: "Today", icon: CalendarDays },
-  { label: "Study", icon: BookOpen },
-  { label: "My Bible", icon: Library },
-  { label: "Profile", icon: UserRound },
+  { label: "Home", icon: Home, href: "/design-lock/home", active: true },
+  { label: "Today", icon: CalendarDays, href: "/design-lock/today" },
+  { label: "Study", icon: BookOpen, href: "#" },
+  { label: "My Bible", icon: Library, href: "#" },
+  { label: "Profile", icon: UserRound, href: "#" },
 ];
 
 export default function HomeExperience() {
@@ -74,11 +74,11 @@ export default function HomeExperience() {
         </div>
 
         <nav className={styles.bottomNav} aria-label="Main navigation">
-          {nav.map(({ label, icon: Icon, active }) => (
-            <button type="button" className={active ? styles.navActive : styles.navItem} key={label}>
+          {nav.map(({ label, icon: Icon, href, active }) => (
+            <Link href={href} className={active ? styles.navActive : styles.navItem} key={label}>
               <Icon aria-hidden="true" />
               <span>{label}</span>
-            </button>
+            </Link>
           ))}
         </nav>
       </section>

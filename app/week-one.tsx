@@ -12,6 +12,7 @@ import lesson from "./week1-data.json";
 import { useStudyAccount } from "./study-account";
 import { announceStudyUpdate, mergePortfolios, PERSONAL_STORAGE_KEY } from "@/lib/study-progress";
 import type { ScriptureMark, ScriptureReading, ScriptureSelection, StudyActivityEvent, StudyActivityType, StudyPortfolio } from "@/lib/study-types";
+import { WEEK_ONE_RESUME_KEY, type ResumeTarget } from "@/lib/week-one-tracking";
 
 type ToolName = "place" | "fill" | "connect" | "unlock";
 type StudyDockName = ToolName | "deep";
@@ -348,6 +349,32 @@ export default function WeekOne({ onCourseHome, initialOpenStudy = false }: { on
     const timer = window.setTimeout(() => savePortfolio(portfolio).catch(() => undefined), 700);
     return () => window.clearTimeout(timer);
   }, [ready, user, state.deepCompleted, state.deepNotes, state.deepReflections, state.scriptureTools, state.readingHistory, state.activityEvents, savePortfolio]);
+
+  useEffect(() => {
+    if (!ready) return;
+    const timer = window.setTimeout(() => {
+      try {
+        const target = JSON.parse(sessionStorage.getItem(WEEK_ONE_RESUME_KEY) || "null") as ResumeTarget | null;
+        if (!target?.screen) return;
+        sessionStorage.removeItem(WEEK_ONE_RESUME_KEY);
+        if (target.screen === "scripture") {
+          openScripture(target.title);
+          return;
+        }
+        const allowed: Screen[] = ["story", "place", "fill", "connect", "unlock", "deep", "complete"];
+        if (!allowed.includes(target.screen as Screen)) return;
+        if (target.screen === "story" && typeof target.index === "number") setStoryIndex(Math.max(0, Math.min(STORY.length - 1, target.index)));
+        if (target.screen === "fill" && typeof target.index === "number") setFillIndex(Math.max(0, Math.min(FILL.length - 1, target.index)));
+        if (target.screen === "deep" && typeof target.index === "number") setDeepDay(Math.max(0, Math.min(DEEP_DAYS.length - 1, target.index)));
+        navigate(target.screen as Screen);
+      } catch {
+        sessionStorage.removeItem(WEEK_ONE_RESUME_KEY);
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
+  // The resume target is intentionally consumed once, after saved course state has loaded.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready]);
 
   const progress = useMemo(() => {
     const story = state.started ? ((Math.max(state.story, 0) + 1) / STORY.length) * 20 : 0;

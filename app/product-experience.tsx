@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   ArrowLeft, ArrowRight, Award, BookMarked, BookOpen, Bookmark, CalendarDays,
-  Check, ChevronRight, CircleHelp, Compass, Flame, Highlighter, Home, Mail,
+  ChevronRight, CircleHelp, Compass, Flame, Highlighter, Home, Mail,
   Map, NotebookPen, Search, ShieldCheck, Sparkles, Underline, UserRound,
 } from "lucide-react";
 import CourseExperience from "./course-experience";
@@ -32,6 +32,15 @@ export default function ProductExperience() {
   const { user, loading } = useStudyAccount();
   const [stage, setStage] = useState<Stage>("launch");
   const [openStudyOnEntry, setOpenStudyOnEntry] = useState(false);
+
+  useEffect(() => {
+    if (loading) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("resume") !== "week1") return;
+    window.history.replaceState({}, "", window.location.pathname);
+    const timer = window.setTimeout(() => setStage("week1"), 0);
+    return () => window.clearTimeout(timer);
+  }, [loading]);
 
   function enter() { if (!loading) setStage(user ? "home" : "auth"); }
   function openWeek(study = false) { setOpenStudyOnEntry(study); setStage("week1"); }
@@ -150,7 +159,7 @@ function MyBibleScreen({ portfolio, stats, openWeek }: { portfolio: StudyPortfol
   const savedCount = marks.filter(m => m.bookmark).length;
   const notes = marks.filter(m => m.notes?.trim()).map(m => m.notes!.trim()).slice(0,3);
   const rows = [[Highlighter,"Highlights",highlightCount],[Underline,"Underlined",underlineCount],[NotebookPen,"My Notes",stats.notes],[CircleHelp,"Questions I Asked",stats.questions],[Bookmark,"Saved Scriptures",savedCount],[Search,"Word Studies",0]] as const;
-  return <div className="ttb-page"><div className="ttb-screen-title"><small>EVERYTHING YOU'VE KEPT</small><h1 className="ttb-serif">My Bible</h1></div><div className="ttb-library-counts">{rows.map(([Icon,label,count]) => <button className="ttb-library-card" key={label} onClick={() => openWeek(true)}><span><Icon /></span><span><b>{label}</b><small>Week 01 saved study</small></span><strong>{count}</strong></button>)}</div><div className="ttb-section-head"><h2>Recent notes</h2></div>{notes.length ? notes.map((note,i) => <article className="ttb-saved-note" key={i}><small>WEEK 01 · GENESIS</small><p>{note}</p></article>) : <div className="ttb-empty">Your notes will collect here as you read. Open a Scripture, select what arrests your attention, and save the thought you want to carry with you.</div>}</div>;
+  return <div className="ttb-page"><div className="ttb-screen-title"><small>EVERYTHING YOU&apos;VE KEPT</small><h1 className="ttb-serif">My Bible</h1></div><div className="ttb-library-counts">{rows.map(([Icon,label,count]) => <button className="ttb-library-card" key={label} onClick={() => openWeek(true)}><span><Icon /></span><span><b>{label}</b><small>Week 01 saved study</small></span><strong>{count}</strong></button>)}</div><div className="ttb-section-head"><h2>Recent notes</h2></div>{notes.length ? notes.map((note,i) => <article className="ttb-saved-note" key={i}><small>WEEK 01 · GENESIS</small><p>{note}</p></article>) : <div className="ttb-empty">Your notes will collect here as you read. Open a Scripture, select what arrests your attention, and save the thought you want to carry with you.</div>}</div>;
 }
 
 function ProfileScreen({ name, stats, openAccount }: { name: string; stats: ReturnType<typeof getWeeklyStudyStats>; openAccount: () => void }) {
