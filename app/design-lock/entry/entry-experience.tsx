@@ -48,7 +48,11 @@ export default function EntryExperience() {
     event.preventDefault();
     const supabase = getSupabaseBrowserClient();
     const normalizedEmail = email.trim();
-    if (!supabase || !normalizedEmail) return;
+    if (!normalizedEmail) return;
+    if (!supabase) {
+      setMessage("Secure sign-in will activate when this review is promoted to the configured environment.");
+      return;
+    }
     setSending(true);
     setMessage("");
     const callback = new URL("/auth/callback", window.location.origin);
@@ -156,12 +160,11 @@ export default function EntryExperience() {
                       onChange={(event) => setEmail(event.target.value)}
                       required
                     />
-                    <button className={styles.primaryAction} type="submit" disabled={!configured || !email.trim() || sending}>
+                    <button className={styles.primaryAction} type="submit" disabled={!email.trim() || sending}>
                       <span>{sending ? "Sending your link…" : "Email me a secure link"}</span><ArrowRight />
                     </button>
                   </form>
                   {message && <p className={styles.errorMessage} role="alert">{message}</p>}
-                  {!configured && <p className={styles.errorMessage}>Secure sign-in is awaiting its environment connection.</p>}
                 </div>
               </>
             )}

@@ -49,18 +49,18 @@
 
 .signIn { z-index: 1; display: flex; flex-direction: column; background: var(--paper); opacity: 0; transform: translateY(16px); transition: opacity 400ms ease 110ms, transform 500ms cubic-bezier(.22,.75,.24,1) 80ms; pointer-events: none; }
 .signInVisible { z-index: 3; opacity: 1; transform: translateY(0); pointer-events: auto; }
-.signInHeader { min-height: 92px; padding: max(22px,env(safe-area-inset-top)) 22px 12px; display: grid; grid-template-columns: 42px 1fr 42px; align-items: center; border-bottom: 1px solid var(--line); }
+.signInHeader { min-height: 84px; padding: max(18px,env(safe-area-inset-top)) 22px 10px; display: grid; grid-template-columns: 42px 1fr 42px; align-items: center; border-bottom: 1px solid var(--line); }
 .signInHeader > button { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: var(--card); color: var(--ink); cursor: pointer; }
 .signInHeader > button svg { width: 19px; }
 .signInHeader .brandCompact { justify-self: center; }
-.signInBody { flex: 1; min-height: 0; padding: clamp(46px,8svh,76px) 26px 22px; display: flex; flex-direction: column; }
+.signInBody { flex: 1; min-height: 0; padding: 26px 26px 22px; display: flex; flex-direction: column; justify-content: center; }
 
 .eyebrow { margin: 0; color: var(--gold); font-size: 10px; font-weight: 650; letter-spacing: .15em; text-transform: uppercase; }
 .introCopy h1,.welcomeBack h1,.linkSent h1 { margin: 12px 0 14px; max-width: 350px; font-size: clamp(39px,10.5vw,47px); font-weight: 680; letter-spacing: -.052em; line-height: .98; }
 .introCopy > p:last-child,.welcomeBack > p:last-of-type,.linkSent > p { max-width: 350px; margin: 0; color: var(--muted); font-size: 15px; line-height: 1.55; }
 .introCopy strong,.welcomeBack strong,.linkSent strong { color: var(--ink); }
 
-.authArea { margin-top: auto; }
+.authArea { margin-top: clamp(38px,5.5svh,54px); padding: 18px; border: 1px solid var(--line); border-radius: 17px; background: var(--card); }
 .googleButton,.primaryAction { width: 100%; height: 52px; padding: 0 15px; display: flex; align-items: center; justify-content: space-between; border-radius: 13px; font: inherit; font-size: 13px; font-weight: 620; text-decoration: none; cursor: pointer; }
 .googleButton { border: 1px solid var(--line); background: var(--card); color: var(--ink); }
 .googleButton b { width: 20px; color: var(--gold); font-size: 17px; }
@@ -68,13 +68,13 @@
 .divider { margin: 13px 0; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; color: var(--muted); font-size: 9px; font-weight: 550; letter-spacing: .08em; text-transform: uppercase; }
 .divider span { height: 1px; background: var(--line); }
 .authArea label { display: block; margin-bottom: 7px; color: var(--muted); font-size: 10px; font-weight: 620; letter-spacing: .09em; text-transform: uppercase; }
-.authArea input { width: 100%; height: 52px; padding: 0 15px; border: 1px solid var(--line); border-radius: 13px; outline: none; background: var(--card); color: var(--ink); font: inherit; font-size: 15px; transition: border-color 180ms ease, box-shadow 180ms ease; }
+.authArea input { width: 100%; height: 52px; padding: 0 15px; border: 1px solid var(--line); border-radius: 12px; outline: none; background: var(--paper); color: var(--ink); font: inherit; font-size: 15px; transition: border-color 180ms ease, box-shadow 180ms ease; }
 .authArea input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-soft); }
 .primaryAction { margin-top: 11px; border: 0; background: var(--action); color: var(--card); }
 .primaryAction:disabled { opacity: .45; cursor: not-allowed; }
 .errorMessage { margin: 10px 2px 0; color: var(--ink); font-size: 11px; line-height: 1.45; }
 
-.privacy { min-height: 68px; padding: 13px 26px max(13px,env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 11px; border-top: 1px solid var(--line); color: var(--muted); }
+.privacy { min-height: 66px; padding: 12px 26px max(12px,env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 11px; border-top: 1px solid var(--line); color: var(--muted); }
 .privacy svg { width: 18px; color: var(--gold); }
 .privacy span { display: grid; gap: 2px; }
 .privacy strong { color: var(--ink); font-size: 10px; font-weight: 650; }
@@ -96,10 +96,11 @@
 }
 
 @media (max-height: 720px) {
-  .signInBody { padding-top: 30px; }
+  .signInBody { justify-content: flex-start; padding-top: 28px; overflow-y: auto; }
   .introCopy h1,.welcomeBack h1,.linkSent h1 { font-size: 37px; }
   .openingBrand { top: 92px; }
   .privacy { min-height: 58px; }
+  .authArea { margin-top: 30px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
