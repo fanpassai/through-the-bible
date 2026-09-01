@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   BookOpen,
   Bookmark,
@@ -121,12 +122,27 @@ export default function TodayExperience() {
         </header>
 
         <div className={styles.content}>
+          <section className={styles.hero} aria-label="Week 01 course focus">
+            <Image
+              src="/images/today-week-01-hero.webp"
+              alt="A river winding through a wide valley at sunrise"
+              fill
+              priority
+              sizes="(max-width: 430px) 100vw, 390px"
+            />
+            <span className={styles.heroShade} aria-hidden="true" />
+            <div className={styles.heroCopy}>
+              <span>WEEK 01 · TODAY&apos;S COURSE</span>
+              <h2>The Beginning</h2>
+              <p>Creation, the Fall and the First Promise</p>
+            </div>
+          </section>
+
           <section className={styles.weekCard}>
             <div className={styles.weekTop}>
-              <div><span>WEEK 01</span><h2>The Beginning</h2></div>
+              <div><span>COURSE PROGRESS</span><h2>Your Week 01 record</h2></div>
               <strong>{tracking.percentage}%</strong>
             </div>
-            <p>Creation, the Fall and the First Promise</p>
             <div className={styles.progress} aria-label={tracking.percentage + "% of Week 01 complete"}>
               <span style={{ width: Math.max(tracking.percentage, 2) + "%" }} />
             </div>
