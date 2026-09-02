@@ -291,6 +291,12 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
     return () => document.removeEventListener("selectionchange", handleSelectionChange);
   }, [reference]);
 
+  useEffect(() => {
+    if (!toolMessage || pendingSelection) return;
+    const timer = window.setTimeout(() => setToolMessage(""), 1800);
+    return () => window.clearTimeout(timer);
+  }, [toolMessage, pendingSelection]);
+
   function verseElementFromNode(node: Node | null) {
     const article = articleRef.current;
     const element = node instanceof Element ? node : node?.parentElement;
