@@ -17,8 +17,8 @@ import styles from "./home.module.css";
 const nav = [
   { label: "Home", icon: Home, href: "/design-lock/home", active: true },
   { label: "Today", icon: CalendarDays, href: "/design-lock/today" },
-  { label: "Study", icon: BookOpen, href: "#" },
-  { label: "My Bible", icon: Library, href: "#" },
+  { label: "Study", icon: BookOpen, href: "/design-lock/lesson" },
+  { label: "My Bible", icon: Library, href: "/?resume=week1" },
   { label: "Profile", icon: UserRound, href: "#" },
 ];
 
@@ -46,7 +46,7 @@ export default function HomeExperience() {
               <strong>60%</strong>
             </div>
             <div className={styles.time}><Clock3 aria-hidden="true" /><span>12 min remaining today</span></div>
-            <Link href="/" className={styles.continueButton}>Continue Reading</Link>
+            <Link href="/design-lock/today" className={styles.continueButton}>Continue Reading</Link>
           </section>
 
           <div className={styles.sectionHeading}>
@@ -55,21 +55,21 @@ export default function HomeExperience() {
           </div>
 
           <section className={styles.todayList} aria-label="Today's study activities">
-            <button type="button" className={styles.activity}>
+            <Link href="/design-lock/today" className={styles.activity}>
               <span className={styles.icon}><Bookmark /></span>
               <span><strong>Daily Reading</strong><small>Genesis 12–15</small></span>
               <ChevronRight className={styles.chevron} />
-            </button>
-            <button type="button" className={styles.activity}>
+            </Link>
+            <Link href="/design-lock/today" className={styles.activity}>
               <span className={styles.icon}><Heart /></span>
               <span><strong>Devotional</strong><small>A Promise for Generations</small></span>
               <ChevronRight className={styles.chevron} />
-            </button>
-            <button type="button" className={styles.activity}>
+            </Link>
+            <Link href="/design-lock/today" className={styles.activity}>
               <span className={styles.icon}><Check /></span>
               <span><strong>Review</strong><small>2 passages to review</small></span>
               <ChevronRight className={styles.chevron} />
-            </button>
+            </Link>
           </section>
         </div>
 

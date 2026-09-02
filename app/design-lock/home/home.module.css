@@ -206,6 +206,7 @@
   border-bottom: 1px solid var(--line);
   background: transparent;
   color: var(--ink);
+  text-decoration: none;
   text-align: left;
   font: inherit;
   cursor: pointer;

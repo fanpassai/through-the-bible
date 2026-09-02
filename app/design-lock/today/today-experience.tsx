@@ -81,8 +81,8 @@ const unitIcons = {
 const nav = [
   { label: "Home", icon: Home, href: "/design-lock/home" },
   { label: "Today", icon: CalendarDays, href: "/design-lock/today", active: true },
-  { label: "Study", icon: BookOpen, href: "#" },
-  { label: "My Bible", icon: Library, href: "#" },
+  { label: "Study", icon: BookOpen, href: "/design-lock/lesson" },
+  { label: "My Bible", icon: Library, href: "/?resume=week1" },
   { label: "Profile", icon: UserRound, href: "#" },
 ];
 
@@ -151,7 +151,7 @@ export default function TodayExperience() {
 
   function continueCourse() {
     window.sessionStorage.setItem(WEEK_ONE_RESUME_KEY, JSON.stringify(tracking.next));
-    window.location.assign("/?resume=week1");
+    window.location.assign("/design-lock/lesson");
   }
 
   return (

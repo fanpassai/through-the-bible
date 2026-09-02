@@ -3,12 +3,11 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   ArrowLeft, ArrowRight, Award, BookMarked, BookOpen, Bookmark, CalendarDays,
-  Check, ChevronRight, CircleHelp, Clock3, Compass, Flame, Highlighter, Home, Mail,
-  Map, MoreHorizontal, NotebookPen, Pencil, PlayCircle, RotateCcw, Search,
-  ShieldCheck, Sparkles, Trash2, Underline, UserRound, X,
+  ChevronRight, CircleHelp, Compass, Flame, Highlighter, Home, Mail,
+  Map, MoreHorizontal, NotebookPen, Pencil, RotateCcw, Search, ShieldCheck,
+  Sparkles, Trash2, Underline, UserRound, X,
 } from "lucide-react";
 import CourseExperience from "./course-experience";
-import lesson from "./week1-data.json";
 import { useStudyAccount } from "./study-account";
 import {
   announceStudyUpdate,
@@ -19,12 +18,8 @@ import {
   STUDY_UPDATED_EVENT,
 } from "@/lib/study-progress";
 import type { ScriptureHighlightColor, StudyPortfolio } from "@/lib/study-types";
-import { getWeekOneTracking, readWeekOneSession, WEEK_ONE_RESUME_KEY, type ResumeTarget, type TrackingKey } from "@/lib/week-one-tracking";
 
-type Stage = "launch" | "auth" | "home" | "today" | "lesson" | "study" | "bible" | "profile" | "journey" | "week1";
-
-const WEEK_ONE_STORY = lesson.STORY as [string, string, string[], string, string][];
-const LESSON_ART = ["/images/week1-roadmap-creation.png","/images/week1-roadmap-image-bearers.png","/images/week1-roadmap-rupture.png","/images/week1-eden-exile-couple.jpg","/images/week1-creation-sea.jpg","/images/week1-eden-vocation.jpg","/images/week1-eden-shame.jpg","/images/week1-hero-reference-v2.png"] as const;
+type Stage = "launch" | "auth" | "home" | "today" | "study" | "bible" | "profile" | "journey" | "week1";
 
 type LibraryItem = {
   id: string;
@@ -66,15 +61,14 @@ export default function ProductExperience() {
   }, [loading]);
 
   function enter() { if (!loading) setStage(user ? "home" : "auth"); }
-  function openWeek(study = false) { setOpenStudyOnEntry(study); setStage("lesson"); }
-  function enterWeekOne(study = false) { setOpenStudyOnEntry(study); setStage("week1"); }
+  function openWeek(study = false) { setOpenStudyOnEntry(study); setStage("week1"); }
 
   if (stage === "launch") return <Launch loading={loading} onEnter={enter} />;
   if (stage === "auth" && !user) return <SignIn onBack={() => setStage("launch")} onPreview={() => setStage("home")} />;
   if (stage === "journey") return <CourseExperience initialView="intro" onProductHome={() => setStage("home")} />;
   if (stage === "week1") return <CourseExperience initialView="week1" initialOpenStudy={openStudyOnEntry} onProductHome={() => setStage("home")} />;
 
-  return <ProductShell stage={stage === "auth" ? "home" : stage} setStage={setStage} openWeek={openWeek} enterWeekOne={enterWeekOne} />;
+  return <ProductShell stage={stage === "auth" ? "home" : stage} setStage={setStage} openWeek={openWeek} />;
 }
 
 function Launch({ loading, onEnter }: { loading: boolean; onEnter: () => void }) {
@@ -119,7 +113,7 @@ function SignIn({ onBack, onPreview }: { onBack: () => void; onPreview: () => vo
   </section></main>;
 }
 
-function ProductShell({ stage, setStage, openWeek, enterWeekOne }: { stage: Stage; setStage: (stage: Stage) => void; openWeek: (study?: boolean) => void; enterWeekOne: (study?: boolean) => void }) {
+function ProductShell({ stage, setStage, openWeek }: { stage: Stage; setStage: (stage: Stage) => void; openWeek: (study?: boolean) => void }) {
   const { user, loadPortfolio, openAccount, savePortfolio } = useStudyAccount();
   const [portfolio, setPortfolio] = useState<StudyPortfolio>(() => readLocalPortfolio());
   const stats = useMemo(() => getWeeklyStudyStats(portfolio), [portfolio]);
@@ -145,11 +139,10 @@ function ProductShell({ stage, setStage, openWeek, enterWeekOne }: { stage: Stag
     if (user) savePortfolio(next).catch(() => undefined);
   }
 
-  const navStage = stage === "study" || stage === "bible" ? stage : stage === "profile" ? "profile" : stage === "today" || stage === "lesson" ? "today" : "home";
+  const navStage = stage === "study" || stage === "bible" ? stage : stage === "profile" ? "profile" : stage === "today" ? "today" : "home";
   return <main className="ttb-product"><section className="ttb-mobile">
     {stage === "home" && <HomeScreen name={name} stats={stats} openWeek={openWeek} setStage={setStage} openAccount={openAccount} />}
     {stage === "today" && <TodayScreen stats={stats} openWeek={openWeek} />}
-    {stage === "lesson" && <LessonOverviewScreen portfolio={portfolio} onBack={() => setStage("today")} enterWeekOne={enterWeekOne} />}
     {stage === "study" && <StudyScreen setStage={setStage} openWeek={openWeek} />}
     {stage === "bible" && <MyBibleScreen portfolio={portfolio} stats={stats} openWeek={openWeek} onPortfolioChange={persistPortfolio} />}
     {stage === "profile" && <ProfileScreen name={name} stats={stats} openAccount={openAccount} />}
@@ -173,33 +166,6 @@ function TodayScreen({ stats, openWeek }: { stats: ReturnType<typeof getWeeklySt
     <section className="ttb-today-hero"><div><small>GENESIS 1–3</small><h2 className="ttb-serif">In the beginning, everything had purpose.</h2></div></section>
     <p className="ttb-eyebrow">YOUR DAILY RHYTHM</p>
     <div className="ttb-daily-list"><Daily icon={BookOpen} title="Read" meta="Genesis 1–3" onClick={() => openWeek(false)} /><Daily icon={Sparkles} title="Reflect" meta="Intentional God · Daily devotional" onClick={() => openWeek(true)} /><Daily icon={NotebookPen} title="Review" meta={stats.progress ? `${stats.progress}% of Week 01 complete` : "Build the story in memory"} onClick={() => openWeek(false)} /></div>
-  </div>;
-}
-
-function LessonOverviewScreen({ portfolio, onBack, enterWeekOne }: { portfolio: StudyPortfolio; onBack: () => void; enterWeekOne: (study?: boolean) => void }) {
-  const tracking = useMemo(() => getWeekOneTracking(readWeekOneSession(), portfolio), [portfolio]);
-  const lessonUnit = tracking.units[0];
-  const currentSubject = Math.min(lessonUnit.completed, Math.max(0, WEEK_ONE_STORY.length - 1));
-  const unitIcons: Record<TrackingKey, typeof BookOpen> = { lesson: BookOpen, scripture: Bookmark, place: Map, fill: NotebookPen, connect: Compass, unlock: ShieldCheck, deeper: Sparkles };
-  function openTarget(target: ResumeTarget) { try { window.localStorage.setItem(WEEK_ONE_RESUME_KEY, JSON.stringify(target)); } catch {} enterWeekOne(false); }
-  function openStorySubject(index: number) { const subject = WEEK_ONE_STORY[index]; openTarget({ key: "lesson", eyebrow: index < lessonUnit.completed ? "REVIEW SUBJECT" : index === currentSubject ? "CONTINUE LESSON" : "OPEN SUBJECT", title: subject[1], detail: `Subject ${index + 1} of ${WEEK_ONE_STORY.length}`, screen: "story", index }); }
-  function openUnit(key: TrackingKey) {
-    if (tracking.next.key === key) return openTarget(tracking.next);
-    const unit = tracking.units.find((item) => item.key === key); if (!unit) return;
-    const screens: Record<TrackingKey,string> = { lesson: "story", scripture: "scripture", place: "place", fill: "fill", connect: "connect", unlock: "unlock", deeper: "deep" };
-    openTarget({ key, eyebrow: unit.completed >= unit.total ? "REVIEW COURSE WORK" : "OPEN COURSE WORK", title: unit.title, detail: unit.description, screen: screens[key], index: 0 });
-  }
-  return <div className="ttb-page ttb-lesson-page">
-    <header className="ttb-lesson-header"><button type="button" aria-label="Back to Today" onClick={onBack}><ArrowLeft /></button><span><small>WEEK 1</small><b>Lesson overview</b></span><i /></header>
-    <section className="ttb-lesson-hero"><img src="/images/week1-cinematic-master-v4.webp" alt="A vivid newly created landscape filled with light and life" /><span /><div><small>GENESIS 1–3</small><h1>The Beginning</h1><p>Creation, rupture and the first promise.</p></div></section>
-    <section className="ttb-lesson-progress"><div><span>COURSE PROGRESS</span><strong>{tracking.percentage}%</strong></div><h2>Your Week 1 record</h2><div className="ttb-lesson-progress-line"><i style={{ width: `${Math.max(tracking.percentage, 2)}%` }} /></div><p>{tracking.completed} of {tracking.total} required course steps complete</p></section>
-    <div className="ttb-lesson-section-title"><div><small>IN PROGRESS</small><h2>Continue where you stopped</h2></div></div>
-    <section className="ttb-continue-card"><img src={LESSON_ART[currentSubject]} alt="" aria-hidden="true" /><div><small>{tracking.next.eyebrow}</small><h3>{tracking.next.title}</h3><p>{tracking.next.detail}</p></div><button type="button" onClick={() => openTarget(tracking.next)}>Continue</button></section>
-    <div className="ttb-lesson-section-title"><div><small>THE LESSON</small><h2>Eight subjects. One unfolding story.</h2></div><p>Every subject must be finished before the lesson is marked complete.</p></div>
-    <div className="ttb-subject-list">{WEEK_ONE_STORY.map((subject,index) => { const complete=index<lessonUnit.completed; const current=!complete&&index===currentSubject; return <button type="button" className={current?"current":complete?"complete":""} onClick={() => openStorySubject(index)} key={subject[1]}><img src={LESSON_ART[index]} alt="" aria-hidden="true" /><span className="ttb-subject-copy"><small>{complete?"COMPLETED":current?"IN PROGRESS":"UP NEXT"} · SUBJECT {index+1}</small><b>{subject[1]}</b><em>{subject[4]}</em></span><span className="ttb-subject-state">{complete?<Check />:current?<PlayCircle />:<ChevronRight />}</span></button>; })}</div>
-    <div className="ttb-lesson-section-title"><div><small>COURSE WORK</small><h2>Practice what you learned.</h2></div><p>Your lesson is not complete until the required Scripture and study work are finished.</p></div>
-    <div className="ttb-coursework-list">{tracking.units.slice(1).map(unit => { const Icon=unitIcons[unit.key]; const complete=unit.completed>=unit.total; const current=tracking.next.key===unit.key; return <button type="button" className={current?"current":complete?"complete":""} onClick={() => openUnit(unit.key)} key={unit.key}><span className="ttb-coursework-icon">{complete?<Check />:<Icon />}</span><span><small>{complete?"COMPLETED":current?"IN PROGRESS":"UP NEXT"}</small><b>{unit.title}</b><em>{unit.description}</em></span><ChevronRight /></button>; })}</div>
-    <section className="ttb-next-lesson"><Clock3 /><div><small>NEXT LESSON</small><h2>Week 2 opens Friday at 7:00 AM.</h2><p>Finish Week 1 at your pace. Everything you save remains in My Bible.</p></div></section>
   </div>;
 }
 
