@@ -160,7 +160,7 @@ export function getWeekOneTracking(sessionValue: unknown, portfolio: StudyPortfo
     .map((event) => Number(event.detail?.question))
     .filter(Number.isFinite));
   const savedDiscoveryCount = Object.values(portfolio.scriptureTools || {}).filter((mark) =>
-    Boolean(mark.bookmark || mark.notes?.trim() || mark.question?.trim() || mark.selections?.length),
+    Boolean(mark.bookmark || mark.notes?.trim() || mark.question?.trim() || mark.selections?.length || mark.studyEntries?.length),
   ).length;
 
   return {

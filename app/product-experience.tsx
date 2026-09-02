@@ -153,13 +153,19 @@ function StudyScreen({ setStage, openWeek }: { setStage: (s: Stage) => void; ope
 }
 
 function MyBibleScreen({ portfolio, stats, openWeek }: { portfolio: StudyPortfolio; stats: ReturnType<typeof getWeeklyStudyStats>; openWeek: (study?: boolean) => void }) {
-  const marks = Object.values(portfolio.scriptureTools || {});
+  const markEntries = Object.entries(portfolio.scriptureTools || {});
+  const marks = markEntries.map(([, mark]) => mark);
   const highlightCount = marks.reduce((n, m) => n + (m.selections?.filter(s => s.type === "highlight").length || 0), 0);
   const underlineCount = marks.reduce((n, m) => n + (m.selections?.filter(s => s.type === "underline").length || 0), 0);
   const savedCount = marks.filter(m => m.bookmark).length;
-  const notes = marks.filter(m => m.notes?.trim()).map(m => m.notes!.trim()).slice(0,3);
+  const notes = markEntries.flatMap(([reference, mark]) => [
+    ...(mark.notes?.trim() ? [{ reference, body: mark.notes.trim(), quote: "", verse: "" }] : []),
+    ...(mark.studyEntries || [])
+      .filter((entry) => entry.type === "note" && entry.body.trim())
+      .map((entry) => ({ reference, body: entry.body.trim(), quote: entry.quote, verse: entry.verse || "" })),
+  ]).slice(0, 3);
   const rows = [[Highlighter,"Highlights",highlightCount],[Underline,"Underlined",underlineCount],[NotebookPen,"My Notes",stats.notes],[CircleHelp,"Questions I Asked",stats.questions],[Bookmark,"Saved Scriptures",savedCount],[Search,"Word Studies",0]] as const;
-  return <div className="ttb-page"><div className="ttb-screen-title"><small>EVERYTHING YOU&apos;VE KEPT</small><h1 className="ttb-serif">My Bible</h1></div><div className="ttb-library-counts">{rows.map(([Icon,label,count]) => <button className="ttb-library-card" key={label} onClick={() => openWeek(true)}><span><Icon /></span><span><b>{label}</b><small>Week 01 saved study</small></span><strong>{count}</strong></button>)}</div><div className="ttb-section-head"><h2>Recent notes</h2></div>{notes.length ? notes.map((note,i) => <article className="ttb-saved-note" key={i}><small>WEEK 01 · GENESIS</small><p>{note}</p></article>) : <div className="ttb-empty">Your notes will collect here as you read. Open a Scripture, select what arrests your attention, and save the thought you want to carry with you.</div>}</div>;
+  return <div className="ttb-page"><div className="ttb-screen-title"><small>EVERYTHING YOU&apos;VE KEPT</small><h1 className="ttb-serif">My Bible</h1></div><div className="ttb-library-counts">{rows.map(([Icon,label,count]) => <button className="ttb-library-card" key={label} onClick={() => openWeek(true)}><span><Icon /></span><span><b>{label}</b><small>Week 01 saved study</small></span><strong>{count}</strong></button>)}</div><div className="ttb-section-head"><h2>Recent notes</h2></div>{notes.length ? notes.map((note,i) => <article className="ttb-saved-note" key={`${note.reference}-${note.verse}-${i}`}><small>{note.reference}{note.verse ? ` · VERSE ${note.verse}` : ""}</small>{note.quote ? <blockquote>“{note.quote}”</blockquote> : null}<p>{note.body}</p></article>) : <div className="ttb-empty">Your notes will collect here as you read. Open a Scripture, select what arrests your attention, and save the thought you want to carry with you.</div>}</div>;
 }
 
 function ProfileScreen({ name, stats, openAccount }: { name: string; stats: ReturnType<typeof getWeeklyStudyStats>; openAccount: () => void }) {

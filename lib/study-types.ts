@@ -1,10 +1,27 @@
+export type ScriptureHighlightColor = "yellow" | "blue" | "red";
+
 export type ScriptureSelection = {
   id: string;
   type: "highlight" | "underline";
   quote: string;
   start: number;
   end: number;
+  scope?: "phrase" | "verse";
+  verse?: string;
+  color?: ScriptureHighlightColor;
   createdAt: string;
+};
+
+export type ScriptureStudyEntry = {
+  id: string;
+  type: "note" | "question";
+  quote: string;
+  start: number;
+  end: number;
+  verse?: string;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type ScriptureMark = {
@@ -14,6 +31,7 @@ export type ScriptureMark = {
   notes?: string;
   question?: string;
   selections?: ScriptureSelection[];
+  studyEntries?: ScriptureStudyEntry[];
 };
 
 export type ScriptureReading = {

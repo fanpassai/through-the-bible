@@ -120,6 +120,7 @@
 .ttb-library-card strong { font-size: 19px; font-family: 'Libre Caslon Display', Georgia, serif; }
 .ttb-saved-note { background: white; border: 1px solid var(--ttb-line); border-radius: 18px; padding: 17px; margin-top: 10px; }
 .ttb-saved-note small { color: var(--ttb-gold); font-size: 10px; font-weight: 700; }
+.ttb-saved-note blockquote { margin: 12px 0 0; padding: 10px 12px; border-left: 3px solid #151412; border-radius: 0 10px 10px 0; background: #f5f7f8; color: #353330; font-family: 'Libre Caslon Display', Georgia, serif; font-size: 15px; line-height: 1.5; }
 .ttb-saved-note p { margin: 9px 0 0; font-family: 'Libre Caslon Display', Georgia, serif; font-size: 18px; line-height: 1.45; }
 .ttb-empty { text-align: center; padding: 38px 20px; border: 1px dashed #d8d0c4; border-radius: 18px; color: var(--ttb-muted); font-size: 12px; line-height: 1.6; }
 

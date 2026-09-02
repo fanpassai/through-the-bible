@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type UIEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+  type UIEvent,
+} from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -24,9 +32,11 @@ import {
 } from "@/lib/study-progress";
 import {
   EMPTY_PORTFOLIO,
+  type ScriptureHighlightColor,
   type ScriptureMark,
   type ScriptureReading,
   type ScriptureSelection,
+  type ScriptureStudyEntry,
   type StudyActivityEvent,
   type StudyActivityType,
   type StudyPortfolio,
@@ -44,6 +54,8 @@ type SelectionDraft = {
   quote: string;
   start: number;
   end: number;
+  scope: "phrase" | "verse";
+  verse?: string;
 };
 
 const SCRIPTURES = lesson.SCRIPTURES as Record<string, Scripture>;
@@ -70,7 +82,12 @@ function keepActivity(events: StudyActivityEvent[], event: StudyActivityEvent) {
 function annotateScriptureHtml(
   html: string,
   annotations: ScriptureSelection[],
-  classNames: { selection: string; highlight: string; underline: string },
+  classNames: {
+    selection: string;
+    highlight: string;
+    underline: string;
+    highlightColors: Record<ScriptureHighlightColor, string>;
+  },
 ) {
   if (!annotations.length) return html;
   let offset = 0;
@@ -98,7 +115,12 @@ function annotateScriptureHtml(
       if (!active.length) return text;
 
       const classes = [classNames.selection];
-      if (active.some((item) => item.type === "highlight")) classes.push(classNames.highlight);
+      const highlights = active.filter((item) => item.type === "highlight");
+      if (highlights.length) {
+        const latest = highlights[highlights.length - 1];
+        classes.push(classNames.highlight);
+        classes.push(classNames.highlightColors[latest.color || "yellow"]);
+      }
       if (active.some((item) => item.type === "underline")) classes.push(classNames.underline);
       return '<span class="' + classes.join(" ") + '">' + text + "</span>";
     }).join("");
@@ -116,10 +138,15 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
   const [pendingSelection, setPendingSelection] = useState<SelectionDraft | null>(null);
   const [toolMessage, setToolMessage] = useState("");
   const [composer, setComposer] = useState<"notes" | "question" | null>(null);
+  const [composerSelection, setComposerSelection] = useState<SelectionDraft | null>(null);
+  const [composerText, setComposerText] = useState("");
+  const [highlightPicker, setHighlightPicker] = useState(false);
   const [largeText, setLargeText] = useState(false);
   const [reachedEnd, setReachedEnd] = useState(false);
   const articleRef = useRef<HTMLElement>(null);
   const selectionDraftRef = useRef<SelectionDraft | null>(null);
+  const pointerGestureRef = useRef<{ startedAt: number; verse?: string } | null>(null);
+  const lastVerseTapRef = useRef<{ at: number; verse: string } | null>(null);
   const cloudLoadedFor = useRef<string | null>(null);
   const openedFor = useRef<string | null>(null);
 
@@ -136,14 +163,22 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
         selection: styles.markSelection,
         highlight: styles.markHighlight,
         underline: styles.markUnderline,
+        highlightColors: {
+          yellow: styles.markYellow,
+          blue: styles.markBlue,
+          red: styles.markRed,
+        },
       },
     ),
     [scripture.html, mark.selections],
   );
 
   useEffect(() => {
-    setPortfolio(readLocalPortfolio());
-    setReady(true);
+    const timer = window.setTimeout(() => {
+      setPortfolio(readLocalPortfolio());
+      setReady(true);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -222,18 +257,31 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
 
       const range = selection.getRangeAt(0);
       if (!article.contains(range.commonAncestorContainer)) return;
-      const quote = selection.toString().trim();
+      const rawQuote = range.toString();
+      const quote = rawQuote.trim();
       if (quote.length < 2) return;
 
       const before = document.createRange();
       before.selectNodeContents(article);
       before.setEnd(range.startContainer, range.startOffset);
-      const start = before.toString().length;
-      const captured = {
+      const leadingSpace = rawQuote.length - rawQuote.trimStart().length;
+      const start = before.toString().length + leadingSpace;
+      const element = range.startContainer instanceof Element
+        ? range.startContainer
+        : range.startContainer.parentElement;
+      const verseElement = element?.closest(".scripture-line");
+      const captured: SelectionDraft = {
         quote,
         start,
-        end: start + selection.toString().length,
+        end: start + quote.length,
+        scope: "phrase",
+        verse: verseElement?.querySelector("sup")?.textContent?.trim() || undefined,
       };
+      const existing = selectionDraftRef.current;
+      if (existing && existing.start === captured.start && existing.end === captured.end && existing.quote === captured.quote) {
+        if (existing.scope === "verse") setPendingSelection(existing);
+        return;
+      }
       selectionDraftRef.current = captured;
       setPendingSelection(captured);
       setToolMessage("");
@@ -243,42 +291,162 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
     return () => document.removeEventListener("selectionchange", handleSelectionChange);
   }, [reference]);
 
+  function verseElementFromNode(node: Node | null) {
+    const article = articleRef.current;
+    const element = node instanceof Element ? node : node?.parentElement;
+    const verse = element?.closest(".scripture-line");
+    return article && verse && article.contains(verse) ? verse as HTMLElement : null;
+  }
+
+  function verseElementFromTarget(target: EventTarget | null) {
+    return target instanceof Node ? verseElementFromNode(target) : null;
+  }
+
+  function verseNumberFor(element: HTMLElement | null) {
+    return element?.querySelector("sup")?.textContent?.trim() || undefined;
+  }
+
+  function makeSelectionDraft(
+    range: Range,
+    scope: SelectionDraft["scope"],
+    verseOverride?: string,
+  ): SelectionDraft | null {
+    const article = articleRef.current;
+    if (!article || !article.contains(range.commonAncestorContainer)) return null;
+
+    const rawQuote = range.toString();
+    const quote = rawQuote.trim();
+    if (quote.length < 2) return null;
+
+    const before = document.createRange();
+    before.selectNodeContents(article);
+    before.setEnd(range.startContainer, range.startOffset);
+    const leadingSpace = rawQuote.length - rawQuote.trimStart().length;
+    const start = before.toString().length + leadingSpace;
+    const verseElement = verseElementFromNode(range.startContainer);
+
+    return {
+      quote,
+      start,
+      end: start + quote.length,
+      scope,
+      verse: verseOverride || verseNumberFor(verseElement),
+    };
+  }
+
+  function rememberSelection(captured: SelectionDraft) {
+    selectionDraftRef.current = captured;
+    setPendingSelection(captured);
+    setToolMessage("");
+  }
+
   function captureSelection() {
     const article = articleRef.current;
     const selection = window.getSelection();
     if (!article || !selection || selection.rangeCount === 0 || selection.isCollapsed) return null;
 
     const range = selection.getRangeAt(0);
-    if (!article.contains(range.commonAncestorContainer)) return null;
-    const quote = selection.toString().trim();
-    if (quote.length < 2) return null;
-
-    const before = document.createRange();
-    before.selectNodeContents(article);
-    before.setEnd(range.startContainer, range.startOffset);
-    const start = before.toString().length;
-    const captured = {
-      quote,
-      start,
-      end: start + selection.toString().length,
-    };
-    selectionDraftRef.current = captured;
-    setPendingSelection(captured);
-    setToolMessage("");
+    const captured = makeSelectionDraft(range, "phrase");
+    if (!captured) return null;
+    const existing = selectionDraftRef.current;
+    if (existing?.scope === "verse" && existing.start === captured.start && existing.end === captured.end) {
+      setPendingSelection(existing);
+      return existing;
+    }
+    rememberSelection(captured);
     return captured;
   }
 
-  function applySelection(type: "highlight" | "underline") {
+  function selectWholeVerse(verseElement: HTMLElement) {
+    const verseNumber = verseNumberFor(verseElement);
+    const verseNumberElement = verseElement.querySelector("sup");
+    const range = document.createRange();
+
+    if (verseNumberElement?.nextSibling) {
+      range.setStartBefore(verseNumberElement.nextSibling);
+      range.setEnd(verseElement, verseElement.childNodes.length);
+    } else {
+      range.selectNodeContents(verseElement);
+    }
+
+    const captured = makeSelectionDraft(range, "verse", verseNumber);
+    if (!captured) return;
+
+    const nativeSelection = window.getSelection();
+    nativeSelection?.removeAllRanges();
+    nativeSelection?.addRange(range);
+    rememberSelection(captured);
+    setToolMessage(verseNumber ? `Verse ${verseNumber} selected.` : "Verse selected.");
+  }
+
+  function handleScripturePointerDown(event: ReactPointerEvent<HTMLElement>) {
+    if (event.pointerType !== "touch") return;
+    const verseElement = verseElementFromTarget(event.target);
+    pointerGestureRef.current = {
+      startedAt: Date.now(),
+      verse: verseNumberFor(verseElement),
+    };
+  }
+
+  function handleScripturePointerUp(event: ReactPointerEvent<HTMLElement>) {
+    if (event.pointerType !== "touch") return;
+    const gesture = pointerGestureRef.current;
+    pointerGestureRef.current = null;
+    const verseElement = verseElementFromTarget(event.target);
+    const verse = verseNumberFor(verseElement);
+    if (!gesture || !verse || !verseElement || gesture.verse !== verse) return;
+    if (Date.now() - gesture.startedAt > 280) return;
+
+    const now = Date.now();
+    const lastTap = lastVerseTapRef.current;
+    if (lastTap?.verse === verse && now - lastTap.at < 420) {
+      event.preventDefault();
+      lastVerseTapRef.current = null;
+      selectWholeVerse(verseElement);
+      return;
+    }
+    lastVerseTapRef.current = { at: now, verse };
+  }
+
+  function handleScriptureDoubleClick(event: ReactMouseEvent<HTMLElement>) {
+    const verseElement = verseElementFromTarget(event.target);
+    if (verseElement) selectWholeVerse(verseElement);
+  }
+
+  function activeSelection() {
+    return pendingSelection || selectionDraftRef.current || captureSelection();
+  }
+
+  function requestSelection() {
+    setToolMessage("Double tap a verse, or press and hold a word and drag to select a phrase.");
+    articleRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function clearActiveSelection() {
+    window.getSelection()?.removeAllRanges();
+    selectionDraftRef.current = null;
+    setPendingSelection(null);
+  }
+
+  function openHighlightPicker() {
+    if (!activeSelection()) {
+      requestSelection();
+      return;
+    }
+    setHighlightPicker(true);
+  }
+
+  function applySelection(type: "highlight" | "underline", color?: ScriptureHighlightColor) {
     const captured = pendingSelection || selectionDraftRef.current || captureSelection();
     if (!captured) {
-      setToolMessage("Press and hold a word, then drag the handles to select a phrase.");
-      articleRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      requestSelection();
       return;
     }
 
     const selection: ScriptureSelection = {
       ...captured,
       type,
+      color: type === "highlight" ? color || "yellow" : undefined,
       id: globalThis.crypto?.randomUUID?.() || String(Date.now()),
       createdAt: new Date().toISOString(),
     };
@@ -301,9 +469,8 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
       };
     });
 
-    window.getSelection()?.removeAllRanges();
-    selectionDraftRef.current = null;
-    setPendingSelection(null);
+    setHighlightPicker(false);
+    clearActiveSelection();
     setToolMessage(type === "highlight" ? "Highlight saved." : "Underline saved.");
   }
 
@@ -325,23 +492,59 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
     setToolMessage(mark.bookmark ? "Removed from saved passages." : "Saved to My Bible.");
   }
 
-  function updateText(key: "notes" | "question", value: string) {
+  function openComposer(kind: "notes" | "question") {
+    const captured = activeSelection();
+    if (!captured) {
+      requestSelection();
+      return;
+    }
+    setComposerSelection(captured);
+    setComposerText("");
+    setComposer(kind);
+  }
+
+  function closeComposer() {
+    setComposer(null);
+    setComposerSelection(null);
+    setComposerText("");
+  }
+
+  function saveComposerEntry() {
+    const body = composerText.trim();
+    if (!composer || !composerSelection || !body) return;
+    const now = new Date().toISOString();
+    const entry: ScriptureStudyEntry = {
+      ...composerSelection,
+      id: globalThis.crypto?.randomUUID?.() || String(Date.now()),
+      type: composer === "notes" ? "note" : "question",
+      body,
+      createdAt: now,
+      updatedAt: now,
+    };
+    const eventType: StudyActivityType = composer === "notes" ? "note_written" : "question_written";
+
     setPortfolio((current) => {
       const prior = current.scriptureTools[reference] || {};
-      const wasEmpty = !prior[key]?.trim();
-      const eventType: StudyActivityType = key === "notes" ? "note_written" : "question_written";
-
       return {
         ...current,
         scriptureTools: {
           ...current.scriptureTools,
-          [reference]: { ...prior, [key]: value },
+          [reference]: {
+            ...prior,
+            studyEntries: [...(prior.studyEntries || []), entry],
+          },
         },
-        activityEvents: wasEmpty && value.trim()
-          ? keepActivity(current.activityEvents, makeActivity(eventType, reference))
-          : current.activityEvents,
+        activityEvents: keepActivity(current.activityEvents, makeActivity(eventType, reference, {
+          verse: composerSelection.verse || "",
+          quote: composerSelection.quote.slice(0, 120),
+        })),
       };
     });
+
+    const savedLabel = composer === "notes" ? "Note saved to My Bible." : "Question saved to My Bible.";
+    closeComposer();
+    clearActiveSelection();
+    setToolMessage(savedLabel);
   }
 
   function completeReading() {
@@ -423,13 +626,19 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
 
           <div className={styles.instruction}>
             <Highlighter />
-            <span><strong>Mark exact words</strong>Press and hold a word, drag to select a phrase, then choose a tool below.</span>
+            <span>
+              <strong>Study the text</strong>
+              Double tap a verse to select it. Press and hold to select a word or phrase.
+            </span>
           </div>
 
           <article
             ref={articleRef}
             className={[styles.scriptureText, largeText ? styles.largeText : ""].join(" ")}
             onMouseUp={captureSelection}
+            onPointerDown={handleScripturePointerDown}
+            onPointerUp={handleScripturePointerUp}
+            onDoubleClick={handleScriptureDoubleClick}
             dangerouslySetInnerHTML={{ __html: scriptureHtml }}
           />
 
@@ -462,14 +671,15 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
 
         {pendingSelection && (
           <div className={styles.selectionBar}>
-            <div><small>SELECTED</small><p>“{selectionPreview}”</p></div>
+            <div>
+              <small>{pendingSelection.scope === "verse" && pendingSelection.verse
+                ? `VERSE ${pendingSelection.verse} SELECTED`
+                : "TEXT SELECTED"}</small>
+              <p>“{selectionPreview}”</p>
+            </div>
             <button
               type="button"
-              onClick={() => {
-                window.getSelection()?.removeAllRanges();
-                selectionDraftRef.current = null;
-                setPendingSelection(null);
-              }}
+              onClick={clearActiveSelection}
               aria-label="Clear selection"
             >
               <X />
@@ -488,7 +698,7 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
             type="button"
             className={pendingSelection ? styles.actionReady : ""}
             onPointerDown={(event) => event.preventDefault()}
-            onClick={() => applySelection("highlight")}
+            onClick={openHighlightPicker}
           >
             <Highlighter />
             <span>Highlight</span>
@@ -502,11 +712,21 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
             <Underline />
             <span>Underline</span>
           </button>
-          <button type="button" onClick={() => setComposer("notes")}>
+          <button
+            type="button"
+            className={pendingSelection ? styles.actionReady : ""}
+            onPointerDown={(event) => event.preventDefault()}
+            onClick={() => openComposer("notes")}
+          >
             <NotebookPen />
             <span>Note</span>
           </button>
-          <button type="button" onClick={() => setComposer("question")}>
+          <button
+            type="button"
+            className={pendingSelection ? styles.actionReady : ""}
+            onPointerDown={(event) => event.preventDefault()}
+            onClick={() => openComposer("question")}
+          >
             <MessageCircleQuestion />
             <span>Question</span>
           </button>
@@ -520,30 +740,63 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
           </button>
         </nav>
 
+        {highlightPicker && (
+          <div className={styles.pickerBackdrop} onClick={() => setHighlightPicker(false)}>
+            <section className={styles.colorPicker} onClick={(event) => event.stopPropagation()}>
+              <header>
+                <div>
+                  <small>HIGHLIGHT</small>
+                  <h2>Choose a color.</h2>
+                </div>
+                <button type="button" onClick={() => setHighlightPicker(false)} aria-label="Close color picker">
+                  <X />
+                </button>
+              </header>
+              <p>{pendingSelection?.scope === "verse" && pendingSelection.verse
+                ? `This will highlight all of verse ${pendingSelection.verse}.`
+                : "This will highlight the exact words you selected."}</p>
+              <div className={styles.colorOptions}>
+                <button type="button" onClick={() => applySelection("highlight", "yellow")}>
+                  <span className={styles.yellowSwatch} /> Yellow
+                </button>
+                <button type="button" onClick={() => applySelection("highlight", "blue")}>
+                  <span className={styles.blueSwatch} /> Blue
+                </button>
+                <button type="button" onClick={() => applySelection("highlight", "red")}>
+                  <span className={styles.redSwatch} /> Red
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
+
         {composer && (
-          <div className={styles.composerBackdrop} onClick={() => setComposer(null)}>
+          <div className={styles.composerBackdrop} onClick={closeComposer}>
             <section className={styles.composer} onClick={(event) => event.stopPropagation()}>
               <header>
                 <div>
                   <small>{composer === "notes" ? "PRIVATE NOTE" : "YOUR QUESTION"}</small>
                   <h2>{composer === "notes" ? "Keep what you noticed." : "What do you want to understand?"}</h2>
                 </div>
-                <button type="button" onClick={() => setComposer(null)} aria-label="Close">
+                <button type="button" onClick={closeComposer} aria-label="Close">
                   <X />
                 </button>
               </header>
-              <p>Attached privately to {reference} and saved automatically.</p>
+              <p>Attached privately to {reference}{composerSelection?.verse ? `, verse ${composerSelection.verse}` : ""}.</p>
+              <blockquote className={styles.composerQuote}>“{composerSelection?.quote}”</blockquote>
               <textarea
                 autoFocus
-                value={composer === "notes" ? mark.notes || "" : mark.question || ""}
-                onChange={(event) => updateText(composer, event.target.value)}
+                value={composerText}
+                onChange={(event) => setComposerText(event.target.value)}
                 placeholder={composer === "notes"
                   ? "Write an observation, connection or thought…"
                   : "Write the question you want to return to…"}
               />
               <footer>
-                <span><Check /> Saved to My Bible</span>
-                <button type="button" onClick={() => setComposer(null)}>Done</button>
+                <span><Bookmark /> Saved with this exact text</span>
+                <button type="button" onClick={saveComposerEntry} disabled={!composerText.trim()}>
+                  {composer === "notes" ? "Save note" : "Save question"}
+                </button>
               </footer>
             </section>
           </div>

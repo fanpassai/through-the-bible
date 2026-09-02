@@ -226,6 +226,8 @@
   user-select: text;
   -webkit-user-select: text;
   -webkit-touch-callout: default;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .scriptureText :global(sup) {
@@ -255,7 +257,18 @@
 
 .markHighlight {
   padding: 1px 2px;
-  background: rgba(236, 215, 119, .58);
+}
+
+.markYellow {
+  background: rgba(255, 218, 55, .52);
+}
+
+.markBlue {
+  background: rgba(45, 125, 245, .25);
+}
+
+.markRed {
+  background: rgba(239, 62, 62, .25);
 }
 
 .markUnderline {
@@ -428,6 +441,7 @@
   font: inherit;
   font-size: 10px;
   font-weight: 650;
+  touch-action: manipulation;
 }
 
 .actionDock button svg {
@@ -514,6 +528,7 @@
   font-weight: 620;
 }
 
+.pickerBackdrop,
 .composerBackdrop {
   position: absolute;
   z-index: 20;
@@ -522,6 +537,100 @@
   align-items: flex-end;
   background: rgba(17, 17, 16, .42);
   backdrop-filter: blur(3px);
+}
+
+.colorPicker {
+  width: 100%;
+  padding: 23px 22px max(24px, env(safe-area-inset-bottom));
+  border-radius: 24px 24px 0 0;
+  background: #fff;
+  box-shadow: 0 -24px 70px rgba(0, 0, 0, .2);
+}
+
+.colorPicker header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.colorPicker header small {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 740;
+  letter-spacing: .13em;
+}
+
+.colorPicker h2 {
+  margin: 5px 0 0;
+  color: var(--ink);
+  font-size: 23px;
+  font-weight: 710;
+  letter-spacing: -.035em;
+}
+
+.colorPicker header > button {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.colorPicker header > button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.colorPicker > p {
+  margin: 12px 0 18px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.colorOptions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.colorOptions button {
+  min-height: 72px;
+  display: grid;
+  place-items: center;
+  gap: 7px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 680;
+}
+
+.yellowSwatch,
+.blueSwatch,
+.redSwatch {
+  width: 29px;
+  height: 29px;
+  border: 1px solid rgba(17, 17, 16, .1);
+  border-radius: 999px;
+}
+
+.yellowSwatch {
+  background: #ffda37;
+}
+
+.blueSwatch {
+  background: #2d7df5;
+}
+
+.redSwatch {
+  background: #ef3e3e;
 }
 
 .composer {
@@ -579,6 +688,20 @@
   line-height: 1.5;
 }
 
+.composerQuote {
+  max-height: 92px;
+  margin: -4px 0 16px;
+  padding: 13px 14px;
+  overflow: hidden;
+  border-left: 3px solid var(--ink);
+  border-radius: 0 12px 12px 0;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 15px;
+  line-height: 1.48;
+}
+
 .composer textarea {
   width: 100%;
   min-height: 190px;
@@ -631,6 +754,11 @@
   font: inherit;
   font-size: 14px;
   font-weight: 680;
+}
+
+.composer footer button:disabled {
+  background: #dce3e6;
+  color: #7b8387;
 }
 
 @media (min-width: 481px) {

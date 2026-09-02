@@ -85,10 +85,14 @@ export function getWeeklyStudyStats(portfolio: StudyPortfolio, now = new Date())
   const readings = Object.values(portfolio.readingHistory || {});
   const weeklyReadings = readings.filter((reading) => isCurrentWeek(reading.lastReadAt || reading.completedAt, weekStart));
   const weeklyEvents = (portfolio.activityEvents || []).filter((event) => isCurrentWeek(event.createdAt, weekStart));
-  const marks = Object.values(portfolio.scriptureTools || {}).reduce((total, mark) => total + (mark.selections?.length || 0), 0);
-  const scriptureNotes = Object.values(portfolio.scriptureTools || {}).filter((mark) => Boolean(mark.notes?.trim())).length;
+  const scriptureMarks = Object.values(portfolio.scriptureTools || {});
+  const anchoredEntries = scriptureMarks.flatMap((mark) => mark.studyEntries || []);
+  const marks = scriptureMarks.reduce((total, mark) => total + (mark.selections?.length || 0), 0);
+  const scriptureNotes = scriptureMarks.filter((mark) => Boolean(mark.notes?.trim())).length
+    + anchoredEntries.filter((entry) => entry.type === "note" && entry.body.trim()).length;
   const devotionalNotes = Object.values(portfolio.deepNotes || {}).filter((note) => Boolean(note?.trim())).length;
-  const questions = Object.values(portfolio.scriptureTools || {}).filter((mark) => Boolean(mark.question?.trim())).length;
+  const questions = scriptureMarks.filter((mark) => Boolean(mark.question?.trim())).length
+    + anchoredEntries.filter((entry) => entry.type === "question" && entry.body.trim()).length;
   const devotionalDays = Object.values(portfolio.deepCompleted || {}).filter(Boolean).length;
   const fillAttempts = weeklyEvents.filter((event) => event.type === "fill_attempt");
   const correctAttempts = fillAttempts.filter((event) => event.detail?.correct === true).length;
