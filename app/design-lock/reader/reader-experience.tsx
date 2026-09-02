@@ -18,7 +18,9 @@ import {
   Highlighter,
   MessageCircleQuestion,
   NotebookPen,
-  Type,
+  Pencil,
+  RotateCcw,
+  Trash2,
   Underline,
   X,
 } from "lucide-react";
@@ -58,8 +60,21 @@ type SelectionDraft = {
   verse?: string;
 };
 
+type ReaderTextSize = "small" | "standard" | "large";
+
+type ManageTarget = {
+  selectionIds: string[];
+  entryIds: string[];
+};
+
+type UndoNotice = {
+  message: string;
+  undo: () => void;
+};
+
 const SCRIPTURES = lesson.SCRIPTURES as Record<string, Scripture>;
 const DEFAULT_REFERENCE = "Genesis 1:3–31";
+const TEXT_SIZE_STORAGE_KEY = "ttb-reader-text-size";
 
 function makeActivity(
   type: StudyActivityType,
@@ -122,9 +137,42 @@ function annotateScriptureHtml(
         classes.push(classNames.highlightColors[latest.color || "yellow"]);
       }
       if (active.some((item) => item.type === "underline")) classes.push(classNames.underline);
-      return '<span class="' + classes.join(" ") + '">' + text + "</span>";
+      return '<span class="' + classes.join(" ") + '" data-selection-ids="' + active.map((item) => item.id).join(",") + '">' + text + "</span>";
     }).join("");
   }).join("");
+}
+
+function attachStudyIndicators(
+  html: string,
+  entries: ScriptureStudyEntry[],
+  classNames: { note: string; question: string },
+) {
+  const byVerse = new Map<string, { notes: string[]; questions: string[] }>();
+  entries.forEach((entry) => {
+    if (!entry.verse) return;
+    const group = byVerse.get(entry.verse) || { notes: [], questions: [] };
+    if (entry.type === "note") group.notes.push(entry.id);
+    else group.questions.push(entry.id);
+    byVerse.set(entry.verse, group);
+  });
+
+  if (!byVerse.size) return html;
+  return html.replace(
+    /(<p class="scripture-line"><sup>([^<]+)<\/sup>)([\s\S]*?)(<\/p>)/g,
+    (verseHtml, open: string, verse: string, text: string, close: string) => {
+      const group = byVerse.get(verse.trim());
+      if (!group) return verseHtml;
+      const indicators = [
+        group.notes.length
+          ? `<button type="button" class="${classNames.note}" data-study-entry-ids="${group.notes.join(",")}" aria-label="Manage notes on verse ${verse.trim()}"></button>`
+          : "",
+        group.questions.length
+          ? `<button type="button" class="${classNames.question}" data-study-entry-ids="${group.questions.join(",")}" aria-label="Manage questions on verse ${verse.trim()}"></button>`
+          : "",
+      ].join("");
+      return open + text + indicators + close;
+    },
+  );
 }
 
 export default function ReaderExperience({ initialReference }: { initialReference?: string }) {
@@ -140,8 +188,12 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
   const [composer, setComposer] = useState<"notes" | "question" | null>(null);
   const [composerSelection, setComposerSelection] = useState<SelectionDraft | null>(null);
   const [composerText, setComposerText] = useState("");
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [highlightPicker, setHighlightPicker] = useState(false);
-  const [largeText, setLargeText] = useState(false);
+  const [textSizePicker, setTextSizePicker] = useState(false);
+  const [textSize, setTextSize] = useState<ReaderTextSize>("standard");
+  const [manageTarget, setManageTarget] = useState<ManageTarget | null>(null);
+  const [undoNotice, setUndoNotice] = useState<UndoNotice | null>(null);
   const [reachedEnd, setReachedEnd] = useState(false);
   const articleRef = useRef<HTMLElement>(null);
   const selectionDraftRef = useRef<SelectionDraft | null>(null);
@@ -156,30 +208,47 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
   const verseCount = Math.max(1, scripture.html.match(/<sup>/g)?.length || 0);
 
   const scriptureHtml = useMemo(
-    () => annotateScriptureHtml(
-      scripture.html,
-      mark.selections || [],
-      {
-        selection: styles.markSelection,
-        highlight: styles.markHighlight,
-        underline: styles.markUnderline,
-        highlightColors: {
-          yellow: styles.markYellow,
-          blue: styles.markBlue,
-          red: styles.markRed,
+    () => attachStudyIndicators(
+      annotateScriptureHtml(
+        scripture.html,
+        mark.selections || [],
+        {
+          selection: styles.markSelection,
+          highlight: styles.markHighlight,
+          underline: styles.markUnderline,
+          highlightColors: {
+            yellow: styles.markYellow,
+            blue: styles.markBlue,
+            red: styles.markRed,
+          },
         },
-      },
+      ),
+      mark.studyEntries || [],
+      { note: styles.noteIndicator, question: styles.questionIndicator },
     ),
-    [scripture.html, mark.selections],
+    [scripture.html, mark.selections, mark.studyEntries],
   );
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setPortfolio(readLocalPortfolio());
+      const savedSize = window.localStorage.getItem(TEXT_SIZE_STORAGE_KEY);
+      if (savedSize === "small" || savedSize === "standard" || savedSize === "large") {
+        setTextSize(savedSize);
+      }
       setReady(true);
     }, 0);
     return () => window.clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (!ready) return;
+    try {
+      window.localStorage.setItem(TEXT_SIZE_STORAGE_KEY, textSize);
+    } catch {
+      // Reading preferences can fall back to the current session.
+    }
+  }, [ready, textSize]);
 
   useEffect(() => {
     if (!ready || !user || cloudLoadedFor.current === user.id) return;
@@ -296,6 +365,12 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
     const timer = window.setTimeout(() => setToolMessage(""), 1800);
     return () => window.clearTimeout(timer);
   }, [toolMessage, pendingSelection]);
+
+  useEffect(() => {
+    if (!undoNotice) return;
+    const timer = window.setTimeout(() => setUndoNotice(null), 4000);
+    return () => window.clearTimeout(timer);
+  }, [undoNotice]);
 
   function verseElementFromNode(node: Node | null) {
     const article = articleRef.current;
@@ -434,6 +509,21 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
     setPendingSelection(null);
   }
 
+  function showUndo(message: string, undo: () => void) {
+    setToolMessage("");
+    setUndoNotice({ message, undo });
+  }
+
+  function handleScriptureClick(event: ReactMouseEvent<HTMLElement>) {
+    const element = event.target instanceof Element ? event.target : null;
+    const entryControl = element?.closest<HTMLElement>("[data-study-entry-ids]");
+    const markedText = element?.closest<HTMLElement>("[data-selection-ids]");
+    const entryIds = entryControl?.dataset.studyEntryIds?.split(",").filter(Boolean) || [];
+    const selectionIds = markedText?.dataset.selectionIds?.split(",").filter(Boolean) || [];
+    if (!entryIds.length && !selectionIds.length) return;
+    setManageTarget({ entryIds, selectionIds });
+  }
+
   function openHighlightPicker() {
     if (!activeSelection()) {
       requestSelection();
@@ -456,6 +546,7 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
       id: globalThis.crypto?.randomUUID?.() || String(Date.now()),
       createdAt: new Date().toISOString(),
     };
+    const activity = makeActivity(type === "highlight" ? "highlight_created" : "underline_created", reference);
 
     setPortfolio((current) => {
       const prior = current.scriptureTools[reference] || {};
@@ -468,19 +559,33 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
             selections: [...(prior.selections || []), selection],
           },
         },
-        activityEvents: keepActivity(
-          current.activityEvents,
-          makeActivity(type === "highlight" ? "highlight_created" : "underline_created", reference),
-        ),
+        activityEvents: keepActivity(current.activityEvents, activity),
       };
     });
 
     setHighlightPicker(false);
     clearActiveSelection();
-    setToolMessage(type === "highlight" ? "Highlight saved." : "Underline saved.");
+    showUndo(type === "highlight" ? "Highlight saved." : "Underline saved.", () => {
+      setPortfolio((current) => {
+        const prior = current.scriptureTools[reference] || {};
+        return {
+          ...current,
+          scriptureTools: {
+            ...current.scriptureTools,
+            [reference]: {
+              ...prior,
+              selections: (prior.selections || []).filter((item) => item.id !== selection.id),
+            },
+          },
+          activityEvents: current.activityEvents.filter((event) => event.id !== activity.id),
+        };
+      });
+    });
   }
 
   function toggleBookmark() {
+    const previousBookmark = Boolean(mark.bookmark);
+    const activity = previousBookmark ? null : makeActivity("bookmark_saved", reference);
     setPortfolio((current) => {
       const prior = current.scriptureTools[reference] || {};
       const bookmark = !prior.bookmark;
@@ -490,12 +595,26 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
           ...current.scriptureTools,
           [reference]: { ...prior, bookmark },
         },
-        activityEvents: bookmark
-          ? keepActivity(current.activityEvents, makeActivity("bookmark_saved", reference))
+        activityEvents: bookmark && activity
+          ? keepActivity(current.activityEvents, activity)
           : current.activityEvents,
       };
     });
-    setToolMessage(mark.bookmark ? "Removed from saved passages." : "Saved to My Bible.");
+    showUndo(previousBookmark ? "Removed from saved passages." : "Saved to My Bible.", () => {
+      setPortfolio((current) => {
+        const prior = current.scriptureTools[reference] || {};
+        return {
+          ...current,
+          scriptureTools: {
+            ...current.scriptureTools,
+            [reference]: { ...prior, bookmark: previousBookmark },
+          },
+          activityEvents: activity
+            ? current.activityEvents.filter((event) => event.id !== activity.id)
+            : current.activityEvents,
+        };
+      });
+    });
   }
 
   function openComposer(kind: "notes" | "question") {
@@ -506,29 +625,101 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
     }
     setComposerSelection(captured);
     setComposerText("");
+    setEditingEntryId(null);
     setComposer(kind);
+  }
+
+  function editStudyEntry(entry: ScriptureStudyEntry) {
+    setComposerSelection({
+      quote: entry.quote,
+      start: entry.start,
+      end: entry.end,
+      scope: "phrase",
+      verse: entry.verse,
+    });
+    setComposerText(entry.body);
+    setEditingEntryId(entry.id);
+    setComposer(entry.type === "note" ? "notes" : "question");
+    setManageTarget(null);
   }
 
   function closeComposer() {
     setComposer(null);
     setComposerSelection(null);
     setComposerText("");
+    setEditingEntryId(null);
   }
 
   function saveComposerEntry() {
     const body = composerText.trim();
     if (!composer || !composerSelection || !body) return;
     const now = new Date().toISOString();
+    const existingEntry = editingEntryId
+      ? (mark.studyEntries || []).find((entry) => entry.id === editingEntryId)
+      : undefined;
     const entry: ScriptureStudyEntry = {
       ...composerSelection,
-      id: globalThis.crypto?.randomUUID?.() || String(Date.now()),
+      id: existingEntry?.id || globalThis.crypto?.randomUUID?.() || String(Date.now()),
       type: composer === "notes" ? "note" : "question",
       body,
-      createdAt: now,
+      createdAt: existingEntry?.createdAt || now,
       updatedAt: now,
     };
     const eventType: StudyActivityType = composer === "notes" ? "note_written" : "question_written";
+    const activity = existingEntry ? null : makeActivity(eventType, reference, {
+      verse: composerSelection.verse || "",
+      quote: composerSelection.quote.slice(0, 120),
+    });
 
+    setPortfolio((current) => {
+      const prior = current.scriptureTools[reference] || {};
+      const entries = prior.studyEntries || [];
+      return {
+        ...current,
+        scriptureTools: {
+          ...current.scriptureTools,
+          [reference]: {
+            ...prior,
+            studyEntries: existingEntry
+              ? entries.map((item) => item.id === entry.id ? entry : item)
+              : [...entries, entry],
+          },
+        },
+        activityEvents: activity ? keepActivity(current.activityEvents, activity) : current.activityEvents,
+      };
+    });
+
+    const savedLabel = existingEntry
+      ? (composer === "notes" ? "Note updated." : "Question updated.")
+      : (composer === "notes" ? "Note saved to My Bible." : "Question saved to My Bible.");
+    closeComposer();
+    clearActiveSelection();
+    showUndo(savedLabel, () => {
+      setPortfolio((current) => {
+        const prior = current.scriptureTools[reference] || {};
+        const entries = prior.studyEntries || [];
+        return {
+          ...current,
+          scriptureTools: {
+            ...current.scriptureTools,
+            [reference]: {
+              ...prior,
+              studyEntries: existingEntry
+                ? entries.map((item) => item.id === existingEntry.id ? existingEntry : item)
+                : entries.filter((item) => item.id !== entry.id),
+            },
+          },
+          activityEvents: activity
+            ? current.activityEvents.filter((event) => event.id !== activity.id)
+            : current.activityEvents,
+        };
+      });
+    });
+  }
+
+  function removeSelections(ids: string[], label: string) {
+    const removed = (mark.selections || []).filter((item) => ids.includes(item.id));
+    if (!removed.length) return;
     setPortfolio((current) => {
       const prior = current.scriptureTools[reference] || {};
       return {
@@ -537,25 +728,104 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
           ...current.scriptureTools,
           [reference]: {
             ...prior,
-            studyEntries: [...(prior.studyEntries || []), entry],
+            selections: (prior.selections || []).filter((item) => !ids.includes(item.id)),
           },
         },
-        activityEvents: keepActivity(current.activityEvents, makeActivity(eventType, reference, {
-          verse: composerSelection.verse || "",
-          quote: composerSelection.quote.slice(0, 120),
-        })),
       };
     });
+    setManageTarget(null);
+    showUndo(label, () => {
+      setPortfolio((current) => {
+        const prior = current.scriptureTools[reference] || {};
+        const existingIds = new Set((prior.selections || []).map((item) => item.id));
+        return {
+          ...current,
+          scriptureTools: {
+            ...current.scriptureTools,
+            [reference]: {
+              ...prior,
+              selections: [...(prior.selections || []), ...removed.filter((item) => !existingIds.has(item.id))],
+            },
+          },
+        };
+      });
+    });
+  }
 
-    const savedLabel = composer === "notes" ? "Note saved to My Bible." : "Question saved to My Bible.";
-    closeComposer();
-    clearActiveSelection();
-    setToolMessage(savedLabel);
+  function changeHighlightColor(ids: string[], color: ScriptureHighlightColor) {
+    const previous = (mark.selections || []).filter((item) => ids.includes(item.id));
+    setPortfolio((current) => {
+      const prior = current.scriptureTools[reference] || {};
+      return {
+        ...current,
+        scriptureTools: {
+          ...current.scriptureTools,
+          [reference]: {
+            ...prior,
+            selections: (prior.selections || []).map((item) => ids.includes(item.id) ? { ...item, color } : item),
+          },
+        },
+      };
+    });
+    setManageTarget(null);
+    showUndo("Highlight color changed.", () => {
+      const previousById = new Map(previous.map((item) => [item.id, item]));
+      setPortfolio((current) => {
+        const prior = current.scriptureTools[reference] || {};
+        return {
+          ...current,
+          scriptureTools: {
+            ...current.scriptureTools,
+            [reference]: {
+              ...prior,
+              selections: (prior.selections || []).map((item) => previousById.get(item.id) || item),
+            },
+          },
+        };
+      });
+    });
+  }
+
+  function deleteStudyEntries(ids: string[], label: string) {
+    const removed = (mark.studyEntries || []).filter((entry) => ids.includes(entry.id));
+    if (!removed.length) return;
+    setPortfolio((current) => {
+      const prior = current.scriptureTools[reference] || {};
+      return {
+        ...current,
+        scriptureTools: {
+          ...current.scriptureTools,
+          [reference]: {
+            ...prior,
+            studyEntries: (prior.studyEntries || []).filter((entry) => !ids.includes(entry.id)),
+          },
+        },
+      };
+    });
+    setManageTarget(null);
+    showUndo(label, () => {
+      setPortfolio((current) => {
+        const prior = current.scriptureTools[reference] || {};
+        const existingIds = new Set((prior.studyEntries || []).map((entry) => entry.id));
+        return {
+          ...current,
+          scriptureTools: {
+            ...current.scriptureTools,
+            [reference]: {
+              ...prior,
+              studyEntries: [...(prior.studyEntries || []), ...removed.filter((entry) => !existingIds.has(entry.id))],
+            },
+          },
+        };
+      });
+    });
   }
 
   function completeReading() {
     if (completed || !reachedEnd) return;
     const now = new Date().toISOString();
+    const previousReading = portfolio.readingHistory[reference];
+    const activity = makeActivity("scripture_read", reference, { verseCount });
 
     setPortfolio((current) => {
       const prior = current.readingHistory[reference];
@@ -574,13 +844,21 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
             verseCount,
           },
         },
-        activityEvents: keepActivity(
-          current.activityEvents,
-          makeActivity("scripture_read", reference, { verseCount }),
-        ),
+        activityEvents: keepActivity(current.activityEvents, activity),
       };
     });
-    setToolMessage("Reading completed and added to Week 1.");
+    showUndo("Reading completed and added to Week 1.", () => {
+      setPortfolio((current) => {
+        const readingHistory = { ...current.readingHistory };
+        if (previousReading) readingHistory[reference] = previousReading;
+        else delete readingHistory[reference];
+        return {
+          ...current,
+          readingHistory,
+          activityEvents: current.activityEvents.filter((event) => event.id !== activity.id),
+        };
+      });
+    });
   }
 
   function handleScroll(event: UIEvent<HTMLDivElement>) {
@@ -593,6 +871,15 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
   const selectionPreview = pendingSelection?.quote.length && pendingSelection.quote.length > 74
     ? pendingSelection.quote.slice(0, 74) + "…"
     : pendingSelection?.quote;
+  const managedSelections = manageTarget
+    ? (mark.selections || []).filter((item) => manageTarget.selectionIds.includes(item.id))
+    : [];
+  const managedEntries = manageTarget
+    ? (mark.studyEntries || []).filter((entry) => manageTarget.entryIds.includes(entry.id))
+    : [];
+  const managedHighlights = managedSelections.filter((item) => item.type === "highlight");
+  const managedUnderlines = managedSelections.filter((item) => item.type === "underline");
+  const managedQuote = managedSelections[0]?.quote || managedEntries[0]?.quote || "Saved Scripture study";
 
   return (
     <main className={styles.page}>
@@ -609,11 +896,11 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
             <span>KJV</span>
             <button
               type="button"
-              className={largeText ? styles.textActive : ""}
-              onClick={() => setLargeText((value) => !value)}
+              className={textSize !== "standard" ? styles.textActive : ""}
+              onClick={() => setTextSizePicker(true)}
               aria-label="Change text size"
             >
-              <Type />
+              <span className={styles.textSizeLabel}>Aa</span>
             </button>
           </div>
         </header>
@@ -640,11 +927,16 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
 
           <article
             ref={articleRef}
-            className={[styles.scriptureText, largeText ? styles.largeText : ""].join(" ")}
+            className={[
+              styles.scriptureText,
+              textSize === "small" ? styles.smallText : "",
+              textSize === "large" ? styles.largeText : "",
+            ].join(" ")}
             onMouseUp={captureSelection}
             onPointerDown={handleScripturePointerDown}
             onPointerUp={handleScripturePointerUp}
             onDoubleClick={handleScriptureDoubleClick}
+            onClick={handleScriptureClick}
             dangerouslySetInnerHTML={{ __html: scriptureHtml }}
           />
 
@@ -693,7 +985,23 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
           </div>
         )}
 
-        {!pendingSelection && toolMessage && (
+        {!pendingSelection && undoNotice && (
+          <div className={[styles.toast, styles.undoToast].join(" ")} role="status">
+            <span>{undoNotice.message}</span>
+            <button
+              type="button"
+              onClick={() => {
+                const undo = undoNotice.undo;
+                setUndoNotice(null);
+                undo();
+              }}
+            >
+              <RotateCcw /> Undo
+            </button>
+          </div>
+        )}
+
+        {!pendingSelection && !undoNotice && toolMessage && (
           <div className={styles.toast} role="status">
             {toolMessage}
           </div>
@@ -776,13 +1084,81 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
           </div>
         )}
 
+        {textSizePicker && (
+          <div className={styles.pickerBackdrop} onClick={() => setTextSizePicker(false)}>
+            <section className={styles.sizePicker} onClick={(event) => event.stopPropagation()} aria-modal="true" role="dialog">
+              <header>
+                <div>
+                  <small>READING SIZE</small>
+                  <h2>Make the text comfortable.</h2>
+                </div>
+                <button type="button" onClick={() => setTextSizePicker(false)} aria-label="Close text size options"><X /></button>
+              </header>
+              <div className={styles.sizeOptions}>
+                {(["small", "standard", "large"] as ReaderTextSize[]).map((size) => (
+                  <button
+                    type="button"
+                    className={textSize === size ? styles.sizeSelected : ""}
+                    key={size}
+                    onClick={() => {
+                      setTextSize(size);
+                      setTextSizePicker(false);
+                      setToolMessage(`${size.charAt(0).toUpperCase() + size.slice(1)} reading size selected.`);
+                    }}
+                  >
+                    <span className={styles[`sizeSample${size.charAt(0).toUpperCase() + size.slice(1)}` as keyof typeof styles]}>Aa</span>
+                    <span>{size.charAt(0).toUpperCase() + size.slice(1)}</span>
+                    {textSize === size ? <Check /> : null}
+                  </button>
+                ))}
+              </div>
+            </section>
+          </div>
+        )}
+
+        {manageTarget && (
+          <div className={styles.pickerBackdrop} onClick={() => setManageTarget(null)}>
+            <section className={styles.manageSheet} onClick={(event) => event.stopPropagation()} aria-modal="true" role="dialog">
+              <header>
+                <div><small>SAVED STUDY</small><h2>Manage what you kept.</h2></div>
+                <button type="button" onClick={() => setManageTarget(null)} aria-label="Close saved study"><X /></button>
+              </header>
+              <blockquote>“{managedQuote}”</blockquote>
+
+              {managedHighlights.length ? <div className={styles.manageGroup}>
+                <div><Highlighter /><span><strong>Highlight</strong><small>Change its color or remove it</small></span></div>
+                <div className={styles.manageColors}>
+                  {(["yellow", "blue", "red"] as ScriptureHighlightColor[]).map((color) => <button type="button" key={color} onClick={() => changeHighlightColor(managedHighlights.map((item) => item.id), color)} aria-label={`Change highlight to ${color}`}><span className={styles[`${color}Swatch`]} /></button>)}
+                  <button type="button" className={styles.removeAction} onClick={() => removeSelections(managedHighlights.map((item) => item.id), "Highlight removed.")}><Trash2 /> Remove</button>
+                </div>
+              </div> : null}
+
+              {managedUnderlines.length ? <div className={styles.manageGroup}>
+                <div><Underline /><span><strong>Underline</strong><small>Attached to this exact text</small></span></div>
+                <button type="button" className={styles.removeWide} onClick={() => removeSelections(managedUnderlines.map((item) => item.id), "Underline removed.")}><Trash2 /> Remove underline</button>
+              </div> : null}
+
+              {managedEntries.map((entry) => <article className={styles.manageEntry} key={entry.id}>
+                <small>{entry.type === "note" ? "NOTE" : "QUESTION"}{entry.verse ? ` · VERSE ${entry.verse}` : ""}</small>
+                <p>{entry.body}</p>
+                <div>
+                  <button type="button" onClick={() => editStudyEntry(entry)}><Pencil /> Edit</button>
+                  <button type="button" onClick={() => deleteStudyEntries([entry.id], entry.type === "note" ? "Note deleted." : "Question deleted.")}><Trash2 /> Delete</button>
+                </div>
+              </article>)}
+            </section>
+          </div>
+        )}
+
         {composer && (
           <div className={styles.composerBackdrop} onClick={closeComposer}>
             <section className={styles.composer} onClick={(event) => event.stopPropagation()}>
               <header>
                 <div>
                   <small>{composer === "notes" ? "PRIVATE NOTE" : "YOUR QUESTION"}</small>
-                  <h2>{composer === "notes" ? "Keep what you noticed." : "What do you want to understand?"}</h2>
+                  <h2>{editingEntryId
+                    ? (composer === "notes" ? "Edit your note." : "Edit your question.")
+                    : (composer === "notes" ? "Keep what you noticed." : "What do you want to understand?")}</h2>
                 </div>
                 <button type="button" onClick={closeComposer} aria-label="Close">
                   <X />
@@ -801,7 +1177,9 @@ export default function ReaderExperience({ initialReference }: { initialReferenc
               <footer>
                 <span><Bookmark /> Saved with this exact text</span>
                 <button type="button" onClick={saveComposerEntry} disabled={!composerText.trim()}>
-                  {composer === "notes" ? "Save note" : "Save question"}
+                  {editingEntryId
+                    ? (composer === "notes" ? "Update note" : "Update question")
+                    : (composer === "notes" ? "Save note" : "Save question")}
                 </button>
               </footer>
             </section>
