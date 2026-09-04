@@ -3,15 +3,33 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   ArrowLeft, ArrowRight, Award, BookMarked, BookOpen, Bookmark, CalendarDays,
-  Check, ChevronRight, CircleHelp, Compass, Flame, Highlighter, Home, Mail,
-  Map, NotebookPen, Search, ShieldCheck, Sparkles, Underline, UserRound,
+  ChevronRight, CircleHelp, Compass, Flame, Highlighter, Home, Mail,
+  Map, MoreHorizontal, NotebookPen, Pencil, RotateCcw, Search, ShieldCheck,
+  Sparkles, Trash2, Underline, UserRound, X,
 } from "lucide-react";
 import CourseExperience from "./course-experience";
 import { useStudyAccount } from "./study-account";
-import { getWeeklyStudyStats, mergePortfolios, readLocalPortfolio, STUDY_UPDATED_EVENT } from "@/lib/study-progress";
-import type { StudyPortfolio } from "@/lib/study-types";
+import {
+  announceStudyUpdate,
+  getWeeklyStudyStats,
+  mergePortfolios,
+  PERSONAL_STORAGE_KEY,
+  readLocalPortfolio,
+  STUDY_UPDATED_EVENT,
+} from "@/lib/study-progress";
+import type { ScriptureHighlightColor, StudyPortfolio } from "@/lib/study-types";
 
 type Stage = "launch" | "auth" | "home" | "today" | "study" | "bible" | "profile" | "journey" | "week1";
+
+type LibraryItem = {
+  id: string;
+  kind: "highlight" | "underline" | "note" | "question" | "bookmark";
+  reference: string;
+  quote: string;
+  body: string;
+  verse: string;
+  color?: ScriptureHighlightColor;
+};
 
 function firstName(email: string | undefined, metadataName: unknown) {
   if (typeof metadataName === "string" && metadataName.trim()) return metadataName.trim().split(/\s+/)[0];
@@ -32,6 +50,15 @@ export default function ProductExperience() {
   const { user, loading } = useStudyAccount();
   const [stage, setStage] = useState<Stage>("launch");
   const [openStudyOnEntry, setOpenStudyOnEntry] = useState(false);
+
+  useEffect(() => {
+    if (loading) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("resume") !== "week1") return;
+    window.history.replaceState({}, "", window.location.pathname);
+    const timer = window.setTimeout(() => setStage("week1"), 0);
+    return () => window.clearTimeout(timer);
+  }, [loading]);
 
   function enter() { if (!loading) setStage(user ? "home" : "auth"); }
   function openWeek(study = false) { setOpenStudyOnEntry(study); setStage("week1"); }
@@ -87,7 +114,7 @@ function SignIn({ onBack, onPreview }: { onBack: () => void; onPreview: () => vo
 }
 
 function ProductShell({ stage, setStage, openWeek }: { stage: Stage; setStage: (stage: Stage) => void; openWeek: (study?: boolean) => void }) {
-  const { user, loadPortfolio, openAccount } = useStudyAccount();
+  const { user, loadPortfolio, openAccount, savePortfolio } = useStudyAccount();
   const [portfolio, setPortfolio] = useState<StudyPortfolio>(() => readLocalPortfolio());
   const stats = useMemo(() => getWeeklyStudyStats(portfolio), [portfolio]);
   const name = firstName(user?.email, user?.user_metadata?.full_name);
@@ -101,12 +128,23 @@ function ProductShell({ stage, setStage, openWeek }: { stage: Stage; setStage: (
     return () => { cancelled = true; window.removeEventListener(STUDY_UPDATED_EVENT, refresh); };
   }, [user, loadPortfolio]);
 
+  function persistPortfolio(next: StudyPortfolio) {
+    setPortfolio(next);
+    try {
+      window.localStorage.setItem(PERSONAL_STORAGE_KEY, JSON.stringify(next));
+      announceStudyUpdate();
+    } catch {
+      // The current screen remains usable when storage is restricted.
+    }
+    if (user) savePortfolio(next).catch(() => undefined);
+  }
+
   const navStage = stage === "study" || stage === "bible" ? stage : stage === "profile" ? "profile" : stage === "today" ? "today" : "home";
   return <main className="ttb-product"><section className="ttb-mobile">
     {stage === "home" && <HomeScreen name={name} stats={stats} openWeek={openWeek} setStage={setStage} openAccount={openAccount} />}
     {stage === "today" && <TodayScreen stats={stats} openWeek={openWeek} />}
     {stage === "study" && <StudyScreen setStage={setStage} openWeek={openWeek} />}
-    {stage === "bible" && <MyBibleScreen portfolio={portfolio} stats={stats} openWeek={openWeek} />}
+    {stage === "bible" && <MyBibleScreen portfolio={portfolio} stats={stats} openWeek={openWeek} onPortfolioChange={persistPortfolio} />}
     {stage === "profile" && <ProfileScreen name={name} stats={stats} openAccount={openAccount} />}
     <BottomNav active={navStage} setStage={setStage} />
   </section></main>;
@@ -143,14 +181,107 @@ function StudyScreen({ setStage, openWeek }: { setStage: (s: Stage) => void; ope
   return <div className="ttb-page"><div className="ttb-screen-title"><small>GO DEEPER</small><h1 className="ttb-serif">Study</h1></div><p className="ttb-eyebrow">YOUR STUDY CENTER</p><div className="ttb-menu-list">{items.map(([Icon,title,meta,onClick]) => <button className="ttb-menu" onClick={onClick} key={title}><span className="ttb-menu-icon"><Icon /></span><span><b>{title}</b><small>{meta}</small></span><ChevronRight /></button>)}</div></div>;
 }
 
-function MyBibleScreen({ portfolio, stats, openWeek }: { portfolio: StudyPortfolio; stats: ReturnType<typeof getWeeklyStudyStats>; openWeek: (study?: boolean) => void }) {
-  const marks = Object.values(portfolio.scriptureTools || {});
+function MyBibleScreen({ portfolio, stats, openWeek, onPortfolioChange }: { portfolio: StudyPortfolio; stats: ReturnType<typeof getWeeklyStudyStats>; openWeek: (study?: boolean) => void; onPortfolioChange: (next: StudyPortfolio) => void }) {
+  const [manageItem, setManageItem] = useState<LibraryItem | null>(null);
+  const [editText, setEditText] = useState("");
+  const [undoState, setUndoState] = useState<{ message: string; portfolio: StudyPortfolio } | null>(null);
+  const markEntries = Object.entries(portfolio.scriptureTools || {});
+  const marks = markEntries.map(([, mark]) => mark);
   const highlightCount = marks.reduce((n, m) => n + (m.selections?.filter(s => s.type === "highlight").length || 0), 0);
   const underlineCount = marks.reduce((n, m) => n + (m.selections?.filter(s => s.type === "underline").length || 0), 0);
   const savedCount = marks.filter(m => m.bookmark).length;
-  const notes = marks.filter(m => m.notes?.trim()).map(m => m.notes!.trim()).slice(0,3);
+  const savedItems: LibraryItem[] = markEntries.flatMap(([reference, mark]) => [
+    ...(mark.selections || []).map((selection) => ({
+      id: selection.id,
+      kind: selection.type,
+      reference,
+      quote: selection.quote,
+      body: selection.type === "highlight" ? `${selection.color || "yellow"} highlight` : "Underlined Scripture",
+      verse: selection.verse || "",
+      color: selection.color,
+    } as LibraryItem)),
+    ...(mark.studyEntries || []).map((entry) => ({
+      id: entry.id,
+      kind: entry.type,
+      reference,
+      quote: entry.quote,
+      body: entry.body,
+      verse: entry.verse || "",
+    } as LibraryItem)),
+    ...(mark.bookmark ? [{ id: `bookmark:${reference}`, kind: "bookmark", reference, quote: "", body: "Saved passage", verse: "" } as LibraryItem] : []),
+  ]).reverse();
   const rows = [[Highlighter,"Highlights",highlightCount],[Underline,"Underlined",underlineCount],[NotebookPen,"My Notes",stats.notes],[CircleHelp,"Questions I Asked",stats.questions],[Bookmark,"Saved Scriptures",savedCount],[Search,"Word Studies",0]] as const;
-  return <div className="ttb-page"><div className="ttb-screen-title"><small>EVERYTHING YOU'VE KEPT</small><h1 className="ttb-serif">My Bible</h1></div><div className="ttb-library-counts">{rows.map(([Icon,label,count]) => <button className="ttb-library-card" key={label} onClick={() => openWeek(true)}><span><Icon /></span><span><b>{label}</b><small>Week 01 saved study</small></span><strong>{count}</strong></button>)}</div><div className="ttb-section-head"><h2>Recent notes</h2></div>{notes.length ? notes.map((note,i) => <article className="ttb-saved-note" key={i}><small>WEEK 01 · GENESIS</small><p>{note}</p></article>) : <div className="ttb-empty">Your notes will collect here as you read. Open a Scripture, select what arrests your attention, and save the thought you want to carry with you.</div>}</div>;
+
+  useEffect(() => {
+    if (!undoState) return;
+    const timer = window.setTimeout(() => setUndoState(null), 4000);
+    return () => window.clearTimeout(timer);
+  }, [undoState]);
+
+  function applyLibraryChange(next: StudyPortfolio, message: string) {
+    setUndoState({ message, portfolio });
+    onPortfolioChange(next);
+    setManageItem(null);
+    setEditText("");
+  }
+
+  function updateManagedItem(action: "remove" | "save" | "color", color?: ScriptureHighlightColor) {
+    if (!manageItem) return;
+    const mark = portfolio.scriptureTools[manageItem.reference] || {};
+    let nextMark = mark;
+    let message = "Saved study updated.";
+
+    if (manageItem.kind === "highlight" || manageItem.kind === "underline") {
+      if (action === "color" && manageItem.kind === "highlight" && color) {
+        nextMark = { ...mark, selections: (mark.selections || []).map((item) => item.id === manageItem.id ? { ...item, color } : item) };
+        message = "Highlight color changed.";
+      } else if (action === "remove") {
+        nextMark = { ...mark, selections: (mark.selections || []).filter((item) => item.id !== manageItem.id) };
+        message = manageItem.kind === "highlight" ? "Highlight removed." : "Underline removed.";
+      }
+    } else if (manageItem.kind === "note" || manageItem.kind === "question") {
+      if (action === "save" && editText.trim()) {
+        nextMark = { ...mark, studyEntries: (mark.studyEntries || []).map((entry) => entry.id === manageItem.id ? { ...entry, body: editText.trim(), updatedAt: new Date().toISOString() } : entry) };
+        message = manageItem.kind === "note" ? "Note updated." : "Question updated.";
+      } else if (action === "remove") {
+        nextMark = { ...mark, studyEntries: (mark.studyEntries || []).filter((entry) => entry.id !== manageItem.id) };
+        message = manageItem.kind === "note" ? "Note deleted." : "Question deleted.";
+      }
+    } else if (manageItem.kind === "bookmark" && action === "remove") {
+      nextMark = { ...mark, bookmark: false };
+      message = "Passage removed from Saved.";
+    }
+
+    applyLibraryChange({ ...portfolio, scriptureTools: { ...portfolio.scriptureTools, [manageItem.reference]: nextMark } }, message);
+  }
+
+  function openManager(item: LibraryItem) {
+    setManageItem(item);
+    setEditText(item.kind === "note" || item.kind === "question" ? item.body : "");
+  }
+
+  return <div className="ttb-page">
+    <div className="ttb-screen-title"><small>EVERYTHING YOU&apos;VE KEPT</small><h1 className="ttb-serif">My Bible</h1></div>
+    <div className="ttb-library-counts">{rows.map(([Icon,label,count]) => <button className="ttb-library-card" key={label} onClick={() => openWeek(true)}><span><Icon /></span><span><b>{label}</b><small>Week 01 saved study</small></span><strong>{count}</strong></button>)}</div>
+    <div className="ttb-section-head"><h2>Recent saved study</h2></div>
+    {savedItems.length ? savedItems.slice(0, 8).map((item) => <article className="ttb-saved-note" key={`${item.reference}-${item.id}`}>
+      <div className="ttb-saved-note-head"><small>{item.reference}{item.verse ? ` · VERSE ${item.verse}` : ""} · {item.kind.toUpperCase()}</small><button type="button" aria-label={`Manage ${item.kind}`} onClick={() => openManager(item)}><MoreHorizontal /></button></div>
+      {item.quote ? <blockquote>“{item.quote}”</blockquote> : null}
+      <p>{item.body}</p>
+    </article>) : <div className="ttb-empty">Your saved study will collect here as you read. Highlight, underline, save, ask or take a note—and return here to manage it later.</div>}
+
+    {undoState ? <div className="ttb-library-undo" role="status"><span>{undoState.message}</span><button type="button" onClick={() => { onPortfolioChange(undoState.portfolio); setUndoState(null); }}>Undo <RotateCcw /></button></div> : null}
+
+    {manageItem ? <div className="ttb-library-backdrop" role="presentation" onClick={() => setManageItem(null)}>
+      <section className="ttb-library-sheet" role="dialog" aria-modal="true" aria-label="Manage saved study" onClick={(event) => event.stopPropagation()}>
+        <header><div><small>{manageItem.reference}{manageItem.verse ? ` · VERSE ${manageItem.verse}` : ""}</small><h2>{manageItem.kind === "bookmark" ? "Saved passage" : `Manage ${manageItem.kind}`}</h2></div><button type="button" aria-label="Close" onClick={() => setManageItem(null)}><X /></button></header>
+        {manageItem.quote ? <blockquote>“{manageItem.quote}”</blockquote> : null}
+        {manageItem.kind === "highlight" ? <><p className="ttb-library-label">Highlight color</p><div className="ttb-library-colors">{(["yellow","blue","green","red"] as ScriptureHighlightColor[]).map((color) => <button key={color} type="button" className={`ttb-swatch ttb-swatch-${color}${manageItem.color === color ? " active" : ""}`} aria-label={`${color} highlight`} onClick={() => updateManagedItem("color", color)} />)}</div></> : null}
+        {manageItem.kind === "note" || manageItem.kind === "question" ? <><label className="ttb-library-edit"><span>{manageItem.kind === "note" ? "Your note" : "Your question"}</span><textarea value={editText} onChange={(event) => setEditText(event.target.value)} rows={5} /></label><button type="button" className="ttb-primary" disabled={!editText.trim()} onClick={() => updateManagedItem("save")}><Pencil />Save changes</button></> : null}
+        <button type="button" className="ttb-library-delete" onClick={() => updateManagedItem("remove")}><Trash2 />{manageItem.kind === "bookmark" ? "Remove from Saved" : manageItem.kind === "note" || manageItem.kind === "question" ? "Delete" : "Remove mark"}</button>
+      </section>
+    </div> : null}
+  </div>;
 }
 
 function ProfileScreen({ name, stats, openAccount }: { name: string; stats: ReturnType<typeof getWeeklyStudyStats>; openAccount: () => void }) {

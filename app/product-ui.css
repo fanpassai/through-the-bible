@@ -120,7 +120,36 @@
 .ttb-library-card strong { font-size: 19px; font-family: 'Libre Caslon Display', Georgia, serif; }
 .ttb-saved-note { background: white; border: 1px solid var(--ttb-line); border-radius: 18px; padding: 17px; margin-top: 10px; }
 .ttb-saved-note small { color: var(--ttb-gold); font-size: 10px; font-weight: 700; }
+.ttb-saved-note blockquote { margin: 12px 0 0; padding: 10px 12px; border-left: 3px solid #151412; border-radius: 0 10px 10px 0; background: #f5f7f8; color: #353330; font-family: 'Libre Caslon Display', Georgia, serif; font-size: 15px; line-height: 1.5; }
 .ttb-saved-note p { margin: 9px 0 0; font-family: 'Libre Caslon Display', Georgia, serif; font-size: 18px; line-height: 1.45; }
+.ttb-saved-note-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ttb-saved-note-head button { width: 34px; height: 34px; border: 0; border-radius: 50%; background: #f5f3ef; color: var(--ttb-ink); display: grid; place-items: center; flex: 0 0 auto; }
+.ttb-saved-note-head button svg { width: 18px; }
+.ttb-library-undo { position: fixed; z-index: 45; left: 50%; bottom: calc(88px + env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(calc(100% - 32px), 488px); min-height: 58px; padding: 10px 12px 10px 18px; border-radius: 16px; background: #11100e; color: white; box-shadow: 0 18px 50px rgba(0,0,0,.22); display: flex; align-items: center; justify-content: space-between; gap: 14px; font-size: 12px; }
+.ttb-library-undo button { border: 0; border-radius: 12px; background: white; color: #11100e; min-height: 38px; padding: 0 13px; display: flex; align-items: center; gap: 7px; font-weight: 700; }
+.ttb-library-undo button svg { width: 15px; }
+.ttb-library-backdrop { position: fixed; z-index: 60; inset: 0; background: rgba(17,16,14,.42); display: flex; align-items: flex-end; justify-content: center; }
+.ttb-library-sheet { width: min(100%, 520px); max-height: 82dvh; overflow-y: auto; padding: 22px 20px calc(24px + env(safe-area-inset-bottom)); border-radius: 26px 26px 0 0; background: #fffefa; box-shadow: 0 -20px 60px rgba(0,0,0,.18); }
+.ttb-library-sheet header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.ttb-library-sheet header small { color: var(--ttb-muted); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
+.ttb-library-sheet h2 { margin: 4px 0 0; font-size: 25px; }
+.ttb-library-sheet header button { width: 38px; height: 38px; border: 1px solid var(--ttb-line); border-radius: 50%; background: white; display: grid; place-items: center; }
+.ttb-library-sheet header button svg { width: 17px; }
+.ttb-library-sheet blockquote { margin: 0 0 18px; padding: 13px 14px; border-radius: 14px; background: #f3f5f6; font-family: 'Libre Caslon Display', Georgia, serif; font-size: 17px; line-height: 1.5; }
+.ttb-library-label { margin: 0 0 10px; color: var(--ttb-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; }
+.ttb-library-colors { display: flex; gap: 12px; margin-bottom: 20px; }
+.ttb-swatch { width: 46px; height: 46px; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 0 1px #d8d2c8; }
+.ttb-swatch.active { box-shadow: 0 0 0 3px #11100e; }
+.ttb-swatch-yellow { background: #f4d34d; }
+.ttb-swatch-blue { background: #8fc5f0; }
+.ttb-swatch-green { background: #95d6a4; }
+.ttb-swatch-red { background: #ef8e8e; }
+.ttb-library-edit { display: grid; gap: 8px; margin-bottom: 14px; }
+.ttb-library-edit span { color: var(--ttb-muted); font-size: 11px; font-weight: 700; }
+.ttb-library-edit textarea { width: 100%; resize: vertical; border: 1px solid var(--ttb-line); border-radius: 15px; background: white; padding: 14px; color: var(--ttb-ink); font: inherit; line-height: 1.55; outline: none; }
+.ttb-library-edit textarea:focus { border-color: #8b8378; box-shadow: 0 0 0 3px rgba(21,19,15,.06); }
+.ttb-library-delete { width: 100%; min-height: 48px; margin-top: 12px; border: 1px solid #e5c8c5; border-radius: 14px; background: #fff7f6; color: #9b3129; display: flex; align-items: center; justify-content: center; gap: 9px; font-weight: 700; }
+.ttb-library-delete svg { width: 17px; }
 .ttb-empty { text-align: center; padding: 38px 20px; border: 1px dashed #d8d0c4; border-radius: 18px; color: var(--ttb-muted); font-size: 12px; line-height: 1.6; }
 
 .ttb-profile-card { background: white; border: 1px solid var(--ttb-line); border-radius: 24px; padding: 25px; text-align: center; }
