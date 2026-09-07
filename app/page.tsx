@@ -1,6 +1,5 @@
-import ProductExperience from "./product-experience";
-import { StudyAccountProvider } from "./study-account";
+import EntryExperience from "./design-lock/entry/entry-experience";
 
 export default function Home() {
-  return <StudyAccountProvider><ProductExperience /></StudyAccountProvider>;
+  return <EntryExperience />;
 }
