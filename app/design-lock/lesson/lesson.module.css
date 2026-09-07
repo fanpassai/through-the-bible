@@ -15,10 +15,14 @@
 
 .device {
   width: min(100%, 430px);
+  height: 100svh;
   min-height: 100svh;
   position: relative;
   padding-bottom: 84px;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
   background: var(--paper);
 }
 
