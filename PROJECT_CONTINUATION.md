@@ -7,7 +7,7 @@
 - Protected baseline branch: `approved-restoration-2026-09-07`
 - Protected baseline commit: `e4461290f361b760b89645e4b1f3f26c5089dbd4`
 - Working branch: `friday-lesson1-launch-2026-09-07`
-- Status: Journey foundation and the new Journey Home are implemented locally and build-verified; publishing the protected preview for user review.
+- Status: Journey foundation and the new Journey Home are build-verified and published to the protected preview; awaiting user review and approval.
 
 ## Governing execution plan
 
@@ -73,7 +73,15 @@ The new canonical `/journey` Home screen now:
 
 ## Immediate next action
 
-Publish the Journey checkpoint to the existing protected preview. The user should review the Journey Home at mobile height, first-session focus, all ten week destinations, and exact Lesson 1 resume. After approval, begin Milestone 3: the complete manifest-driven Week Plan.
+The user should review the Journey Home at mobile height, first-session focus, all ten week destinations, and exact Lesson 1 resume. After approval, begin Milestone 3: the complete manifest-driven Week Plan.
+
+## Current protected preview checkpoint
+
+- Journey implementation commit: `d71760e0c16027d8d84b62c0c05926f1dc35ae32`
+- Preview branch: `friday-lesson1-launch-2026-09-07`
+- Direct review route: `https://through-the-bible-git-friday-lesson1-118efa-fanpassais-projects.vercel.app/journey`
+- Vercel status: both configured preview deployments passed
+- Production: untouched
 
 ## Approval protocol
 

@@ -261,4 +261,5 @@ Definition of done: every approved Week 1 path works end to end on the protected
 - Production: untouched
 - Milestone 1 verification: 10 weeks, 43 Week 1 activities, 56 permanent routes; course contract and production build passed.
 - Journey Home implementation: complete locally and production-build verified. It is driven by the manifest and progress resolver, shows the exact legacy-compatible Continue target, exposes the two-row Week 1–10 map, and gives Weeks 2–10 honest locked destinations.
+- Protected Journey implementation commit: `d71760e0c16027d8d84b62c0c05926f1dc35ae32`; both Vercel preview checks passed.
 - Remaining Milestone 2 action: review the protected preview in new, returning, and Week-complete states; then begin Milestone 3, the complete reusable Week Plan.
