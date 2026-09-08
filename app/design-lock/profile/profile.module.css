@@ -1,0 +1,53 @@
+.page {
+  --ink: #141412;
+  --line: #e8e3d9;
+  --gold: #bd8739;
+  --gold-soft: #faf0df;
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #000;
+  color: var(--ink);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+}
+
+.device { position: relative; width: min(100%, 430px); height: 100svh; max-height: 932px; overflow: hidden; background: #fff; }
+.header { min-height: 82px; padding: max(32px, env(safe-area-inset-top)) 24px 14px; display: grid; grid-template-columns: 34px 1fr 34px; align-items: end; text-align: center; border-bottom: 1px solid var(--line); }
+.header a { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; color: var(--ink); }
+.header svg { width: 16px; }
+.header strong { padding-bottom: 7px; font-size: 13px; }
+.content { height: calc(100% - 82px); padding: 28px 24px 94px; overflow-y: auto; scrollbar-width: none; }
+.content::-webkit-scrollbar { display: none; }
+.identity { text-align: center; }
+.identity > div { width: 70px; height: 70px; margin: 0 auto 12px; display: grid; place-items: center; border-radius: 50%; background: var(--gold-soft); color: var(--ink); font-size: 24px; font-weight: 750; }
+.identity h1 { margin: 0; font-size: 27px; letter-spacing: -.04em; }
+.identity p { margin: 5px 0 0; font-size: 11px; }
+.progressCard { margin-top: 25px; padding: 18px; border: 1px solid var(--line); border-radius: 16px; }
+.progressCard > small { font-size: 8px; font-weight: 750; letter-spacing: .08em; }
+.progressCard > div { margin-top: 10px; display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; }
+.progressCard h2 { margin: 0; max-width: 220px; font-size: 19px; line-height: 1.15; letter-spacing: -.03em; }
+.progressCard > div > strong { font-size: 16px; color: var(--gold); }
+.progress { height: 5px; margin-top: 16px; display: block; overflow: hidden; border-radius: 9px; background: var(--line); }
+.progress i { height: 100%; display: block; border-radius: inherit; background: var(--gold); }
+.progressCard p { margin: 8px 0 14px; font-size: 9px; }
+.progressCard a { display: flex; align-items: center; justify-content: space-between; color: var(--ink); font-size: 11px; font-weight: 700; text-decoration: none; }
+.progressCard a svg { width: 14px; color: var(--gold); }
+.stats { margin-top: 14px; padding: 16px 8px; display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); border-radius: 16px; }
+.stats span { display: flex; flex-direction: column; align-items: center; gap: 3px; border-right: 1px solid var(--line); }
+.stats span:last-child { border-right: 0; }
+.stats svg { width: 16px; height: 16px; color: var(--gold); }
+.stats strong { margin-top: 3px; font-size: 17px; }
+.stats small { font-size: 8px; }
+.accountButton { width: 100%; min-height: 67px; margin-top: 14px; padding: 12px 14px; display: grid; grid-template-columns: 36px 1fr 16px; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 16px; background: #fff; color: var(--ink); text-align: left; cursor: pointer; }
+.accountButton > svg:first-child { width: 18px; color: var(--gold); }
+.accountButton > svg:last-child { width: 14px; }
+.accountButton span strong, .accountButton span small { display: block; }
+.accountButton span strong { font-size: 11px; }
+.accountButton span small { max-width: 245px; margin-top: 3px; overflow: hidden; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.bottomNav { position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; min-height: 70px; padding: 8px 8px max(9px, env(safe-area-inset-bottom)); display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid var(--line); background: rgba(255,255,255,.98); backdrop-filter: blur(15px); }
+.navItem, .navActive { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--ink); text-decoration: none; }
+.navItem svg, .navActive svg { width: 18px; height: 18px; stroke-width: 1.65; }
+.navItem span, .navActive span { font-size: 7px; font-weight: 620; }
+.navActive { color: var(--gold); }
+@media (min-width: 481px) { .device { border-radius: 28px; box-shadow: 0 28px 90px rgba(0,0,0,.36); } }

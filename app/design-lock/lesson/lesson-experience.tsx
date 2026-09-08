@@ -79,8 +79,8 @@ const navigation = [
   { label: "Home", icon: Home, href: "/design-lock/home" },
   { label: "Today", icon: CalendarDays, href: "/design-lock/today", active: true },
   { label: "Study", icon: BookOpen, href: "/design-lock/lesson" },
-  { label: "My Bible", icon: Library, href: "/?resume=week1" },
-  { label: "Profile", icon: UserRound, href: "#" },
+  { label: "My Bible", icon: Library, href: "/?resume=week1&study=open" },
+  { label: "Profile", icon: UserRound, href: "/design-lock/profile" },
 ];
 
 export default function LessonExperience() {
