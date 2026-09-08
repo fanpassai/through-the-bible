@@ -1,0 +1,21 @@
+.page { --ink:#11110f; --line:#e7e8e6; --blue:#eaf4ff; --gold:#b9802f; min-height:100svh; display:grid; place-items:center; overflow:hidden; background:#000; color:var(--ink); font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Arial,sans-serif; }
+.device { width:min(100%,430px); height:100svh; max-height:932px; overflow:hidden; background:#fff; }
+.header { min-height:86px; padding:max(34px,env(safe-area-inset-top)) 24px 13px; display:grid; grid-template-columns:34px 1fr 34px; align-items:end; border-bottom:1px solid var(--line); text-align:center; }
+.header a { width:32px; height:32px; display:grid; place-items:center; border:1px solid var(--line); border-radius:50%; color:var(--ink); }
+.header a svg { width:16px; }
+.header span small,.header span strong { display:block; }
+.header span small { margin-bottom:2px; color:var(--gold); font-size:8px; font-weight:800; letter-spacing:.1em; }
+.header span strong { font-size:13px; }
+.content { min-height:calc(100% - 86px); padding:80px 30px 35px; text-align:center; }
+.lockIcon { width:66px; height:66px; margin:0 auto 23px; display:grid; place-items:center; border-radius:50%; background:var(--blue); color:#3779b5; }
+.lockIcon svg { width:25px; }
+.eyebrow { margin:0; color:var(--gold); font-size:10px; font-weight:800; letter-spacing:.11em; }
+.content h1 { max-width:340px; margin:11px auto 13px; font-size:29px; line-height:1.08; letter-spacing:-.045em; }
+.content > p:not(.eyebrow) { max-width:330px; margin:0 auto; color:#626563; font-size:14px; line-height:1.55; }
+.promise { margin:30px auto 0; padding:17px; display:flex; align-items:flex-start; gap:12px; border:1px solid var(--line); border-radius:16px; background:#fff; text-align:left; }
+.promise > svg { flex:0 0 auto; width:19px; color:var(--gold); }
+.promise strong,.promise small { display:block; }
+.promise strong { font-size:13px; }
+.promise small { margin-top:5px; color:#626563; font-size:11px; line-height:1.45; }
+.returnAction { height:48px; margin-top:18px; display:flex; align-items:center; justify-content:center; border-radius:13px; background:#11110f; color:#fff; font-size:13px; font-weight:720; text-decoration:none; }
+@media (min-width:481px) { .device { border-radius:28px; box-shadow:0 28px 90px rgba(0,0,0,.36); } }

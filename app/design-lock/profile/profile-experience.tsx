@@ -22,7 +22,7 @@ import { getWeekOneTracking, readWeekOneSession } from "@/lib/week-one-tracking"
 import styles from "./profile.module.css";
 
 const nav = [
-  { label: "Home", icon: Home, href: "/design-lock/home" },
+  { label: "Home", icon: Home, href: "/journey" },
   { label: "Today", icon: CalendarDays, href: "/design-lock/today" },
   { label: "Study", icon: BookOpen, href: "/design-lock/lesson" },
   { label: "My Bible", icon: Library, href: "/?resume=week1&study=open" },
@@ -59,7 +59,7 @@ export default function ProfileExperience() {
     <main className={styles.page}>
       <section className={styles.device}>
         <header className={styles.header}>
-          <Link href="/design-lock/home" aria-label="Back to Home"><ArrowLeft /></Link>
+          <Link href="/journey" aria-label="Back to Home"><ArrowLeft /></Link>
           <strong>Profile</strong><span />
         </header>
         <div className={styles.content}>

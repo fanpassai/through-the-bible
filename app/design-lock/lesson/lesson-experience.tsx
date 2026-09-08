@@ -76,7 +76,7 @@ const emptyPortfolio: StudyPortfolio = {
 };
 
 const navigation = [
-  { label: "Home", icon: Home, href: "/design-lock/home" },
+  { label: "Home", icon: Home, href: "/journey" },
   { label: "Today", icon: CalendarDays, href: "/design-lock/today", active: true },
   { label: "Study", icon: BookOpen, href: "/design-lock/lesson" },
   { label: "My Bible", icon: Library, href: "/?resume=week1&study=open" },
@@ -150,7 +150,7 @@ export default function LessonExperience() {
     <main className={styles.page}>
       <section className={styles.device}>
         <header className={styles.header}>
-          <Link href="/design-lock/today" aria-label="Back to Today"><ArrowLeft /></Link>
+          <Link href="/journey" aria-label="Back to your journey"><ArrowLeft /></Link>
           <span><small>WEEK 1</small><strong>Lesson overview</strong></span>
           <i />
         </header>

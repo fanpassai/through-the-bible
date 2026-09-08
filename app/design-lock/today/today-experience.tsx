@@ -79,7 +79,7 @@ const unitIcons = {
 } satisfies Record<TrackingKey, typeof BookOpen>;
 
 const nav = [
-  { label: "Home", icon: Home, href: "/design-lock/home" },
+  { label: "Home", icon: Home, href: "/journey" },
   { label: "Today", icon: CalendarDays, href: "/design-lock/today", active: true },
   { label: "Study", icon: BookOpen, href: "/design-lock/lesson" },
   { label: "My Bible", icon: Library, href: "/?resume=week1&study=open" },

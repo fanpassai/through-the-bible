@@ -8,9 +8,10 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "check:course": "node --experimental-strip-types scripts/check-course-contract.mts",
     "start": "next start",
     "lint": "eslint .",
-    "test": "npm run build"
+    "test": "npm run check:course && npm run build"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",
