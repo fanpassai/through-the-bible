@@ -1,1380 +1,19 @@
-"use client";
-
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type UIEvent } from "react";
-import {
-  ArrowLeft, ArrowRight, Bookmark, BookOpen, Check, ChevronDown, ChevronRight, CircleHelp,
-  GripVertical, Highlighter, Info, Link2, LockKeyhole, MapPin, Minus,
-  MessageCircleQuestion, NotebookPen, RotateCcw,
-  Sparkles, Underline, UserRound, Users, Waypoints, X,
-} from "lucide-react";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import lesson from "./week1-data.json";
-import { useStudyAccount } from "./study-account";
-import { announceStudyUpdate, mergePortfolios, PERSONAL_STORAGE_KEY } from "@/lib/study-progress";
-import type { ScriptureMark, ScriptureReading, ScriptureSelection, StudyActivityEvent, StudyActivityType, StudyPortfolio } from "@/lib/study-types";
-import { WEEK_ONE_RESUME_KEY, type ResumeTarget } from "@/lib/week-one-tracking";
-
-type ToolName = "place" | "fill" | "connect" | "unlock";
-type StudyDockName = ToolName | "deep";
-type Screen = "home" | "roadmap" | "movement" | "story" | "promise" | "family" |
-  "placeIntro" | "fillIntro" | "connectIntro" | "unlockIntro" | "place" | "fill" | "connect" | "unlock" | "deep" | "complete";
-type Scripture = { html: string; study: string; translation: string; kind: string };
-type FillItem = { q: string; answer: string; accepted: string[]; hint: string; why: string };
-type DeepDay = {
-  tab: string; eyebrow: string; title: string; cover: string; subtitle: string;
-  time: string; refs: string[]; lede: string; paragraphs: string[];
-  quote: string; quoteRef: string; hold: string; reflect: string; prayer: string;
-};
-type AppState = {
-  started: boolean; story: number; place: string[]; placeOrder: string[];
-  fillAnswers: Record<string, string>; fillCorrect: Record<string, boolean>;
-  connect: number; teachback: string[]; teachbackComplete: boolean;
-  deepCompleted: Record<string, boolean>; deepNotes: Record<string, string>;
-  deepReflections: Record<string, string>; scriptureTools: Record<string, ScriptureMark>;
-  readingHistory: Record<string, ScriptureReading>; activityEvents: StudyActivityEvent[];
-};
-
-const STORY = lesson.STORY as [string, string, string[], string, string][];
-const FILL = lesson.FILL as FillItem[];
-const PLACE = lesson.PLACE as string[];
-const SCRIPTURES = lesson.SCRIPTURES as Record<string, Scripture>;
-const DISCOVERIES = lesson.W1_DISCOVERIES as { title: string; body: string }[];
-const TEACHBACK = lesson.TEACHBACK_STEPS as { label: string; trail: string; title: string; prompt: string; placeholder: string; nudge: string }[];
-const DEEP_DAYS = lesson.DEEP_DAYS as DeepDay[];
-const DEEP_INSIGHTS = lesson.DEEP_INSIGHTS as Record<string, { type: string; title: string; body: string; source: string }>;
-const DEEP_ART = DEEP_DAYS.map((_, index) => `/images/week1-deep-day-${String(index + 1).padStart(2, "0")}.jpg`);
-const DEEP_COVER = "/images/week1-deep-plan-cover-v2.png";
-const SCRAMBLED_PLACE = [PLACE[4], PLACE[1], PLACE[5], PLACE[2], PLACE[0], PLACE[3]];
-
-const DEFAULT_STATE: AppState = {
-  started: false, story: 0, place: [], placeOrder: SCRAMBLED_PLACE, fillAnswers: {}, fillCorrect: {}, connect: 0,
-  teachback: ["", "", "", ""], teachbackComplete: false, deepCompleted: {},
-  deepNotes: {}, deepReflections: {}, scriptureTools: {}, readingHistory: {}, activityEvents: [],
-};
-const SESSION_STORAGE_KEY = "ttb-week01-active-study-session-v1";
-const LEGACY_STORAGE_KEYS = ["ttb-week01-living-atlas-v2", "ttb-week01-living-atlas-v1"];
-const HOME_HERO = "/images/week1-cinematic-master-v4.webp";
-const CINEMA_HERO = "/images/week1-hero-cinematic.png";
-const CINEMA_CREATION = "/images/week1-story-creation.png";
-const ROADMAP_ART = [
-  "/images/week1-roadmap-creation.png",
-  "/images/week1-roadmap-image-bearers.png",
-  "/images/week1-roadmap-rupture.png",
-  "/images/week1-eden-exile-couple.jpg",
-] as const;
-const STORY_ART = [
-  CINEMA_CREATION,
-  "/images/week1-creation-sea.jpg",
-  "/images/week1-eden-couple.jpg",
-  "/images/week1-eden-vocation.jpg",
-  "/images/week1-eden-temptation.jpg",
-  "/images/week1-eden-shame.jpg",
-  "/images/week1-eden-exile-couple.jpg",
-  CINEMA_HERO,
-] as const;
-const PROMISE_ART = "/images/week1-hero-reference-v2.png";
-const FAMILY_ART = "/images/week1-hero-reference-v3.png";
-const MOVEMENTS = [
-  {
-    eyebrow: "01 Â· THE SIX DAYS", title: "A world formedâ€”and filled.",
-    roadmapTitle: "Six Days: A World Formed and Filled",
-    roadmapSummary: "God orders the realms, fills them with life, and rests over a world declared very good.",
-    deck: "Genesis opens with movement, sequence and intention. God does not merely make things; He orders a world in which life can flourish.",
-    sectionTitle: "Creation is architecture before it is scenery.",
-    paragraphs: [
-      "During Days 1â€“3, God forms the realms: light and darkness, sky and sea, dry land and vegetation. During Days 4â€“6, He fills those realms with the lights, birds and fish, animals and finally humanity.",
-      "The repeated rhythmâ€”God speaks, creation responds, God names, and God calls it goodâ€”presents a world that is neither accidental nor chaotic. It arrives by His word, under His authority, and according to His purpose.",
-      "Day Seven completes the pattern. God rests, blesses the day and makes it holyâ€”not because He is tired, but because the ordered work is complete and His rule is established.",
-    ],
-    beats: [["DAYS 1â€“3", "God forms the realms"], ["DAYS 4â€“6", "God fills what He formed"], ["DAY 7", "God rests, blesses and reigns"]],
-    insight: "The first truth Scripture gives us about reality is that the world belongs to God and carries the marks of His intention.",
-    refs: ["Genesis 1:3â€“31"], image: CINEMA_CREATION,
-  },
-  {
-    eyebrow: "02 Â· THE CROWN", title: "Image-bearers become earthâ€™s regents.",
-    roadmapTitle: "The Crown of Creation: Image-Bearers and Regents",
-    roadmapSummary: "Humanity receives royal dignity, delegated authority and a vocation beneath Godâ€™s rule.",
-    deck: "Creation reaches its climax when God makes humanity in His image and entrusts the earth to their care.",
-    sectionTitle: "Identity comes before assignment.",
-    paragraphs: [
-      "On the sixth day, God creates humankindâ€”male and femaleâ€”in His image and likeness. In the ancient world, an image represented the presence and authority of a king. Genesis gives that royal dignity not to one ruler, but to every human being.",
-      "Humanity is commissioned to be fruitful, fill the earth, subdue it and rule over its creatures. This is not permission to exploit creation. It is delegated authority: human beings govern under God, reflecting His wise and life-giving rule.",
-      "The garden makes the vocation concrete. Humanity is placed there to work it and keep it. Meaningful work, cultivation and responsibility exist before sin; they belong to the goodness of creation itself.",
-    ],
-    beats: [["IDENTITY", "Made in Godâ€™s image"], ["AUTHORITY", "Royal representatives under God"], ["VOCATION", "Cultivate, guard and extend order"]],
-    insight: "To be human is to possess God-given dignityâ€”and to carry God-given responsibility for the world entrusted to us.",
-    refs: ["Genesis 1:26â€“28", "Genesis 2:15â€“17"], image: "/images/week1-image-bearers.webp",
-  },
-  {
-    eyebrow: "03 Â· THE RUPTURE", title: "Sin breaks trustâ€”and disorders everything.",
-    roadmapTitle: "The Rupture: Sin and What It Changed",
-    roadmapSummary: "Distrust becomes rebellion; shame, disorder, mortality and exile enter the human story.",
-    deck: "The fall begins when Godâ€™s goodness is questioned and human beings reach for the right to define good and evil for themselves.",
-    sectionTitle: "The first rebellion produces the first hiding place.",
-    paragraphs: [
-      "The serpent reframes Godâ€™s generous world around one prohibition: â€œDid God really say?â€ Distrust comes before disobedience. The humans seize autonomy, taking what God had withheld rather than receiving wisdom on His terms.",
-      "The effects are immediate: innocence becomes shame, openness becomes hiding, fellowship becomes blame. Sin ruptures humanityâ€™s relationship with God, with one another, with the self and with the ground from which humanity was formed.",
-      "Judgment reaches relationships, labor, pain and mortality. Finally, humanity is sent east of Eden, away from the tree of life. The world remains Godâ€™s creation, but life within it is now marked by resistance, fracture and death.",
-    ],
-    beats: [["DISTRUST", "Godâ€™s goodness is questioned"], ["DISORDER", "Shame, hiding and blame enter"], ["EXILE", "Humanity moves east of Eden"]],
-    insight: "Sin is more than rule-breaking. It is the rejection of Godâ€™s ruleâ€”and the unraveling of the order His rule sustained.",
-    refs: ["Genesis 3:1â€“7", "Genesis 3:14â€“19", "Genesis 3:22â€“24"], image: "/images/week1-trust-fractures.webp",
-  },
-  {
-    eyebrow: "04 Â· THE FIRST PROMISE", title: "Hope speaks before Eden closes.",
-    roadmapTitle: "The First Promise: Hope Before Eden Closes",
-    roadmapSummary: "Inside the judgment, God promises a coming Seed and a victory evil cannot prevent.",
-    deck: "Judgment is not the Bibleâ€™s final word in Genesis 3. Before humanity leaves the garden, God places a promise inside the sentence.",
-    sectionTitle: "The conflict will continueâ€”but evil will not win.",
-    paragraphs: [
-      "Speaking to the serpent, God announces enmity between the serpent and the woman, and between their offspring. One coming Seed will be wounded, yet He will crush the serpentâ€™s head.",
-      "Genesis 3:15 is a beginning, not the completed explanation. It introduces a conflict, a coming descendant and a decisive victory. The rest of Scripture will progressively identify where that promised deliverance leads.",
-      "The promise is spoken before the expulsion. Humanity will leave Eden, but not without hope. From this moment onward, the biblical story follows Godâ€™s purpose to defeat evil, restore His people and bring creation under His good rule again.",
-    ],
-    beats: [["CONFLICT", "The serpent will be opposed"], ["SEED", "A coming offspring will enter"], ["VICTORY", "Woundedâ€”yet finally crushing evil"]],
-    insight: "Grace appears at the very place rebellion is judged: God Himself promises that the destroyer will not have the last word.",
-    refs: ["Genesis 3:15", "1 John 3:8"], image: "/images/week1-atlas-eden.png",
-  },
-] as const;
-
-const PLACE_CARD_META: Record<string, { kicker: string; title: string; body: string; ref: string; image: string; fallback: string }> = {
-  "God creates and calls creation good": {
-    kicker: "FORMED + FILLED", title: "A World Called Good",
-    body: "Across six ordered days, God forms the realms, fills them with life and declares the whole creation very good.",
-    ref: "Genesis 1:3â€“31", image: "/images/place-01-creation-v24.webp", fallback: "/images/week1-creation-sea.jpg?place=v24",
-  },
-  "Humanity bears God's image": {
-    kicker: "THE CROWN", title: "Royal Image-Bearers",
-    body: "Male and female receive God-given dignity and are commissioned to represent His rule within creation.",
-    ref: "Genesis 1:26â€“28", image: "/images/place-02-image-bearers-v24.webp", fallback: "/images/week1-eden-couple.jpg?place=v24",
-  },
-  "God gives abundance and a boundary": {
-    kicker: "GIFT + TRUST", title: "Abundance with a Boundary",
-    body: "The garden is generous, work is meaningful and one command makes trusting the Giver visible.",
-    ref: "Genesis 2:15â€“17", image: "/images/place-03-vocation-v24.webp", fallback: "/images/week1-eden-vocation.jpg?place=v24",
-  },
-  "The serpent questions God's word": {
-    kicker: "THE QUESTION", title: "Trust Comes Under Attack",
-    body: "The serpent reframes Godâ€™s generosity and plants suspicion before the first act of disobedience.",
-    ref: "Genesis 3:1â€“7", image: "/images/place-04-temptation-v24.webp", fallback: "/images/week1-eden-temptation.jpg?place=v24",
-  },
-  "Rebellion brings shame, blame, and judgment": {
-    kicker: "THE RUPTURE", title: "Shame, Blame and Judgment",
-    body: "Sin disorders humanityâ€™s relationship with God, one another, the self and the ground beneath them.",
-    ref: "Genesis 3:8â€“13", image: "/images/place-05-rupture-v24.webp", fallback: "/images/week1-eden-shame.jpg?place=v24",
-  },
-  "Promise appears before humanity is exiled": {
-    kicker: "HOPE SPEAKS", title: "Promise Before Exile",
-    body: "Before Eden closes, God announces a coming Seed and a victory the serpent cannot prevent.",
-    ref: "Genesis 3:15", image: "/images/place-06-promise-v24.webp", fallback: "/images/cinema-night.png?place=v24",
-  },
-};
-
-function normalize(value: string) {
-  return value.toLowerCase().trim().replace(/[.,!?;:'"â€œâ€â€˜â€™]/g, "").replace(/\s+/g, " ");
-}
-
-function annotateScriptureHtml(html: string, annotations: ScriptureSelection[]) {
-  if (!annotations.length) return html;
-  let offset = 0;
-  return (html.match(/<[^>]+>|[^<]+/g) || []).map((token) => {
-    if (token.startsWith("<")) return token;
-    const start = offset;
-    const end = start + token.length;
-    offset = end;
-    const local = annotations.filter((item) => item.start < end && item.end > start);
-    if (!local.length) return token;
-    const boundaries = new Set<number>([0, token.length]);
-    local.forEach((item) => {
-      boundaries.add(Math.max(0, item.start - start));
-      boundaries.add(Math.min(token.length, item.end - start));
-    });
-    const points = [...boundaries].sort((a, b) => a - b);
-    return points.slice(0, -1).map((from, index) => {
-      const to = points[index + 1];
-      const text = token.slice(from, to);
-      const active = local.filter((item) => item.start < start + to && item.end > start + from);
-      if (!active.length) return text;
-      const classes = ["scripture-selection"];
-      if (active.some((item) => item.type === "highlight")) classes.push("is-highlighted");
-      if (active.some((item) => item.type === "underline")) classes.push("is-underlined");
-      return `<span class="${classes.join(" ")}">${text}</span>`;
-    }).join("");
-  }).join("");
-}
-
-function restoreState(saved: unknown): AppState {
-  if (!saved || typeof saved !== "object") return DEFAULT_STATE;
-  const candidate = saved as Partial<AppState>;
-  const validPlace = Array.isArray(candidate.place)
-    ? candidate.place.filter((item): item is string => typeof item === "string" && PLACE.includes(item))
-    : [];
-  const validPlaceOrder = Array.isArray(candidate.placeOrder) && candidate.placeOrder.length === PLACE.length &&
-    new Set(candidate.placeOrder).size === PLACE.length && candidate.placeOrder.every((item) => typeof item === "string" && PLACE.includes(item))
-    ? candidate.placeOrder as string[] : SCRAMBLED_PLACE;
-  const validTeachback = Array.isArray(candidate.teachback)
-    ? [...candidate.teachback.filter((item): item is string => typeof item === "string"), "", "", "", ""].slice(0, 4)
-    : [...DEFAULT_STATE.teachback];
-
-  return {
-    started: Boolean(candidate.started),
-    story: typeof candidate.story === "number" && Number.isFinite(candidate.story) ? candidate.story : 0,
-    place: validPlace, placeOrder: validPlaceOrder,
-    fillAnswers: candidate.fillAnswers && typeof candidate.fillAnswers === "object" ? candidate.fillAnswers : {},
-    fillCorrect: candidate.fillCorrect && typeof candidate.fillCorrect === "object" ? candidate.fillCorrect : {},
-    connect: typeof candidate.connect === "number" && Number.isFinite(candidate.connect) ? candidate.connect : 0,
-    teachback: validTeachback,
-    teachbackComplete: Boolean(candidate.teachbackComplete),
-    deepCompleted: candidate.deepCompleted && typeof candidate.deepCompleted === "object" ? candidate.deepCompleted : {},
-    deepNotes: candidate.deepNotes && typeof candidate.deepNotes === "object" ? candidate.deepNotes : {},
-    deepReflections: candidate.deepReflections && typeof candidate.deepReflections === "object" ? candidate.deepReflections : {},
-    scriptureTools: candidate.scriptureTools && typeof candidate.scriptureTools === "object" ? candidate.scriptureTools : {},
-    readingHistory: candidate.readingHistory && typeof candidate.readingHistory === "object" ? candidate.readingHistory : {},
-    activityEvents: Array.isArray(candidate.activityEvents)
-      ? candidate.activityEvents.filter((event): event is StudyActivityEvent => Boolean(event && typeof event === "object")).slice(-500)
-      : [],
-  };
-}
-
-export default function WeekOne({ onCourseHome, initialOpenStudy = false }: { onCourseHome?: () => void; initialOpenStudy?: boolean }) {
-  const [state, setState] = useState<AppState>(DEFAULT_STATE);
-  const [ready, setReady] = useState(false);
-  const [screen, setScreen] = useState<Screen>("roadmap");
-  const [storyIndex, setStoryIndex] = useState(0);
-  const [movementIndex, setMovementIndex] = useState(0);
-  const [fillIndex, setFillIndex] = useState(0);
-  const [fillHint, setFillHint] = useState(false);
-  const [fillMessage, setFillMessage] = useState("");
-  const [placeMessage, setPlaceMessage] = useState("");
-  const [scriptureRef, setScriptureRef] = useState<string | null>(null);
-  const [deepDay, setDeepDay] = useState(0);
-  const [deepOpen, setDeepOpen] = useState(false);
-  const [insightKey, setInsightKey] = useState<string | null>(null);
-  const [teachbackStep, setTeachbackStep] = useState(0);
-  const [teachbackSummary, setTeachbackSummary] = useState("");
-  const [showModel, setShowModel] = useState(false);
-  const [teachbackMessage, setTeachbackMessage] = useState("");
-  const [myStudyOpen, setMyStudyOpen] = useState(initialOpenStudy);
-  const cloudLoadedFor = useRef<string | null>(null);
-  const { user, cloudConfigured, loading: accountLoading, openAccount, loadPortfolio, savePortfolio, submitQuestion } = useStudyAccount();
-
-  function makeActivity(type: StudyActivityType, reference?: string, detail?: StudyActivityEvent["detail"]): StudyActivityEvent {
-    return {
-      id: crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`,
-      type,
-      createdAt: new Date().toISOString(),
-      reference,
-      detail,
-    };
-  }
-
-  function keepActivity(events: StudyActivityEvent[], event: StudyActivityEvent) {
-    return [...events, event].slice(-500);
-  }
-
-  useEffect(() => {
-    const loadSavedProgress = window.setTimeout(() => {
-      try {
-        const session = JSON.parse(sessionStorage.getItem(SESSION_STORAGE_KEY) || "null");
-        const savedPersonal = JSON.parse(localStorage.getItem(PERSONAL_STORAGE_KEY) || "null");
-        const legacy = JSON.parse(LEGACY_STORAGE_KEYS.map((key) => localStorage.getItem(key)).find(Boolean) || "null");
-        const personal = savedPersonal && typeof savedPersonal === "object" ? savedPersonal : legacy;
-        const personalRecord = personal && typeof personal === "object" ? personal as Partial<AppState> : {};
-        setState(restoreState({
-          ...(session && typeof session === "object" ? session : {}),
-          deepCompleted: personalRecord.deepCompleted || {},
-          deepNotes: personalRecord.deepNotes || {},
-          deepReflections: personalRecord.deepReflections || {},
-          scriptureTools: personalRecord.scriptureTools || {},
-          readingHistory: personalRecord.readingHistory || {},
-          activityEvents: personalRecord.activityEvents || [],
-        }));
-        LEGACY_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
-      } catch { /* malformed local progress must never block the lesson */ }
-      setReady(true);
-    }, 0);
-    return () => window.clearTimeout(loadSavedProgress);
-  }, []);
-  useEffect(() => {
-    if (!ready) return;
-    try {
-      sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
-        started: state.started,
-        story: state.story,
-        place: state.place,
-        placeOrder: state.placeOrder,
-        fillAnswers: state.fillAnswers,
-        fillCorrect: state.fillCorrect,
-        connect: state.connect,
-        teachback: state.teachback,
-        teachbackComplete: state.teachbackComplete,
-      }));
-      localStorage.setItem(PERSONAL_STORAGE_KEY, JSON.stringify({
-        deepCompleted: state.deepCompleted,
-        deepNotes: state.deepNotes,
-        deepReflections: state.deepReflections,
-        scriptureTools: state.scriptureTools,
-        readingHistory: state.readingHistory,
-        activityEvents: state.activityEvents,
-      }));
-      announceStudyUpdate();
-    } catch { /* storage restrictions must never block the lesson */ }
-  }, [ready, state]);
-
-  useEffect(() => {
-    if (!ready || !user || cloudLoadedFor.current === user.id) return;
-    let cancelled = false;
-    loadPortfolio().then((cloud) => {
-      if (cancelled) return;
-      setState((current) => {
-        if (!cloud) return current;
-        const merged = mergePortfolios(cloud, current);
-        return { ...current, ...merged };
-      });
-      cloudLoadedFor.current = user.id;
-    }).catch(() => { cloudLoadedFor.current = user.id; });
-    return () => { cancelled = true; };
-  }, [ready, user, loadPortfolio]);
-
-  useEffect(() => {
-    if (!ready || !user || cloudLoadedFor.current !== user.id) return;
-    const portfolio: StudyPortfolio = {
-      deepCompleted: state.deepCompleted,
-      deepNotes: state.deepNotes,
-      deepReflections: state.deepReflections,
-      scriptureTools: state.scriptureTools,
-      readingHistory: state.readingHistory,
-      activityEvents: state.activityEvents,
-    };
-    const timer = window.setTimeout(() => savePortfolio(portfolio).catch(() => undefined), 700);
-    return () => window.clearTimeout(timer);
-  }, [ready, user, state.deepCompleted, state.deepNotes, state.deepReflections, state.scriptureTools, state.readingHistory, state.activityEvents, savePortfolio]);
-
-  useEffect(() => {
-    if (!ready) return;
-    const timer = window.setTimeout(() => {
-      try {
-        const target = JSON.parse(sessionStorage.getItem(WEEK_ONE_RESUME_KEY) || "null") as ResumeTarget | null;
-        if (!target?.screen) return;
-        sessionStorage.removeItem(WEEK_ONE_RESUME_KEY);
-        if (target.screen === "scripture") {
-          openScripture(target.title);
-          return;
-        }
-        const allowed: Screen[] = ["story", "place", "fill", "connect", "unlock", "deep", "complete"];
-        if (!allowed.includes(target.screen as Screen)) return;
-        if (target.screen === "story" && typeof target.index === "number") setStoryIndex(Math.max(0, Math.min(STORY.length - 1, target.index)));
-        if (target.screen === "fill" && typeof target.index === "number") setFillIndex(Math.max(0, Math.min(FILL.length - 1, target.index)));
-        if (target.screen === "deep" && typeof target.index === "number") setDeepDay(Math.max(0, Math.min(DEEP_DAYS.length - 1, target.index)));
-        navigate(target.screen as Screen);
-      } catch {
-        sessionStorage.removeItem(WEEK_ONE_RESUME_KEY);
-      }
-    }, 0);
-    return () => window.clearTimeout(timer);
-  // The resume target is intentionally consumed once, after saved course state has loaded.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready]);
-
-  const progress = useMemo(() => {
-    const story = state.started ? ((Math.max(state.story, 0) + 1) / STORY.length) * 20 : 0;
-    const place = (state.place.length / PLACE.length) * 20;
-    const fill = (Object.values(state.fillCorrect).filter(Boolean).length / FILL.length) * 20;
-    const connect = (Math.min(state.connect, 4) / 4) * 20;
-    const unlock = state.teachbackComplete ? 20 : 0;
-    return Math.min(100, Math.round(story + place + fill + connect + unlock));
-  }, [state]);
-
-  function navigate(next: Screen) {
-    setScreen(next);
-    requestAnimationFrame(() => document.querySelector<HTMLElement>(".screen-scroll")?.scrollTo({ top: 0 }));
-  }
-  function beginJourney() {
-    setState((current) => ({ ...current, started: true }));
-    navigate("roadmap");
-  }
-  function openScripture(ref: string) {
-    if (!SCRIPTURES[ref]) return;
-    const now = new Date().toISOString();
-    setState((current) => {
-      const prior = current.readingHistory[ref];
-      return {
-        ...current,
-        readingHistory: {
-          ...current.readingHistory,
-          [ref]: {
-            reference: ref,
-            opens: (prior?.opens || 0) + 1,
-            reads: prior?.reads || 0,
-            firstOpenedAt: prior?.firstOpenedAt || now,
-            lastOpenedAt: now,
-            completedAt: prior?.completedAt,
-            lastReadAt: prior?.lastReadAt,
-            verseCount: prior?.verseCount,
-          },
-        },
-        activityEvents: keepActivity(current.activityEvents, makeActivity("scripture_opened", ref)),
-      };
-    });
-    setScriptureRef(ref);
-  }
-
-  function markScriptureRead(ref: string, verseCount: number) {
-    const now = new Date().toISOString();
-    setState((current) => {
-      const prior = current.readingHistory[ref];
-      const alreadyReadThisOpen = prior?.lastReadAt && prior.lastOpenedAt && prior.lastReadAt >= prior.lastOpenedAt;
-      if (alreadyReadThisOpen) return current;
-      return {
-        ...current,
-        readingHistory: {
-          ...current.readingHistory,
-          [ref]: {
-            reference: ref,
-            opens: Math.max(1, prior?.opens || 0),
-            reads: (prior?.reads || 0) + 1,
-            firstOpenedAt: prior?.firstOpenedAt || now,
-            lastOpenedAt: prior?.lastOpenedAt || now,
-            completedAt: prior?.completedAt || now,
-            lastReadAt: now,
-            verseCount,
-          },
-        },
-        activityEvents: keepActivity(current.activityEvents, makeActivity("scripture_read", ref, { verseCount })),
-      };
-    });
-  }
-  function selectStory(index: number) {
-    setStoryIndex(index);
-    setState((current) => ({ ...current, started: true, story: Math.max(current.story, index) }));
-  }
-  function updatePlaceOrder(order: string[]) {
-    setState((current) => ({ ...current, placeOrder: order, place: [] }));
-    setPlaceMessage("");
-  }
-  function checkPlaceOrder() {
-    const correct = state.placeOrder.every((item, index) => item === PLACE[index]);
-    if (correct) {
-      setState((current) => ({ ...current, place: [...PLACE],
-        activityEvents: keepActivity(current.activityEvents, makeActivity("place_completed")) }));
-      setPlaceMessage("You rebuilt the beginning. All six movements are in their biblical order.");
-    } else {
-      setState((current) => ({ ...current, place: [] }));
-      setPlaceMessage("Not quite yet. Re-read the card summaries, move the sequence, and check it again.");
-    }
-  }
-  function submitFill() {
-    const item = FILL[fillIndex];
-    const answer = state.fillAnswers[String(fillIndex)] || "";
-    const correct = [item.answer, ...item.accepted].map(normalize).includes(normalize(answer));
-    if (correct) {
-      setState((current) => ({ ...current, fillCorrect: { ...current.fillCorrect, [fillIndex]: true },
-        activityEvents: keepActivity(current.activityEvents, makeActivity("fill_attempt", undefined, { question: fillIndex + 1, correct: true })) }));
-      setFillHint(false);
-      setFillMessage(item.why);
-    } else {
-      setState((current) => ({ ...current,
-        activityEvents: keepActivity(current.activityEvents, makeActivity("fill_attempt", undefined, { question: fillIndex + 1, correct: false })) }));
-      setFillMessage("Read the sentence once more. Use the hint if you need it.");
-    }
-  }
-  function saveTeachback() {
-    const answer = state.teachback[teachbackStep]?.trim();
-    if (!answer || answer.length < 18) {
-      setTeachbackMessage("Add one clear sentence before moving on. Aim for at least a complete thought.");
-      return;
-    }
-    setTeachbackMessage("");
-    if (teachbackStep < 3) setTeachbackStep((step) => step + 1);
-    else setTeachbackSummary(state.teachback.join(" "));
-  }
-  function completeTeachback() {
-    if (!state.teachback.every((answer) => answer.trim().length >= 18)) {
-      setTeachbackMessage("Return to any unfinished step and add one complete thought.");
-      return;
-    }
-    if (teachbackSummary.trim().length < 80) {
-      setTeachbackMessage("Bring the four movements together in a short paragraph before unlocking the lesson.");
-      return;
-    }
-    setTeachbackMessage("");
-    setState((current) => ({ ...current, teachbackComplete: true,
-      activityEvents: keepActivity(current.activityEvents, makeActivity("unlock_completed")) }));
-  }
-  function updateScriptureTool(key: "highlight" | "underline" | "bookmark") {
-    if (!scriptureRef) return;
-    setState((current) => {
-      const nextValue = !current.scriptureTools[scriptureRef]?.[key];
-      return { ...current, scriptureTools: { ...current.scriptureTools,
-        [scriptureRef]: { ...current.scriptureTools[scriptureRef], [key]: nextValue } },
-        activityEvents: key === "bookmark" && nextValue
-          ? keepActivity(current.activityEvents, makeActivity("bookmark_saved", scriptureRef))
-          : current.activityEvents };
-    });
-  }
-  function updateScriptureText(key: "notes" | "question", value: string) {
-    if (!scriptureRef) return;
-    setState((current) => {
-      const wasEmpty = !current.scriptureTools[scriptureRef]?.[key]?.trim();
-      const eventType = key === "notes" ? "note_written" : "question_written";
-      return { ...current, scriptureTools: { ...current.scriptureTools,
-        [scriptureRef]: { ...current.scriptureTools[scriptureRef], [key]: value } },
-        activityEvents: wasEmpty && value.trim()
-          ? keepActivity(current.activityEvents, makeActivity(eventType, scriptureRef))
-          : current.activityEvents };
-    });
-  }
-  function addScriptureSelection(selection: ScriptureSelection) {
-    if (!scriptureRef) return;
-    setState((current) => ({ ...current, scriptureTools: { ...current.scriptureTools,
-      [scriptureRef]: { ...current.scriptureTools[scriptureRef], selections: [...(current.scriptureTools[scriptureRef]?.selections || []), selection] } },
-      activityEvents: keepActivity(current.activityEvents, makeActivity(selection.type === "highlight" ? "highlight_created" : "underline_created", scriptureRef)) }));
-  }
-  function completeDeepDay() {
-    if ((state.deepReflections[String(deepDay)] || "").trim().length < 15) return;
-    setState((current) => ({ ...current, deepCompleted: { ...current.deepCompleted, [deepDay]: true },
-      activityEvents: keepActivity(current.activityEvents, makeActivity("devotional_completed", undefined, { day: deepDay + 1 })) }));
-    setDeepOpen(false);
-    if (deepDay < 6) setDeepDay((day) => day + 1);
-    else navigate("complete");
-  }
-
-  const common = { navigate, openScripture };
-  return (
-    <main className="product-shell">
-      <DesktopRail screen={screen} progress={progress} navigate={navigate} />
-      <section className="phone-canvas" aria-label="Through the Bible Week 1">
-        <button className={`my-study-trigger ${["home", "movement", "story", "promise", "family", "complete"].includes(screen) ? "on-dark" : ""}`} onClick={() => setMyStudyOpen(true)} aria-label="Open My Study"><NotebookPen />{user && <span />}</button>
-        {screen === "home" && <HomeScreen beginJourney={beginJourney} onCourseHome={onCourseHome} />}
-        {screen === "roadmap" && <RoadmapScreen navigate={navigate} openMovement={(index) => { setMovementIndex(index); navigate("movement"); }} />}
-        {screen === "movement" && <MovementScreen index={movementIndex} setIndex={setMovementIndex} {...common} />}
-        {screen === "story" && <StoryScreen index={storyIndex} selectStory={selectStory} {...common} />}
-        {screen === "promise" && <PromiseScreen {...common} />}
-        {screen === "family" && <FamilyScreen {...common} />}
-        {screen === "placeIntro" && <ToolIntroScreen tool="place" state={state} navigate={navigate} />}
-        {screen === "fillIntro" && <ToolIntroScreen tool="fill" state={state} navigate={navigate} />}
-        {screen === "connectIntro" && <ToolIntroScreen tool="connect" state={state} navigate={navigate} />}
-        {screen === "unlockIntro" && <ToolIntroScreen tool="unlock" state={state} navigate={navigate} />}
-        {screen === "place" && <PlaceScreen order={state.placeOrder} completed={state.place.length === PLACE.length} message={placeMessage}
-          setOrder={updatePlaceOrder} checkOrder={checkPlaceOrder}
-          reset={() => { setState((current) => ({ ...current, place: [], placeOrder: SCRAMBLED_PLACE })); setPlaceMessage(""); }} {...common} />}
-        {screen === "fill" && <FillScreen state={state} index={fillIndex} hint={fillHint} message={fillMessage}
-          setIndex={(index) => { setFillIndex(index); setFillHint(false); setFillMessage(""); }} setHint={setFillHint}
-          setAnswer={(value) => setState((current) => ({ ...current, fillAnswers: { ...current.fillAnswers, [fillIndex]: value } }))}
-          clearMessage={() => setFillMessage("")} completeRevealed={() => {
-            setState((current) => ({ ...current, fillCorrect: { ...current.fillCorrect, [fillIndex]: true } }));
-            setFillMessage("");
-          }} submit={submitFill} navigate={navigate} />}
-        {screen === "connect" && <ConnectScreen step={state.connect}
-          advance={() => setState((current) => { const next = Math.min(4, current.connect + 1); return { ...current, connect: next,
-            activityEvents: next === 4 && current.connect < 4 ? keepActivity(current.activityEvents, makeActivity("connect_completed")) : current.activityEvents }; })} {...common} />}
-        {screen === "unlock" && <UnlockScreen state={state} step={teachbackStep} summary={teachbackSummary}
-          showModel={showModel} message={teachbackMessage} setStep={(nextStep) => { setTeachbackStep(nextStep); setTeachbackMessage(""); }}
-          setSummary={(value) => { setTeachbackSummary(value); setTeachbackMessage(""); }} setShowModel={setShowModel}
-          setAnswer={(value) => { setTeachbackMessage(""); setState((current) => { const answers = [...current.teachback]; answers[teachbackStep] = value; return { ...current, teachback: answers }; }); }}
-          save={saveTeachback} complete={completeTeachback} navigate={navigate} />}
-        {screen === "deep" && <DeepStudyScreen completed={state.deepCompleted}
-          openDay={(index) => { setDeepDay(index); setDeepOpen(true); }} navigate={navigate} />}
-        {screen === "complete" && <WeekCompleteScreen state={state} navigate={navigate} />}
-
-        <ScriptureReader key={scriptureRef || "closed-scripture"} reference={scriptureRef} scripture={scriptureRef ? SCRIPTURES[scriptureRef] : null}
-          mark={scriptureRef ? state.scriptureTools[scriptureRef] || {} : {}} onClose={() => setScriptureRef(null)}
-          onTool={updateScriptureTool} onText={updateScriptureText} onSelection={addScriptureSelection}
-          reading={scriptureRef ? state.readingHistory[scriptureRef] : undefined}
-          onRead={markScriptureRead} onNavigate={openScripture} />
-        <DeepReader key={`deep-reader-${deepDay}`} open={deepOpen} dayIndex={deepDay} day={DEEP_DAYS[deepDay]}
-          completed={Boolean(state.deepCompleted[deepDay])} reflection={state.deepReflections[deepDay] || ""}
-          notes={state.deepNotes[deepDay] || ""} onClose={() => setDeepOpen(false)} onScripture={openScripture}
-          onInsight={setInsightKey} onReflection={(value) => setState((current) => ({ ...current, deepReflections: { ...current.deepReflections, [deepDay]: value } }))}
-          onNotes={(value) => setState((current) => ({ ...current, deepNotes: { ...current.deepNotes, [deepDay]: value } }))}
-          onComplete={completeDeepDay} />
-        <MyStudySheet open={myStudyOpen} onOpenChange={setMyStudyOpen} state={state} userEmail={user?.email || null}
-          cloudConfigured={cloudConfigured} accountLoading={accountLoading} openAccount={openAccount}
-          openScripture={(ref) => { setMyStudyOpen(false); openScripture(ref); }}
-          openDay={(index) => { setMyStudyOpen(false); setDeepDay(index); setDeepOpen(true); }} submitQuestion={submitQuestion} />
-        <Sheet open={Boolean(insightKey)} onOpenChange={(open) => !open && setInsightKey(null)}>
-          <SheetContent side="bottom" className="insight-sheet">
-            <SheetHeader><MicroLabel>{insightKey ? DEEP_INSIGHTS[insightKey]?.type : "STUDY NOTE"}</MicroLabel>
-              <SheetTitle>{insightKey && DEEP_INSIGHTS[insightKey]?.title}</SheetTitle>
-              <SheetDescription>{insightKey && DEEP_INSIGHTS[insightKey]?.source}</SheetDescription></SheetHeader>
-            <p>{insightKey && DEEP_INSIGHTS[insightKey]?.body}</p>
-          </SheetContent>
-        </Sheet>
-      </section>
-    </main>
-  );
-}
-
-function HomeScreen({ beginJourney, onCourseHome }: { beginJourney: () => void; onCourseHome?: () => void }) {
-  return (
-    <section className="app-screen cinema-screen home-screen" style={{ "--cinema-image": `url('${HOME_HERO}')` } as CSSProperties}>
-      <CinemaHeader onHome={onCourseHome} />
-      <div className="home-content">
-        <div className="home-copy">
-          <h1><span>Creation, Rupture &amp;</span><span>the First Promise</span></h1>
-          <p>A good world is formed. Trust fractures. Hope appears before Eden closes.</p></div>
-        <div className="home-spacer" />
-        <button className="journey-button" onClick={beginJourney}>Begin journey</button>
-      </div>
-    </section>
-  );
-}
-
-function RoadmapScreen({ navigate, openMovement }: { navigate: (screen: Screen) => void; openMovement: (index: number) => void }) {
-  const chapterThreads = [
-    "FORM Â· FILL Â· GOOD",
-    "IMAGE Â· VOCATION Â· BOUNDARY",
-    "QUESTION Â· REBELLION Â· JUDGMENT",
-    "SEED Â· HOPE Â· EXILE",
-  ];
-  return (
-    <section className="app-screen atlas-screen roadmap-screen">
-      <AtlasHeader label="THROUGH THE BIBLE Â· WEEK 01" onBack={() => navigate("home")} />
-      <div className="screen-scroll roadmap-body">
-        <header className="roadmap-intro">
-          <div className="roadmap-intro-top"><p>WEEK 01 Â· GENESIS 1â€“3</p><em>18 MIN Â· VISUAL STORY</em></div>
-          <h1>Follow the story<br />as it changes.</h1>
-          <span>Four decisive movements establish the world, the human calling, the rupture and the promise that carries the Bible forward.</span>
-          <div className="roadmap-thread-map" aria-label="Week 1 story progression">
-            {MOVEMENTS.map((movement, index) => <button key={movement.roadmapTitle} onClick={() => openMovement(index)}><i>{String(index + 1).padStart(2, "0")}</i><b>{["FORMED", "CROWNED", "RUPTURED", "PROMISED"][index]}</b></button>)}
-          </div>
-          <small>CHOOSE A CHAPTER Â· EACH OPENS AS A VISUAL STORY</small>
-        </header>
-        <div className="roadmap-cinema-list">{MOVEMENTS.map((movement, index) => (
-          <button
-            className={`roadmap-cinema-card roadmap-chapter-${index + 1}`}
-            key={movement.roadmapTitle}
-            onClick={() => openMovement(index)}
-            aria-label={`Open chapter ${index + 1}: ${movement.roadmapTitle}`}
-          >
-            <span className="roadmap-image-frame"><img src={ROADMAP_ART[index]} alt="" aria-hidden="true" /><span className="roadmap-cinema-shade" /></span>
-            <span className="roadmap-cinema-copy">
-              <span className="roadmap-cinema-meta">CHAPTER {String(index + 1).padStart(2, "0")} Â· OPEN STORY</span>
-              <strong>{movement.roadmapTitle}</strong>
-              <span className="roadmap-cinema-summary">{movement.roadmapSummary}</span>
-              <span className="roadmap-cinema-refs">{movement.refs.join(" Â· ")}</span>
-              <span className="roadmap-cinema-thread">{chapterThreads[index]}</span>
-              <span className="roadmap-cinema-enter"><b>ENTER CHAPTER</b><ArrowRight /></span>
-            </span>
-          </button>
-        ))}</div>
-        <footer className="roadmap-finale">
-          <p>Four chapters. One opening movement.</p>
-          <button onClick={() => openMovement(0)}><span><small>START AT THE BEGINNING</small><strong>Enter the visual story</strong></span><ArrowRight /></button>
-        </footer>
-      </div>
-    </section>
-  );
-}
-
-function MovementScreen({ index, setIndex, navigate, openScripture }: { index: number; setIndex: (index: number) => void; navigate: (screen: Screen) => void; openScripture: (ref: string) => void }) {
-  const movement = MOVEMENTS[index];
-  const isLast = index === MOVEMENTS.length - 1;
-  useEffect(() => {
-    document.querySelector<HTMLElement>(".movement-scroll")?.scrollTo({ top: 0 });
-  }, [index]);
-
-  function continueStory() {
-    if (isLast) navigate("placeIntro");
-    else setIndex(index + 1);
-  }
-
-  function scrollIntoStory() {
-    document.querySelector<HTMLElement>(".movement-lesson")?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-
-  return (
-    <section className="app-screen cinema-screen movement-screen" style={{ "--cinema-image": `url('${movement.image}')` } as CSSProperties}>
-      <header className="movement-header"><button aria-label="Back to roadmap" onClick={() => navigate("roadmap")}><ArrowLeft /></button><b>VISUAL STORY Â· {index + 1} / {MOVEMENTS.length}</b><span className="header-spacer" aria-hidden="true" /></header>
-      <div className="movement-scroll">
-        <div className="movement-hero-block">
-          <div className="movement-copy"><span>{movement.eyebrow}</span><h1>{movement.title}</h1><p>{movement.deck}</p></div>
-          <button className="movement-scroll-cue" onClick={scrollIntoStory}><span>Continue into the story</span><ChevronDown /></button>
-        </div>
-        <article className="movement-lesson">
-          <header className="movement-lesson-header">
-            <span>0{index + 1}</span>
-            <div><small>THE STORY</small><b>{movement.eyebrow.replace(/^\d+ Â· /, "")}</b></div>
-          </header>
-          <h2>{movement.sectionTitle}</h2>
-          <div className="movement-paragraphs">{movement.paragraphs.map((paragraph, paragraphIndex) => (
-            <p className={paragraphIndex === 0 ? "movement-lede" : ""} key={paragraph}>{paragraph}</p>
-          ))}</div>
-
-          <section className="movement-beats" aria-label="Key movements">
-            <div className="movement-section-label"><span>FOLLOW THE MOVEMENT</span><small>{movement.beats.length} MOMENTS</small></div>
-            {movement.beats.map(([label, description], beatIndex) => (
-              <article key={label}><span>0{beatIndex + 1}</span><div><small>{label}</small><strong>{description}</strong></div></article>
-            ))}
-          </section>
-
-          <blockquote className="movement-insight"><small>WHY IT MATTERS</small><p>{movement.insight}</p></blockquote>
-
-          <section className="movement-reading">
-            <div><small>READ IT IN CONTEXT</small><p>Open the passage without leaving the lesson.</p></div>
-            {movement.refs.map((ref) => <button key={ref} onClick={() => openScripture(ref)}><BookOpen /><span>{ref}</span><ChevronRight /></button>)}
-          </section>
-
-          <button className="movement-next" onClick={continueStory}>
-            <span><small>{isLast ? "STORY COMPLETE" : `UP NEXT Â· CHAPTER 0${index + 2}`}</small><strong>{isLast ? "Build what you learned" : MOVEMENTS[index + 1].roadmapTitle}</strong></span><ArrowRight />
-          </button>
-        </article>
-      </div>
-    </section>
-  );
-}
-
-function StoryScreen({ index, selectStory, navigate, openScripture }: { index: number; selectStory: (index: number) => void; navigate: (screen: Screen) => void; openScripture: (ref: string) => void }) {
-  const story = STORY[index];
-  return (
-    <section className="app-screen cinema-screen story-screen" style={{ "--cinema-image": `url('${STORY_ART[index]}')` } as CSSProperties}>
-      <CinemaHeader onBack={() => navigate("roadmap")} label="STORY" />
-      <div className="story-progress" aria-label={`Story movement ${index + 1} of 8`}>{STORY.map((_, itemIndex) => (
-        <button key={itemIndex} aria-label={`Open movement ${itemIndex + 1}`} className={itemIndex <= index ? "active" : ""} onClick={() => selectStory(itemIndex)} />
-      ))}</div>
-      <article className="story-content"><MicroLabel light>{story[0]} Â· {String(index + 1).padStart(2, "0")} OF 08</MicroLabel>
-        <h1>{story[1]}</h1><p>{story[2][0]}</p><blockquote>{story[3]}</blockquote>
-        <div className="story-actions"><button className="glass-action" onClick={() => openScripture(story[4])}><BookOpen /> {story[4]}</button>
-          <button className="story-next" onClick={() => index < STORY.length - 1 ? selectStory(index + 1) : navigate("placeIntro")}>
-            {index < STORY.length - 1 ? "Next movement" : "Open the atlas"} <ArrowRight /></button></div>
-      </article>
-      <CoreDock active="story" navigate={navigate} />
-    </section>
-  );
-}
-
-function PromiseScreen({ navigate, openScripture }: { navigate: (screen: Screen) => void; openScripture: (ref: string) => void }) {
-  return (
-    <section className="app-screen atlas-screen"><AtlasHeader label="PROMISE" onBack={() => navigate("home")} />
-      <div className="screen-scroll atlas-body detail-body"><MicroLabel>GENESIS 3:15</MicroLabel>
-        <h1>Hope appears before Eden closes.</h1><p className="screen-lede">Judgment is real, but it is not the final word. Scripture introduces a coming Seed.</p>
-        <figure className="atlas-visual promise-visual"><img src={PROMISE_ART} alt="A luminous path moving toward a distant promise" />
-          <div className="promise-marker promise-marker-one">Conflict</div><div className="promise-marker promise-marker-two">Seed</div><div className="promise-marker promise-marker-three">Hope</div></figure>
-        <WhyCard>Genesis 3:15 begins a thread; it does not finish the explanation. The course follows that promise through later Scripture without forcing the first verse to say more than it says.</WhyCard>
-        <button className="primary-action" onClick={() => openScripture("Genesis 3:15")}><BookOpen /> Read Genesis 3:15 <ArrowRight /></button>
-        <button className="text-action" onClick={() => navigate("connectIntro")}>Trace the promise toward Christ <ArrowRight /></button>
-      </div><CoreDock active="promise" navigate={navigate} />
-    </section>
-  );
-}
-
-function FamilyScreen({ navigate, openScripture }: { navigate: (screen: Screen) => void; openScripture: (ref: string) => void }) {
-  const cards = [
-    ["IDENTITY", "Made in Godâ€™s image", "Human worth begins with the Creator, not with achievement."],
-    ["DIGNITY", "Male and female", "Both receive the image and the blessing before the Fall."],
-    ["VOCATION", "Fill, subdue, steward", "Humanity is entrusted with meaningful responsibility in Godâ€™s world."],
-  ];
-  return (
-    <section className="app-screen atlas-screen"><AtlasHeader label="FAMILY" onBack={() => navigate("home")} />
-      <div className="screen-scroll atlas-body family-body"><MicroLabel>HUMANITY Â· GENESIS 1:26â€“28</MicroLabel>
-        <h1>Identity comes before brokenness.</h1><p className="screen-lede">Genesis first tells us what human beings were created to beâ€”not simply what went wrong.</p>
-        <div className="family-portrait" style={{ backgroundImage: `url('${FAMILY_ART}')` }}><span>IMAGE BEARERS</span><strong>Dignity. Purpose. Responsibility.</strong></div>
-        <div className="principle-list">{cards.map(([label, title, body], index) => (
-          <article key={label}><span>{String(index + 1).padStart(2, "0")}</span><div><small>{label}</small><h2>{title}</h2><p>{body}</p></div></article>
-        ))}</div>
-        <button className="primary-action" onClick={() => openScripture("Genesis 1:26â€“28")}><BookOpen /> Read Genesis 1:26â€“28 <ArrowRight /></button>
-      </div><CoreDock active="family" navigate={navigate} />
-    </section>
-  );
-}
-
-function ToolIntroScreen({ tool, state, navigate }: { tool: ToolName; state: AppState; navigate: (screen: Screen) => void }) {
-  const configs: Record<ToolName, {
-    label: string; eyebrow: string; title: string; lede: string; image: string;
-    icon: ReactNode; steps: [string, string][]; progress: string; destination: Screen; cta: string;
-  }> = {
-    place: {
-      label: "PLACE Â· STORY ORDER", eyebrow: "REBUILD THE NARRATIVE",
-      title: "Can you put the beginning back in order?",
-      lede: "Six cinematic cards hold the movement of Genesis 1â€“3. Reconstruct the sequence from goodness to promise.",
-      image: "/images/week1-hero-reference-v3-hd.png", icon: <MapPin />,
-      steps: [["Press", "Hold the grip on any story card."], ["Move", "Drag it above or below the other movements."], ["Check", "Test the full sequence when all six are in view."]],
-      progress: `${state.place.length} of ${PLACE.length} placed`, destination: "place", cta: "Enter the card studio",
-    },
-    fill: {
-      label: "FILL Â· RETRIEVAL", eyebrow: "RECALL THE ESSENTIALS",
-      title: "What can you retrieve without reopening the page?",
-      lede: "Ten focused prompts test whether the central truths of Creation, the Fall and the first promise have taken root.",
-      image: "/images/source-01.jpg", icon: <Minus />,
-      steps: [["Read", "Take one carefully written prompt at a time."], ["Recall", "Complete the truth in your own memory."], ["Learn", "See why the answer matters in the biblical story."]],
-      progress: `${Object.values(state.fillCorrect).filter(Boolean).length} of ${FILL.length} mastered`, destination: "fill", cta: "Begin retrieval",
-    },
-    connect: {
-      label: "CONNECT Â· SCRIPTURE", eyebrow: "TRACE THE THREADS",
-      title: "Watch Genesis reach forward through Scripture.",
-      lede: "Follow the Creator and promised Seed threads from the opening chapters toward the person and work of Christ.",
-      image: CINEMA_HERO, icon: <Waypoints />,
-      steps: [["Open", "Begin with the first pulsing Scripture node."], ["Observe", "Read the discovery before moving forward."], ["Watch", "See the living line converge on Christ and carry the Seed thread ahead."]],
-      progress: `${Math.min(state.connect, 4)} of 4 connections`, destination: "connect", cta: "Trace the connections",
-    },
-    unlock: {
-      label: "UNLOCK Â· TEACH BACK", eyebrow: "OWN THE UNDERSTANDING",
-      title: "Can you tell the beginning without the workbook?",
-      lede: "Turn recognition into understanding by explaining what was good, what broke and what hope God promised.",
-      image: "/images/week1-east-of-eden.webp", icon: <LockKeyhole />,
-      steps: [["Frame", "Answer four short prompts in sequence."], ["Explain", "Join your answers into one clear story."], ["Own", "Compare, refine and complete your teach-back."]],
-      progress: state.teachbackComplete ? "Understanding unlocked" : `${state.teachback.filter((answer) => answer.trim().length >= 18).length} of 4 responses`, destination: "unlock", cta: "Begin the teach-back",
-    },
-  };
-  const config = configs[tool];
-
-  return (
-    <section className="app-screen atlas-screen tool-intro-screen">
-      <AtlasHeader label={`${config.label} Â· WEEK 01`} onBack={() => navigate("roadmap")} />
-      <div className="screen-scroll tool-intro-scroll">
-        <figure className="tool-intro-hero"><img src={config.image} alt="" /><span className="tool-intro-shade" />
-          <div className="tool-intro-copy"><span>{config.eyebrow}</span><h1>{config.title}</h1><p>{config.lede}</p></div>
-        </figure>
-        <section className="tool-intro-guide"><header><span>{config.icon}</span><div><small>HOW THIS SECTION WORKS</small><strong>One focused experience.</strong></div></header>
-          <ol>{config.steps.map(([title, body], index) => <li key={title}><b>{index + 1}</b><span><strong>{title}</strong><small>{body}</small></span></li>)}</ol>
-          <div className="tool-intro-status"><span><small>YOUR PROGRESS</small><strong>{config.progress}</strong></span><i /></div>
-          <button className="tool-intro-action" onClick={() => navigate(config.destination)}>{config.cta}<ArrowRight /></button>
-        </section>
-      </div>
-      <ToolDock active={tool} navigate={navigate} />
-    </section>
-  );
-}
-
-function PlaceScreen({ order, completed, message, setOrder, checkOrder, reset, navigate, openScripture }: {
-  order: string[]; completed: boolean; message: string; setOrder: (order: string[]) => void; checkOrder: () => void; reset: () => void;
-  navigate: (screen: Screen) => void; openScripture: (ref: string) => void;
-}) {
-  const dragging = useRef<string | null>(null);
-  const [draggingItem, setDraggingItem] = useState<string | null>(null);
-  const feedbackTone = completed ? "success" : message ? "error" : "";
-
-  function moveItem(item: string, target: string) {
-    if (item === target) return;
-    const next = [...order];
-    const from = next.indexOf(item);
-    const to = next.indexOf(target);
-    next.splice(from, 1);
-    next.splice(to, 0, item);
-    setOrder(next);
-  }
-
-  function onDragMove(event: React.PointerEvent<HTMLButtonElement>) {
-    const active = dragging.current;
-    if (!active) return;
-    const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-place-item]")?.dataset.placeItem;
-    if (target) moveItem(active, target);
-  }
-
-  function stopDragging() {
-    dragging.current = null;
-    setDraggingItem(null);
-  }
-
-  return (
-    <section className="app-screen atlas-screen place-build-screen"><AtlasHeader label="PLACE Â· BUILD THE STORY" onBack={() => navigate("placeIntro")} />
-      <div className="screen-scroll atlas-body tool-body place-build-body">
-        <div className="place-title-row"><div><MicroLabel>RECALL MODE Â· GENESIS 1â€“3</MicroLabel><h1>Put the beginning in order.</h1></div><div className="place-count"><strong>6</strong><span>CARDS<br />TO MOVE</span></div></div>
-        <p className="screen-lede">Press a grip and move the cards with your hand. When the story reads correctly from top to bottom, check the order.</p>
-        <div className="place-sort-guide"><GripVertical /><span><strong>HOLD + DRAG</strong><small>Move any card above or below another.</small></span></div>
-        {message && <div className={`place-feedback ${feedbackTone}`}><span>{completed ? <Check /> : <CircleHelp />}</span><p>{message}</p></div>}
-        <div className={`place-sort-list ${completed ? "complete" : ""}`} aria-label="Sortable story cards">{order.map((item, index) => {
-          const card = PLACE_CARD_META[item];
-          return <article key={item} data-place-item={item} className={draggingItem === item ? "dragging" : ""}>
-            <span className="place-sort-number">{index + 1}</span><img className="place-card-art" src={card.image} data-fallback={card.fallback} alt={`${card.title} cinematic artwork`} loading="eager" decoding="async"
-              onError={(event) => { const image = event.currentTarget; const fallback = image.dataset.fallback; if (fallback && !image.dataset.fallbackUsed) { image.dataset.fallbackUsed = "true"; image.src = fallback; } }} />
-            <button className="place-sort-copy" onClick={() => openScripture(card.ref)}><small>{card.kicker} Â· {card.ref}</small><strong>{card.title}</strong><span>{card.body}</span></button>
-            <button className="place-grip" aria-label={`Move ${card.title}`} onPointerDown={(event) => { dragging.current = item; setDraggingItem(item); event.currentTarget.setPointerCapture(event.pointerId); }}
-              onPointerMove={onDragMove} onPointerUp={stopDragging} onPointerCancel={stopDragging}><GripVertical /></button>
-          </article>;
-        })}</div>
-        <div className="place-sort-actions"><button className="primary-action" onClick={checkOrder}>{completed ? "Order confirmed" : "Check order"}<Check /></button>
-          <button className="text-action" onClick={reset}><RotateCcw /> Scramble again</button></div>
-        {completed && <article className="place-complete-card"><span><Check /></span><small>STORY ORDER RESTORED</small><h2>Goodness comes before rupture. Promise appears before exile.</h2>
-          <p>The sequence matters: Scripture begins with Godâ€™s good design, tells the truth about what sin changed, and introduces hope before humanity leaves Eden.</p>
-          <button onClick={() => navigate("fillIntro")}>Continue to Fill <ArrowRight /></button></article>}
-      </div><ToolDock active="place" navigate={navigate} />
-    </section>
-  );
-}
-
-function FillScreen({ state, index, hint, message, setIndex, setHint, setAnswer, submit, clearMessage, completeRevealed, navigate }: {
-  state: AppState; index: number; hint: boolean; message: string; setIndex: (index: number) => void;
-  setHint: (value: boolean) => void; setAnswer: (value: string) => void; submit: () => void; clearMessage: () => void;
-  completeRevealed: () => void; navigate: (screen: Screen) => void;
-}) {
-  const correct = Boolean(state.fillCorrect[index]);
-  const [showAnswer, setShowAnswer] = useState(false);
-  const promptParts = FILL[index].q.split(/_{3,}/);
-  const currentAnswer = state.fillAnswers[index] || "";
-  const answerWidth = Math.min(182, Math.max(112, Math.max(currentAnswer.length, FILL[index].answer.length) * 16 + 32));
-
-  function blurAndReveal(selector?: string) {
-    (document.activeElement as HTMLElement | null)?.blur?.();
-    window.setTimeout(() => {
-      const body = document.querySelector<HTMLElement>(".fill-body");
-      if (selector) document.querySelector<HTMLElement>(selector)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      else body?.scrollTo({ top: 0, behavior: "smooth" });
-    }, 80);
-  }
-
-  function selectQuestion(nextIndex: number) {
-    setShowAnswer(false);
-    setIndex(nextIndex);
-    blurAndReveal();
-  }
-
-  function checkAnswer() {
-    blurAndReveal(".fill-correct-card, .fill-body .inline-note");
-    submit();
-  }
-
-  function toggleHint() {
-    clearMessage();
-    setHint(!hint);
-    setShowAnswer(false);
-    blurAndReveal(".hint-note");
-  }
-
-  function revealAnswer() {
-    setAnswer(FILL[index].answer);
-    setShowAnswer(true);
-    setHint(false);
-    clearMessage();
-    blurAndReveal(".answer-reveal");
-  }
-
-  function continueAfterReveal() {
-    completeRevealed();
-    if (index < FILL.length - 1) selectQuestion(index + 1);
-    else navigate("connectIntro");
-  }
-
-  return (
-    <section className="app-screen atlas-screen"><AtlasHeader label="FILL Â· GUIDED NOTES" onBack={() => navigate("fillIntro")} onInfo={() => navigate("fillIntro")} />
-      <div className="screen-scroll atlas-body tool-body fill-body">
-        <div className="fill-progress-head"><span>QUESTION {index + 1} OF {FILL.length}</span><b>{Object.values(state.fillCorrect).filter(Boolean).length} / {FILL.length}</b></div>
-        <div className="fill-progress-line"><span style={{ width: `${((index + 1) / FILL.length) * 100}%` }} /></div>
-        <article className={`question-card ${correct ? "correct" : ""}`}>
-          <h2 className="inline-fill-prompt"><span>{promptParts[0]}</span><input id="fill-answer" className="inline-fill-answer" aria-label="Type the missing word or phrase"
-            value={currentAnswer} style={{ width: `${answerWidth}px` }} readOnly={correct || showAnswer}
-            onChange={(event) => { setAnswer(event.target.value); if (showAnswer) setShowAnswer(false); clearMessage(); }}
-            onKeyDown={(event) => event.key === "Enter" && !correct && !showAnswer && checkAnswer()} autoCapitalize="none" autoComplete="off" /><span>{promptParts[1]}</span></h2>
-          <p className="inline-fill-guide">TYPE YOUR ANSWER ON THE LINE ABOVE</p>
-          {!correct && !showAnswer && <button className="primary-action fill-check" onClick={checkAnswer}>Check answer <ArrowRight /></button>}
-          {correct && <div className="fill-correct-card"><span><Check /></span><div><strong>Correct!</strong><p>{FILL[index].why}</p>
-            <button onClick={() => index < FILL.length - 1 ? selectQuestion(index + 1) : navigate("connectIntro")}>{index < FILL.length - 1 ? "Next question" : "Continue to Connect"}<ArrowRight /></button></div></div>}
-          <div className="fill-help-actions"><button className="fill-help-row" onClick={toggleHint}><CircleHelp /><span><small>NEED A NUDGE?</small><b>{hint ? "Hide the clue" : "Open a clue"}</b></span><ChevronRight /></button>
-            <button className="fill-help-row" onClick={revealAnswer}><BookOpen /><span><small>NOT SURE?</small><b>Show me + explain why</b></span><ChevronRight /></button></div>
-          {hint && !correct && !showAnswer && <p className="inline-note hint-note"><b>A CLUEâ€”NOT THE ANSWER</b>{FILL[index].hint}</p>}
-          {showAnswer && <div className="answer-reveal"><small>THE ANSWER</small><strong>{FILL[index].answer}</strong><p>{FILL[index].why}</p>
-            <span>Read the explanation once, then continue when you are ready.</span></div>}
-          {message && !correct && !hint && !showAnswer && <p className="inline-note"><b>Try again.</b>{message}</p>}
-          {showAnswer && !correct && <button className="primary-action fill-continue" onClick={continueAfterReveal}>{index < FILL.length - 1 ? "Continue to next question" : "Complete Fill"}<ArrowRight /></button>}
-        </article>
-      </div><ToolDock active="fill" navigate={navigate} />
-    </section>
-  );
-}
-
-function ConnectScreen({ step, advance, navigate, openScripture }: { step: number; advance: () => void; navigate: (screen: Screen) => void; openScripture: (ref: string) => void }) {
-  const nodes = [
-    { thread: "CREATOR THREAD", ref: "Genesis 1:1", title: "God creates", discoveryIndex: 0 },
-    { thread: "CREATOR THREAD", ref: "John 1:1â€“3", title: "The Word was there", discoveryIndex: 1 },
-    { thread: "SEED THREAD", ref: "Genesis 3:15", title: "A promised victor", discoveryIndex: 3 },
-    { thread: "FINAL CONNECTION", ref: "Colossians 1:15â€“17", title: "The center is named", discoveryIndex: 2 },
-  ];
-  const completed = Math.min(step, nodes.length);
-  const christRevealed = completed >= nodes.length;
-  const [activeDiscovery, setActiveDiscovery] = useState<number | null>(null);
-  const discovery = activeDiscovery === null ? null : DISCOVERIES[nodes[activeDiscovery].discoveryIndex];
-  const finalRevealGate = activeDiscovery === nodes.length - 1 && completed === nodes.length - 1;
-
-  function openDiscovery(index: number) {
-    if (index > completed) return;
-    setActiveDiscovery(index);
-    window.setTimeout(() => document.querySelector<HTMLElement>(".connect-discovery-card")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
-  }
-
-  function continueThread() {
-    if (activeDiscovery === completed && completed < nodes.length) advance();
-    setActiveDiscovery(null);
-    window.setTimeout(() => document.querySelector<HTMLElement>(completed === nodes.length - 1 ? ".connect-complete-card" : ".christ-thread-map")?.scrollIntoView({ behavior: "smooth", block: "center" }), 80);
-  }
-
-  return (
-    <section className="app-screen atlas-screen"><AtlasHeader label="CONNECT" onBack={() => navigate("connectIntro")} onInfo={() => navigate("connectIntro")} />
-      <div className="screen-scroll atlas-body tool-body connect-body"><MicroLabel>CREATOR + SEED THREADS</MicroLabel>
-        <h1>Watch the beginning converge.</h1><p className="screen-lede">Tap each pulsing node and follow the living thread. Its center stays hidden until the final connection is made.</p>
-
-        <section className={`christ-thread-map connect-progress-${completed}`} aria-label="Animated Scripture connection map">
-          <header><span><small>THE LIVING THREAD</small><strong>{completed < nodes.length ? `Discovery ${completed + 1} is ready` : "The map is open"}</strong></span>
-            <em>{completed} / {nodes.length}</em></header>
-          <div className="thread-legend"><span><i />Creator thread</span><span><i />Promise carried forward</span></div>
-          <div className="thread-stage">
-            <svg viewBox="0 0 360 520" preserveAspectRatio="none" aria-hidden="true">
-              <path className="thread-ghost" d="M75 77 C150 77 151 167 273 167" />
-              <path className="thread-ghost" d="M273 167 C206 167 215 261 75 261" />
-              <path className="thread-ghost" d="M75 261 C137 280 135 367 180 377" />
-              <path className="thread-ghost seed" d="M180 377 C235 385 223 458 273 458" />
-              <path className={`thread-live ${completed >= 1 ? "drawn" : ""}`} pathLength="1" d="M75 77 C150 77 151 167 273 167" />
-              <path className={`thread-live ${completed >= 2 ? "drawn" : ""}`} pathLength="1" d="M273 167 C206 167 215 261 75 261" />
-              <path className={`thread-live ${completed >= 3 ? "drawn" : ""}`} pathLength="1" d="M75 261 C137 280 135 367 180 377" />
-              <path className={`thread-live seed ${completed >= 4 ? "drawn" : ""}`} pathLength="1" d="M180 377 C235 385 223 458 273 458" />
-            </svg>
-            {nodes.map((node, index) => <button key={node.ref} className={`thread-node thread-node-${index} ${index < completed ? "done" : ""} ${index === completed ? "ready" : ""} ${index > completed ? "locked" : ""}`}
-              onClick={() => openDiscovery(index)} aria-label={`${index < completed ? "Review" : "Open"} discovery ${index + 1}: ${node.ref}`}>
-              <span className="thread-node-dot">{index < completed ? <Check /> : index + 1}</span><span><small>{node.thread}</small><strong>{node.ref}</strong><em>{node.title}</em></span>
-            </button>)}
-            <div className={`christ-center ${christRevealed ? "found revealed" : "veiled"}`}><span>{christRevealed ? <Sparkles /> : <LockKeyhole />}</span><small>{christRevealed ? "CREATOR REVEALED" : "FINAL REVEAL"}</small><strong>{christRevealed ? "CHRIST" : "?"}</strong></div>
-          </div>
-          <p className="thread-instruction"><span>{completed < nodes.length ? completed + 1 : <Check />}</span>{completed < nodes.length ? "Tap the pulsing node to open the next discovery." : "Tap any completed node to revisit its Scripture discovery."}</p>
-        </section>
-
-        {discovery && activeDiscovery !== null && <article className="connect-discovery-card" onClick={(event) => { const target = (event.target as HTMLElement).closest<HTMLElement>("[data-ref]"); if (target?.dataset.ref) { event.preventDefault(); openScripture(target.dataset.ref); } }}>
-          <div className="connect-discovery-head"><span>0{activeDiscovery + 1}</span><div><small>{nodes[activeDiscovery].thread}</small><strong>DISCOVERY {activeDiscovery + 1} OF {nodes.length}</strong></div></div>
-          <h2>{finalRevealGate ? "One final connection remains." : discovery.title}</h2>
-          {finalRevealGate ? <div className="connect-reveal-gate"><LockKeyhole /><p>Colossians takes the Creator thread and names its center. Make the final connection when you are ready.</p></div>
-            : <div className="connect-discovery-content" dangerouslySetInnerHTML={{ __html: discovery.body }} />}
-          <button className="light-action" onClick={continueThread}>{finalRevealGate ? "Reveal the center" : activeDiscovery === completed && completed < nodes.length ? "Continue the thread" : "Back to the map"}<ArrowRight /></button>
-        </article>}
-
-        {completed >= nodes.length && activeDiscovery === null && <article className="connect-complete-card"><span><Sparkles /></span><small>THE THREADS ARE NOW VISIBLE</small><h2>Christ is not added to the beginning. He is its center.</h2>
-          <p>John and Colossians identify Christ as the eternal Word through whom creation came and for whom it exists. Genesis 3:15 opens the Seed promise; the course will keep tracing it until later Scripture brings it fully into focus.</p>
-          <div><b>CREATOR THREAD</b><strong>Resolved in Christ</strong></div><div><b>SEED THREAD</b><strong>Openâ€”carry it forward</strong></div>
-          <button onClick={() => navigate("unlockIntro")}>Continue to Unlock <ArrowRight /></button></article>}
-      </div><ToolDock active="connect" navigate={navigate} />
-    </section>
-  );
-}
-
-function UnlockScreen({ state, step, summary, showModel, message, setStep, setSummary, setShowModel, setAnswer, save, complete, navigate }: {
-  state: AppState; step: number; summary: string; showModel: boolean; message: string; setStep: (step: number) => void;
-  setSummary: (value: string) => void; setShowModel: (value: boolean) => void; setAnswer: (value: string) => void;
-  save: () => void; complete: () => void; navigate: (screen: Screen) => void;
-}) {
-  return (
-    <section className="app-screen atlas-screen"><AtlasHeader label="UNLOCK" onBack={() => navigate("unlockIntro")} />
-      <div className="screen-scroll atlas-body tool-body unlock-body"><MicroLabel>TEACH BACK Â· 60 SECONDS</MicroLabel>
-        <h1>Tell the beginning clearly.</h1><p className="screen-lede">Explain what was good, what broke, and what hope God gave.</p>
-        {!state.teachbackComplete && !summary && <article className="teachback-card">
-          <div className="teachback-steps">{TEACHBACK.map((item, index) => (
-            <button key={item.trail} className={`${index === step ? "active" : ""} ${state.teachback[index]?.length >= 18 ? "done" : ""}`} onClick={() => index <= step && setStep(index)}>
-              <span>{index + 1}</span><small>{item.trail}</small></button>
-          ))}</div>
-          <div className="question-meta"><span>{TEACHBACK[step].label}</span><b>{step + 1} / 4</b></div><h2>{TEACHBACK[step].title}</h2><p>{TEACHBACK[step].prompt}</p>
-          <label htmlFor="teachback">YOUR EXPLANATION</label><textarea id="teachback" value={state.teachback[step] || ""} placeholder={TEACHBACK[step].placeholder} onChange={(event) => setAnswer(event.target.value)} />
-          <details><summary>Need a nudge?</summary><p>{TEACHBACK[step].nudge}</p></details>{message && <p className="unlock-message"><CircleHelp />{message}</p>}
-          <button className="primary-action" onClick={save}>{step === 3 ? "Build my explanation" : "Save + next"}<ArrowRight /></button>
-        </article>}
-        {!state.teachbackComplete && summary && <article className="teachback-card summary-card"><MicroLabel>FINAL PASS</MicroLabel><h2>Make it one clear story.</h2>
-          <textarea value={summary} onChange={(event) => setSummary(event.target.value)} /><button className="text-action" onClick={() => setShowModel(!showModel)}>{showModel ? "Hide" : "Compare with"} a strong answer</button>
-          {showModel && <div className="model-answer"><small>A STRONG ANSWER</small><p>God created everything good, and humanityâ€”male and femaleâ€”was made in His image, given a place, work, relationship, provision, and a boundary. The serpent questioned God&apos;s word, humanity rebelled, and shame, judgment, death, and exile entered the story. Yet before Eden closes, God promises that the woman&apos;s Seed will confront the serpent.</p></div>}
-          {message && <p className="unlock-message"><CircleHelp />{message}</p>}<button className="primary-action" onClick={complete}>I can explain Week 1 <Check /></button></article>}
-        {state.teachbackComplete && <article className="unlock-reward"><span><Check /></span><MicroLabel light>UNDERSTANDING UNLOCKED</MicroLabel>
-          <h2>You can explain why the Bible needs a rescue story.</h2><p>You did more than recognize an answerâ€”you rebuilt the beginning in your own words.</p>
-          <div className="unlock-reward-actions"><button className="light-action" onClick={() => navigate("deep")}>Go deeper for seven days <ArrowRight /></button>
-            <button className="unlock-finish-action" onClick={() => navigate("complete")}>Finish Week 1 <ArrowRight /></button></div></article>}
-        {!state.teachbackComplete && <button className="unlock-devotion-route" onClick={() => navigate("deep")}><span><small>READY TO CONTINUE?</small><strong>Open the 7-day devotional</strong></span><ArrowRight /></button>}
-      </div><ToolDock active="unlock" navigate={navigate} />
-    </section>
-  );
-}
-
-function DeepStudyScreen({ completed, openDay, navigate }: { completed: Record<string, boolean>; openDay: (index: number) => void; navigate: (screen: Screen) => void }) {
-  const completedCount = Object.values(completed).filter(Boolean).length;
-  const nextDay = DEEP_DAYS.findIndex((_, index) => !completed[index]);
-  const featuredDay = nextDay === -1 ? 6 : nextDay;
-  return (
-    <section className="app-screen atlas-screen deep-screen"><AtlasHeader label="GO DEEPER Â· WEEK 01" onBack={() => navigate("home")} />
-      <div className="screen-scroll deep-body">
-        <section className="deep-plan-hero">
-          <div className="deep-journal-art"><img src={DEEP_COVER} alt="A traveler looking across a landscape shaped by light and water" /><span><small>A SEVEN-DAY READING JOURNAL</small><b>WEEK 01</b></span></div>
-          <div className="deep-plan-copy"><small>GO DEEPER</small><h1>Carry the beginning into your week.</h1>
-            <p>Seven unhurried encounters with Scripture, context, reflection and prayer. Your notes remain private and saved on this device.</p></div>
-          <div className="deep-progress" aria-label={`${completedCount} of 7 devotionals complete`}>
-            {DEEP_DAYS.map((day, index) => <span className={completed[index] ? "done" : index === featuredDay ? "current" : ""} key={day.title}><i />DAY {index + 1}</span>)}
-          </div>
-        </section>
-
-        <section className="deep-today">
-          <div className="deep-today-heading"><span><small>{completedCount === 7 ? "RETURN TO THE STORY" : "CONTINUE HERE"}</small><strong>{completedCount === 7 ? "Revisit the final day" : "Todayâ€™s reading"}</strong></span><em>{completedCount} / 7 COMPLETE</em></div>
-          <button onClick={() => openDay(featuredDay)}><img src={DEEP_ART[featuredDay]} alt="" /><span className="deep-today-copy"><small>DAY {String(featuredDay + 1).padStart(2, "0")} Â· {DEEP_DAYS[featuredDay].eyebrow}</small><b>{DEEP_DAYS[featuredDay].cover}</b><p>{DEEP_DAYS[featuredDay].subtitle}</p><strong>{completed[featuredDay] ? "Read again" : "Enter todayâ€™s study"}<ArrowRight /></strong></span></button>
-        </section>
-
-        <div className="deep-week-heading"><span><small>THE WEEK AHEAD</small><strong>Seven invitations to go deeper</strong></span><em>NOTES SAVE ON THIS DEVICE</em></div>
-        <div className="deep-story-stack">{DEEP_DAYS.map((day, index) => index === featuredDay ? null : (
-          <button className="deep-story-panel" key={day.title} onClick={() => openDay(index)}><img src={DEEP_ART[index]} alt="" /><span className="deep-shade" />
-            <span className="deep-number">DAY 0{index + 1}</span>{completed[index] && <span className="deep-check"><Check /></span>}
-            <span className="deep-copy"><small>{day.eyebrow}</small><b>{day.cover}</b><p>{day.subtitle}</p><em>{day.time} Â· READING + REFLECTION</em><strong>{completed[index] ? "Read again" : "Enter todayâ€™s study"}<ArrowRight /></strong></span></button>
-        ))}
-          <section className="deep-finish-card"><span>{completedCount === 7 ? <Check /> : <BookOpen />}</span><small>{completedCount === 7 ? "SEVEN DAYS COMPLETE" : "WEEK 01 Â· CLOSING THE STORY"}</small><h2>Carry the beginning forward.</h2>
-            <p>{completedCount === 7 ? "Your reflections are saved. Close the devotional with the Week 1 story in one clear view." : "You can return to any devotional throughout the week. When you are ready, step into the Week 1 conclusion and see the whole beginning as one story."}</p>
-            <button onClick={() => navigate("complete")}>Enter the Week 1 conclusion <ArrowRight /></button></section>
-        </div>
-      </div><ToolDock active="deep" navigate={navigate} />
-    </section>
-  );
-}
-
-function WeekCompleteScreen({ state, navigate }: { state: AppState; navigate: (screen: Screen) => void }) {
-  const devotionalCount = Object.values(state.deepCompleted).filter(Boolean).length;
-  const thread = ["GOD", "GOOD CREATION", "IMAGE", "BOUNDARY", "FALL", "SEED", "EXILE"];
-  return <section className="app-screen complete-screen">
-    <CinemaHeader onBack={() => navigate("unlock")} label="WEEK 01 COMPLETE" />
-    <div className="screen-scroll complete-scroll">
-      <section className="complete-hero"><span className="complete-hero-shade" />
-        <div className="complete-mark"><Check /></div><div className="complete-copy"><small>CREATION Â· FALL Â· FIRST PROMISE</small>
-          <h1>You now know why the Bible needs a rescue story.</h1><p>What God made was good. Humanity broke trust. Before Eden closed, God spoke hope.</p></div>
-      </section>
-      <section className="complete-story"><MicroLabel>THE WHOLE BEGINNING Â· ONE THREAD</MicroLabel><h2>Keep the order. Carry the promise.</h2>
-        <div className="complete-thread">{thread.map((item, index) => <div key={item}><span>{index + 1}</span><strong>{item}</strong></div>)}</div>
-        <p>Genesis 1â€“3 establishes the world as Godâ€™s good creation, humanity as His image-bearing representatives, sin as a rupture of trust and order, and the promised Seed as the first sign that evil will not have the final word.</p>
-      </section>
-      <section className="complete-next"><small>NEXT Â· WEEK 02</small><h2>The story does not stop east of Eden.</h2><p>Next, we follow what sin multiplies, what judgment reveals and how God preserves the human story.</p>
-        <div><button className="primary-action" onClick={() => navigate("roadmap")}>Review Week 1 <RotateCcw /></button>
-          <button className="complete-secondary" onClick={() => navigate("deep")}>{devotionalCount === 7 ? "Revisit saved reflections" : `Continue devotional Â· ${devotionalCount}/7`}<ArrowRight /></button></div>
-      </section>
-    </div>
-  </section>;
-}
-
-function CinemaHeader({ onBack, onHome, label }: { onBack?: () => void; onHome?: () => void; label?: string }) {
-  return <header className="app-header cinema-header">{onBack ? <button onClick={onBack} aria-label="Go back"><ArrowLeft /></button> : onHome ? <button onClick={onHome} aria-label="Return to course home"><BookOpen /></button> : <span className="header-symbol" aria-hidden="true"><BookOpen /></span>}
-    <div><b>{label || "THROUGH THE BIBLE"}</b><span>WEEK 01</span></div><span className="header-spacer" aria-hidden="true" /></header>;
-}
-function AtlasHeader({ label, onBack, onInfo }: { label: string; onBack: () => void; onInfo?: () => void }) {
-  return <header className="app-header atlas-header"><button onClick={onBack} aria-label="Go back"><ArrowLeft /></button><b>{label}</b>
-    {onInfo ? <button aria-label="Review section instructions" onClick={onInfo}><Info /></button> : <span className="header-spacer" aria-hidden="true" />}</header>;
-}
-function ProgressRing({ value }: { value: number }) {
-  return <div className="progress-ring" style={{ "--progress": `${value * 3.6}deg` } as CSSProperties} aria-label={`${value}% complete`}><span>{value}%</span></div>;
-}
-function MicroLabel({ children, light = false }: { children: ReactNode; light?: boolean }) { return <p className={`micro-label ${light ? "light" : ""}`}>{children}</p>; }
-function WhyCard({ children }: { children: ReactNode }) { return <article className="why-card"><span /><div><small>WHY IT MATTERS</small><p>{children}</p></div></article>; }
-
-function CoreDock({ active, navigate }: { active: "story" | "promise" | "family" | "deeper"; navigate: (screen: Screen) => void }) {
-  const items: { label: string; id: typeof active; screen: Screen; icon: ReactNode }[] = [
-    { label: "STORY", id: "story", screen: "home", icon: <BookOpen /> }, { label: "PROMISE", id: "promise", screen: "promise", icon: <Waypoints /> },
-    { label: "FAMILY", id: "family", screen: "family", icon: <Users /> }, { label: "DEEPER", id: "deeper", screen: "deep", icon: <Sparkles /> },
-  ];
-  return <nav className="core-dock" aria-label="Lesson navigation">{items.map((item) => <button key={item.id} className={active === item.id ? "active" : ""} onClick={() => navigate(item.screen)}>{item.icon}<span>{item.label}</span></button>)}</nav>;
-}
-function ToolDock({ active, navigate }: { active?: StudyDockName; navigate: (screen: Screen) => void }) {
-  const items: { label: string; id: StudyDockName; screen: Screen; icon: ReactNode }[] = [
-    { label: "PLACE", id: "place", screen: "placeIntro", icon: <MapPin /> }, { label: "FILL", id: "fill", screen: "fillIntro", icon: <Minus /> },
-    { label: "CONNECT", id: "connect", screen: "connectIntro", icon: <Link2 /> }, { label: "UNLOCK", id: "unlock", screen: "unlockIntro", icon: <LockKeyhole /> },
-    { label: "DEVOTION", id: "deep", screen: "deep", icon: <Sparkles /> },
-  ];
-  return <nav className="tool-dock" aria-label="Study tools">{items.map((item) => <button key={item.id} className={active === item.id ? "active" : ""} onClick={() => navigate(item.screen)}>{item.icon}<span>{item.label}</span></button>)}</nav>;
-}
-
-function DesktopRail({ screen, progress, navigate }: { screen: Screen; progress: number; navigate: (screen: Screen) => void }) {
-  const routes: { label: string; screen: Screen; meta: string }[] = [
-    { label: "The opening", screen: "home", meta: "CINEMA" }, { label: "The story", screen: "roadmap", meta: "4 CHAPTERS" },
-    { label: "The promise", screen: "promise", meta: "GENESIS 3:15" }, { label: "Learning lab", screen: "placeIntro", meta: "4 TOOLS" },
-    { label: "Deep study", screen: "deep", meta: "7 DAYS" },
-  ];
-  return <aside className="desktop-rail"><div className="desktop-brand"><BookOpen /><span><b>THROUGH THE BIBLE</b><small>WEEK 01 Â· GENESIS 1â€“3</small></span></div>
-    <div className="desktop-progress"><ProgressRing value={progress} /><span><small>YOUR PROGRESS</small><b>The beginning is taking shape.</b></span></div>
-    <div className="desktop-title"><MicroLabel light>CREATION Â· FALL Â· FIRST PROMISE</MicroLabel><h1>Creation, Rupture &amp; the First Promise</h1></div>
-    <nav>{routes.map((route) => <button key={route.screen} className={screen === route.screen || (route.screen === "placeIntro" && ["placeIntro", "fillIntro", "connectIntro", "unlockIntro", "place", "fill", "connect", "unlock"].includes(screen)) ? "active" : ""} onClick={() => navigate(route.screen)}><span><small>{route.meta}</small><b>{route.label}</b></span><ArrowRight /></button>)}</nav>
-    <blockquote>â€œHope appears before Eden closes.â€</blockquote></aside>;
-}
-
-function ScriptureReader({ reference, scripture, mark, reading, onClose, onTool, onText, onSelection, onRead, onNavigate }: {
-  reference: string | null; scripture: Scripture | null; mark: ScriptureMark; reading?: ScriptureReading; onClose: () => void;
-  onTool: (key: "highlight" | "underline" | "bookmark") => void; onText: (key: "notes" | "question", value: string) => void;
-  onSelection: (selection: ScriptureSelection) => void; onRead: (reference: string, verseCount: number) => void;
-  onNavigate: (reference: string) => void;
-}) {
-  const articleRef = useRef<HTMLElement>(null);
-  const responseRef = useRef<HTMLElement>(null);
-  const [pendingSelection, setPendingSelection] = useState<{ quote: string; start: number; end: number } | null>(null);
-  const [toolMessage, setToolMessage] = useState("");
-  const [studyOpen, setStudyOpen] = useState(false);
-  const [readReference, setReadReference] = useState<string | null>(null);
-  const readReportedFor = useRef<string | null>(reading?.lastReadAt && reference ? reference : null);
-  const onReadRef = useRef(onRead);
-  const references = Object.keys(SCRIPTURES);
-  const referenceIndex = reference ? references.indexOf(reference) : -1;
-  const previousReference = referenceIndex > 0 ? references[referenceIndex - 1] : null;
-  const nextReference = referenceIndex >= 0 && referenceIndex < references.length - 1 ? references[referenceIndex + 1] : null;
-  const verseCount = Math.max(1, scripture?.html.match(/<sup>/g)?.length || 0);
-  const scriptureHtml = useMemo(() => annotateScriptureHtml(
-    scripture?.html || '<p class="scripture-unavailable">This passage could not be loaded. Close the reader and try again.</p>',
-    mark.selections || [],
-  ), [scripture?.html, mark.selections]);
-  const readLogged = Boolean(reading?.lastReadAt || readReference === reference);
-
-  useEffect(() => { onReadRef.current = onRead; }, [onRead]);
-
-  useEffect(() => {
-    if (!reference) return;
-    const timer = window.setTimeout(() => {
-      if (readReportedFor.current === reference) return;
-      readReportedFor.current = reference;
-      setReadReference(reference);
-      onReadRef.current(reference, verseCount);
-    }, 10000);
-    return () => window.clearTimeout(timer);
-  }, [reference, reading?.lastReadAt, verseCount]);
-
-  function reportRead() {
-    if (!reference || readReportedFor.current === reference) return;
-    readReportedFor.current = reference;
-    setReadReference(reference);
-    onReadRef.current(reference, verseCount);
-  }
-
-  function handleReaderScroll(event: UIEvent<HTMLDivElement>) {
-    const article = articleRef.current;
-    if (!article) return;
-    const viewport = event.currentTarget.getBoundingClientRect();
-    if (article.getBoundingClientRect().bottom <= viewport.bottom + 72) reportRead();
-  }
-
-  function captureSelection() {
-    const article = articleRef.current;
-    const selection = window.getSelection();
-    if (!article || !selection || selection.rangeCount === 0 || selection.isCollapsed) return null;
-    const range = selection.getRangeAt(0);
-    if (!article.contains(range.commonAncestorContainer)) return null;
-    const quote = selection.toString().trim();
-    if (quote.length < 2) return null;
-    const before = document.createRange();
-    before.selectNodeContents(article);
-    before.setEnd(range.startContainer, range.startOffset);
-    const start = before.toString().length;
-    const captured = { quote, start, end: start + selection.toString().length };
-    setPendingSelection(captured);
-    setToolMessage("");
-    return captured;
-  }
-
-  function saveSelection(type: "highlight" | "underline") {
-    const captured = pendingSelection || captureSelection();
-    if (!captured) {
-      setToolMessage(`Select a word or phrase in the Scripture, then tap ${type}.`);
-      articleRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-      return;
-    }
-    onSelection({ ...captured, type, id: globalThis.crypto?.randomUUID?.() || `${Date.now()}`, createdAt: new Date().toISOString() });
-    window.getSelection()?.removeAllRanges();
-    setPendingSelection(null);
-    setToolMessage(type === "highlight" ? "Highlight saved to My Study." : "Underline saved to My Study.");
-  }
-
-  useEffect(() => {
-    if (!reference) return;
-    const handleSelectionChange = () => {
-      const selection = window.getSelection();
-      const article = articleRef.current;
-      if (!article || !selection || selection.rangeCount === 0 || selection.isCollapsed) return;
-      const range = selection.getRangeAt(0);
-      if (!article.contains(range.commonAncestorContainer)) return;
-      const quote = selection.toString().trim();
-      if (quote.length < 2) return;
-      const before = document.createRange();
-      before.selectNodeContents(article);
-      before.setEnd(range.startContainer, range.startOffset);
-      const start = before.toString().length;
-      setPendingSelection({ quote, start, end: start + selection.toString().length });
-      setToolMessage("");
-    };
-    document.addEventListener("selectionchange", handleSelectionChange);
-    return () => document.removeEventListener("selectionchange", handleSelectionChange);
-  }, [reference]);
-
-  return <Sheet open={Boolean(reference)} onOpenChange={(open) => !open && onClose()}><SheetContent side="right" className="scripture-sheet">
-    <SheetHeader className="scripture-header"><div className="scripture-kicker"><MicroLabel>{scripture?.translation || "KING JAMES VERSION (KJV)"}</MicroLabel><span className={readLogged ? "read" : ""}>{readLogged ? <><Check />READ</> : "READING"}</span></div><SheetTitle>{reference || "Scripture"}</SheetTitle><SheetDescription>The text comes first. Read slowly; keep only what asks you to stay.</SheetDescription></SheetHeader>
-    <div className="scripture-toolbar-v35" aria-label="Scripture study tools">
-      <button className={pendingSelection ? "ready" : ""} onMouseDown={(event) => event.preventDefault()} onClick={() => saveSelection("highlight")}><Highlighter /><span>Highlight</span></button>
-      <button className={pendingSelection ? "ready" : ""} onMouseDown={(event) => event.preventDefault()} onClick={() => saveSelection("underline")}><Underline /><span>Underline</span></button>
-      <button className={mark.bookmark ? "active" : ""} onClick={() => onTool("bookmark")}><Bookmark /><span>{mark.bookmark ? "Saved" : "Save"}</span></button>
-      <button onClick={() => responseRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}><NotebookPen /><span>Notes</span></button>
-    </div>
-    <div className={`scripture-tool-status ${pendingSelection ? "has-selection" : ""}`} aria-live="polite">
-      {pendingSelection ? <><span>Selected</span><p>â€œ{pendingSelection.quote.length > 70 ? `${pendingSelection.quote.slice(0, 70)}â€¦` : pendingSelection.quote}â€</p><button onClick={() => { window.getSelection()?.removeAllRanges(); setPendingSelection(null); }} aria-label="Clear selection"><X /></button></> : <><span>{toolMessage || "Select any words in the passage, then choose Highlight or Underline."}</span></>}
-    </div>
-    <div className="scripture-scroll" onScroll={handleReaderScroll}>
-      <article ref={articleRef} onMouseUp={captureSelection} onTouchEnd={() => window.setTimeout(captureSelection, 0)}
-        className={`scripture-text ${mark.highlight ? "highlighted" : ""} ${mark.underline ? "underlined" : ""}`}
-        dangerouslySetInnerHTML={{ __html: scriptureHtml }} />
-      <section className={`scripture-context ${studyOpen ? "open" : ""}`}><button onClick={() => setStudyOpen((value) => !value)}><span><Sparkles /><small>UNDERSTAND THE TEXT</small><b>Why this passage matters</b></span><ChevronDown /></button>{studyOpen ? <WhyCard>{scripture?.study || "Read the passage in the movement of the larger biblical story."}</WhyCard> : null}</section>
-      <section ref={responseRef} className="scripture-response"><header><small>KEEP WHAT YOU NOTICE</small><h2>Turn attention into a record.</h2><p>Your question and note remain attached to {reference}.</p></header>
-        <label className="study-field"><span><MessageCircleQuestion />ASK A QUESTION</span><textarea value={mark.question || ""} onChange={(event) => onText("question", event.target.value)} placeholder="What do you want to understand about this text?" /></label>
-        <label className="study-field"><span><NotebookPen />PRIVATE NOTES</span><textarea value={mark.notes || ""} onChange={(event) => onText("notes", event.target.value)} placeholder="Capture an observation, connection or questionâ€¦" /></label><p className="saved-note"><Check />Saved automatically to My Study</p>
-      </section>
-      <nav className="scripture-passage-nav" aria-label="Move between Scripture passages">{previousReference ? <button onClick={() => onNavigate(previousReference)}><ArrowLeft /><span><small>PREVIOUS</small><b>{previousReference}</b></span></button> : <span />}{nextReference ? <button onClick={() => onNavigate(nextReference)}><span><small>NEXT</small><b>{nextReference}</b></span><ArrowRight /></button> : <span />}</nav>
-    </div></SheetContent></Sheet>;
-}
-
-function MyStudySheet({ open, onOpenChange, state, userEmail, cloudConfigured, accountLoading, openAccount, openScripture, openDay, submitQuestion }: {
-  open: boolean; onOpenChange: (open: boolean) => void; state: AppState; userEmail: string | null; cloudConfigured: boolean; accountLoading: boolean;
-  openAccount: () => void; openScripture: (reference: string) => void; openDay: (index: number) => void;
-  submitQuestion: (reference: string, question: string) => Promise<boolean>;
-}) {
-  const [submitted, setSubmitted] = useState<Record<string, boolean>>({});
-  const keptReferences = new Set([
-    ...Object.keys(state.readingHistory),
-    ...Object.entries(state.scriptureTools).filter(([, mark]) => mark.bookmark || mark.notes?.trim() || mark.question?.trim() || mark.selections?.length).map(([reference]) => reference),
-  ]);
-  const scriptureEntries: [string, ScriptureMark][] = [...keptReferences].map((reference) => [reference, state.scriptureTools[reference] || {}]);
-  const devotionalEntries = DEEP_DAYS.map((day, index) => ({ day, index, note: state.deepNotes[index] || "", reflection: state.deepReflections[index] || "" }))
-    .filter((item) => item.note.trim() || item.reflection.trim());
-  const highlightCount = scriptureEntries.reduce((total, [, mark]) => total + (mark.selections?.length || 0), 0);
-  const questionCount = scriptureEntries.filter(([, mark]) => mark.question?.trim()).length;
-
-  async function sendQuestion(reference: string, question: string) {
-    if (!userEmail) { onOpenChange(false); openAccount(); return; }
-    if (await submitQuestion(reference, question)) setSubmitted((current) => ({ ...current, [reference]: true }));
-  }
-
-  return <Sheet open={open} onOpenChange={onOpenChange}><SheetContent side="right" className="my-study-sheet" showCloseButton={false}>
-    <header className="my-study-header"><button onClick={() => onOpenChange(false)}><ArrowLeft />Back</button><b>MY STUDY</b><button onClick={openAccount} aria-label="Open account"><UserRound /></button></header>
-    <div className="my-study-scroll"><section className="my-study-hero"><small>YOUR PRIVATE STUDY LIBRARY</small><h1>Everything you<br />didnâ€™t want to lose.</h1><p>Notes, marked Scripture, questions and devotional reflectionsâ€”kept together and linked to their original context.</p>
-      <div className={`study-sync-state ${userEmail ? "synced" : ""}`}><span>{userEmail ? <Check /> : <LockKeyhole />}</span><div><small>{userEmail ? "CLOUD SYNC ACTIVE" : cloudConfigured ? "SAVED ON THIS DEVICE" : "ACCOUNT CONNECTION PENDING"}</small><b>{accountLoading ? "Checking your accountâ€¦" : userEmail || "Protect this study across every device"}</b></div>{!userEmail && <button onClick={() => { onOpenChange(false); openAccount(); }}>Protect it <ArrowRight /></button>}</div>
-    </section>
-    <section className="study-overview"><article><b>{scriptureEntries.length}</b><span>PASSAGES</span></article><article><b>{highlightCount}</b><span>MARKS</span></article><article><b>{questionCount}</b><span>QUESTIONS</span></article><article><b>{devotionalEntries.length}</b><span>JOURNAL DAYS</span></article></section>
-
-    {!scriptureEntries.length && !devotionalEntries.length ? <section className="my-study-empty"><NotebookPen /><h2>Your study library is waiting.</h2><p>Highlight a phrase, save a Scripture or write inside a devotional. It will appear here automatically.</p></section> : null}
-
-    {scriptureEntries.length > 0 && <section className="study-library-section"><header><small>SCRIPTURE STUDY</small><h2>Saved from the text</h2></header>{scriptureEntries.map(([reference, mark]) => <article className="study-library-card" key={reference}>
-      <button className="study-card-main" onClick={() => openScripture(reference)}><span>{state.readingHistory[reference]?.completedAt ? <Check /> : <Bookmark />}</span><div><small>{reference}</small><b>{mark.notes?.trim() || mark.question?.trim() || mark.selections?.[0]?.quote || (state.readingHistory[reference]?.completedAt ? "Read in full" : "Opened in your study")}</b><em>{state.readingHistory[reference]?.opens || 0} visit{state.readingHistory[reference]?.opens === 1 ? "" : "s"}{mark.selections?.length ? ` Â· ${mark.selections.length} text mark${mark.selections.length === 1 ? "" : "s"}` : ""}{mark.notes?.trim() ? " Â· note" : ""}{mark.question?.trim() ? " Â· question" : ""}</em></div><ChevronRight /></button>
-      {mark.selections?.map((selection) => <button className={`study-quote ${selection.type}`} onClick={() => openScripture(reference)} key={selection.id}>â€œ{selection.quote}â€</button>)}
-      {mark.question?.trim() && <div className="study-question"><MessageCircleQuestion /><span><small>YOUR QUESTION</small><p>{mark.question}</p></span><button disabled={submitted[reference]} onClick={() => sendQuestion(reference, mark.question || "")}>{submitted[reference] ? "Submitted" : userEmail ? "Ask instructor" : "Sign in to ask"}</button></div>}
-    </article>)}</section>}
-
-    {devotionalEntries.length > 0 && <section className="study-library-section devotional-library"><header><small>DEVOTIONAL JOURNAL</small><h2>Reflections from the week</h2></header>{devotionalEntries.map(({ day, index, note, reflection }) => <button className="devotional-library-card" key={day.title} onClick={() => openDay(index)}><img src={DEEP_ART[index]} alt="" /><span><small>DAY {index + 1} Â· {day.eyebrow}</small><b>{day.cover}</b><p>{reflection || note}</p></span><ChevronRight /></button>)}</section>}
-    <footer className="my-study-privacy"><LockKeyhole /><span><b>Your private writing belongs to you.</b><small>Only questions you deliberately submit can be seen by an instructor.</small></span></footer>
-    </div>
-  </SheetContent></Sheet>;
-}
-
-function DeepReader({ open, dayIndex, day, completed, reflection, notes, onClose, onScripture, onInsight, onReflection, onNotes, onComplete }: {
-  open: boolean; dayIndex: number; day: DeepDay; completed: boolean; reflection: string; notes: string; onClose: () => void;
-  onScripture: (ref: string) => void; onInsight: (key: string) => void; onReflection: (value: string) => void; onNotes: (value: string) => void; onComplete: () => void;
-}) {
-  const image = DEEP_ART[dayIndex];
-  const [completionAttempted, setCompletionAttempted] = useState(false);
-
-  function finishDay() {
-    if (reflection.trim().length < 15) {
-      setCompletionAttempted(true);
-      window.setTimeout(() => document.querySelector<HTMLElement>(".reader-reflection-message")?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 60);
-      return;
-    }
-    setCompletionAttempted(false);
-    onComplete();
-  }
-
-  return <Sheet open={open} onOpenChange={(value) => !value && onClose()}><SheetContent side="right" className="deep-reader-sheet" showCloseButton={false}>
-    <header className="reader-topbar"><button onClick={onClose}><ArrowLeft />Back to plan</button><span>DAY {dayIndex + 1} OF 7</span><button onClick={onClose} aria-label="Close"><X /></button></header>
-    <div className="deep-reader-scroll"><div className="reader-hero" style={{ backgroundImage: `url('${image}')` }}><div className="reader-hero-shade" /><div><small>{day.eyebrow}</small><h1>{day.title}</h1><p>{day.subtitle}</p></div></div>
-      <article className="reader-body" onClick={(event) => { const target = (event.target as HTMLElement).closest<HTMLElement>("[data-insight]"); if (target?.dataset.insight) onInsight(target.dataset.insight); }}>
-        <div className="reader-meta"><span>{day.time}</span><span>READING + REFLECTION</span></div><p className="reader-lede">{day.lede}</p>{day.paragraphs.map((paragraph, index) => <p key={index} dangerouslySetInnerHTML={{ __html: paragraph }} />)}
-        <div className="reader-references"><small>READ THE TEXTS</small>{day.refs.map((ref) => <button key={ref} onClick={() => onScripture(ref)}>{ref}<ArrowRight /></button>)}</div>
-        <blockquote><p>â€œ{day.quote}â€</p><button onClick={() => onScripture(day.quoteRef)}>{day.quoteRef}<ArrowRight /></button></blockquote><section className="hold-card"><small>HOLD THIS</small><p>{day.hold}</p></section>
-        <section className="journal-section"><small>OBSERVE + RESPOND</small><h2>Stay honest here.</h2><p>{day.reflect}</p><label>YOUR REFLECTION<textarea value={reflection} onChange={(event) => onReflection(event.target.value)} placeholder="Write the truest answer you canâ€¦" /></label>
-          <label>PRIVATE NOTES<textarea value={notes} onChange={(event) => onNotes(event.target.value)} placeholder="Capture what you do not want to loseâ€¦" /></label><span><Check />Saved automatically between visits</span></section>
-        <section className="prayer-section"><small>A PRAYER TO CARRY</small><h2>Pray it slowly.</h2><p>{day.prayer}</p></section>
-        {completionAttempted && reflection.trim().length < 15 && <p className="reader-reflection-message"><CircleHelp />Write one honest sentence in your reflection before completing todayâ€™s study.</p>}
-        <button className="primary-action reader-complete" onClick={finishDay}>{completed ? "Day complete" : dayIndex === 6 ? "Complete the plan" : "Mark day complete"}<Check /></button>
-      </article></div></SheetContent></Sheet>;
-}
+YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éíß~½İ:-jZ.¶›­–)Ş³R'W6R6Æ–VçB#° ¦–×÷'B²W6TVffV7BÂW6TÖVÖòÂW6U&VbÂW6U7FFRÂG—R555&÷W'F–W2ÂG—R&V7DæöFRÂG—RT”WfVçBÒg&öÒ'&V7B#°¦–×÷'B°¢'&÷tÆVgBÂ'&÷u&–v‡BÂ&öö¶Ö&²Â&öö´÷VâÂ6†V6²Â6†Wg&öäF÷vâÂ6†Wg&öå&–v‡BÂ6—&6ÆT†VÇÀ¢w&—fW'F–6ÂÂ†–v†Æ–v‡FW"Â–æfòÂÆ–æ³"ÂÆö6´¶W–†öÆRÂÖ–âÂÖ–çW2À¢ÖW76vT6—&6ÆUVW7F–öâÂæ÷FV&ööµVâÂ&÷FFT67rÀ¢7&¶ÆW2ÂVæFW&Æ–æRÂW6W%&÷VæBÂW6W'2Âv—ö–çG2Â‚À§Òg&öÒ&ÇV6–FR×&V7B#°¦–×÷'B²6†VWBÂ6†VWD6öçFVçBÂ6†VWDFW67&—F–öâÂ6†VWD†VFW"Â6†VWEF—FÆRÒg&öÒ$ö6ö×öæVçG2÷V’÷6†VWB#°¦–×÷'BÆW76öâg&öÒ"â÷vVV³ÖFFæ§6öâ#°¦–×÷'B²W6U7GVG”66÷VçBÒg&öÒ"â÷7GVG’Ö66÷VçB#°¦–×÷'B²ææ÷Væ6U7GVG•WFFRÂÖW&vU÷'FföÆ–÷2ÂU%4ôäÅõ5Dõ$tUô´U’Òg&öÒ$öÆ–"÷7GVG’×&öw&W72#°¦–×÷'BG—R²67&—GW&TÖ&²Â67&—GW&U&VF–ærÂ67&—GW&U6VÆV7F–öâÂ7GVG”7F—f—G”WfVçBÂ7GVG”7F—f—G•G—RÂ7GVG•÷'FföÆ–òÒg&öÒ$öÆ–"÷7GVG’×G—W2#°¦–×÷'B²tTTµôôäUõ$U5TÔUô´U’ÂG—R&W7VÖUF&vWBÒg&öÒ$öÆ–"÷vVV²ÖöæR×G&6¶–ær#° §G—RFööÄæÖRÒ'Æ6R"Â&f–ÆÂ"Â&6öææV7B"Â'VæÆö6²#°§G—R7GVG”Fö6´æÖRÒFööÄæÖRÂ&FVW#°§G—R67&VVâÒ&†öÖR"Â'&öFÖ"Â&Ö÷fVÖVçB"Â'7F÷'’"Â'&öÖ—6R"Â&fÖ–Ç’"À¢'Æ6T–çG&ò"Â&f–ÆÄ–çG&ò"Â&6öææV7D–çG&ò"Â'VæÆö6´–çG&ò"Â'Æ6R"Â&f–ÆÂ"Â&6öææV7B"Â'VæÆö6²"Â&FVW"Â&6ö×ÆWFR#°§G—R67&—GW&RÒ²‡FÖÃ¢7G&–æs²7GVG“¢7G&–æs²G&ç6ÆF–öã¢7G&–æs²¶–æC¢7G&–ærÓ°§G—Rf–ÆÄ—FVÒÒ²¢7G&–æs²ç7vW#¢7G&–æs²66WFVC¢7G&–æuµÓ²†–çC¢7G&–æs²v‡“¢7G&–ærÓ°§G—RFVWF’Ò°¢F#¢7G&–æs²W–V'&÷s¢7G&–æs²F—FÆS¢7G&–æs²6÷fW#¢7G&–æs²7V'F—FÆS¢7G&–æs°¢F–ÖS¢7G&–æs²&Vg3¢7G&–æuµÓ²ÆVFS¢7G&–æs²&w&‡3¢7G&–æuµÓ°¢V÷FS¢7G&–æs²V÷FU&Vc¢7G&–æs²†öÆC¢7G&–æs²&VfÆV7C¢7G&–æs²&–W#¢7G&–æs°§Ó°§G—R7FFRÒ°¢7F'FVC¢&ööÆVã²7F÷'“¢çVÖ&W#²Æ6S¢7G&–æuµÓ²Æ6T÷&FW#¢7G&–æuµÓ°¢f–ÆÄç7vW'3¢&V6÷&CÇ7G&–ærÂ7G&–æsã²f–ÆÄ6÷'&V7C¢&V6÷&CÇ7G&–ærÂ&ööÆVãã°¢6öææV7C¢çVÖ&W#²FV6†&6³¢7G&–æuµÓ²FV6†&6´6ö×ÆWFS¢&ööÆVã°¢FVW6ö×ÆWFVC¢&V6÷&CÇ7G&–ærÂ&ööÆVãã²FVWæ÷FW3¢&V6÷&CÇ7G&–ærÂ7G&–æsã°¢FVW&VfÆV7F–öç3¢&V6÷&CÇ7G&–ærÂ7G&–æsã²67&—GW&UFööÇ3¢&V6÷&CÇ7G&–ærÂ67&—GW&TÖ&³ã°¢&VF–æt†—7F÷'“¢&V6÷&CÇ7G&–ærÂ67&—GW&U&VF–æsã²7F—f—G”WfVçG3¢7GVG”7F—f—G”WfVçEµÓ°§Ó° ¦6öç7B5Dõ%’ÒÆW76öâå5Dõ%’2·7G&–ærÂ7G&–ærÂ7G&–æuµÒÂ7G&–ærÂ7G&–æuÕµÓ°¦6öç7Bd”ÄÂÒÆW76öâäd”ÄÂ2f–ÆÄ—FVÕµÓ°¦6öç7BÄ4RÒÆW76öâåÄ4R27G&–æuµÓ°¦6öç7B45$•EU$U2ÒÆW76öâå45$•EU$U22&V6÷&CÇ7G&–ærÂ67&—GW&Sã°¦6öç7BD•44õdU$”U2ÒÆW76öâåsôD•44õdU$”U22²F—FÆS¢7G&–æs²&öG“¢7G&–ærÕµÓ°¦6öç7BDT4„$4²ÒÆW76öâåDT4„$4µõ5DU22²Æ&VÃ¢7G&–æs²G&–Ã¢7G&–æs²F—FÆS¢7G&–æs²&ö×C¢7G&–æs²Æ6V†öÆFW#¢7G&–æs²çVFvS¢7G&–ærÕµÓ°¦6öç7BDTUôD•2ÒÆW76öâäDTUôD•22FVWF•µÓ°¦6öç7BDTUô”å4”t…E2ÒÆW76öâäDTUô”å4”t…E22&V6÷&CÇ7G&–ærÂ²G—S¢7G&–æs²F—FÆS¢7G&–æs²&öG“¢7G&–æs²6÷W&6S¢7G&–ærÓã°¦6öç7BDTUô%BÒDTUôD•2æÖ‚…òÂ–æFW‚’Óâö–ÖvW2÷vVV³ÖFVWÖF’ÒGµ7G&–ær†–æFW‚²’çE7F'Bƒ"Â#"—Òæ§v“°¦6öç7BDTUô4õdU"Ò"ö–ÖvW2÷vVV³ÖFVW×ÆâÖ6÷fW"×c"çær#°¦6öç7B45$Ô$ÄTEõÄ4RÒµÄ4U³EÒÂÄ4U³ÒÂÄ4U³UÒÂÄ4U³%ÒÂÄ4U³ÒÂÄ4U³5ÕÓ° ¦6öç7BDTdTÅEõ5DDS¢7FFRÒ°¢7F'FVC¢fÇ6RÂ7F÷'“¢ÂÆ6S¢µÒÂÆ6T÷&FW#¢45$Ô$ÄTEõÄ4RÂf–ÆÄç7vW'3¢·ÒÂf–ÆÄ6÷'&V7C¢·ÒÂ6öææV7C¢À¢FV6†&6³¢²""Â""Â""Â"%ÒÂFV6†&6´6ö×ÆWFS¢fÇ6RÂFVW6ö×ÆWFVC¢·ÒÀ¢FVWæ÷FW3¢·ÒÂFVW&VfÆV7F–öç3¢·ÒÂ67&—GW&UFööÇ3¢·ÒÂ&VF–æt†—7F÷'“¢·ÒÂ7F—f—G”WfVçG3¢µÒÀ§Ó°¦6öç7B4U54”ôåõ5Dõ$tUô´U’Ò'GF"×vVV³Ö7F—fR×7GVG’×6W76–öâ×c#°¦6öç7BÄTt5•õ5Dõ$tUô´U•2Ò²'GF"×vVV³ÖÆ—f–ærÖFÆ2×c""Â'GF"×vVV³ÖÆ—f–ærÖFÆ2×c%Ó°¦6öç7B„ôÔUô„U$òÒ"ö–ÖvW2÷vVV³Ö6–æVÖF–2ÖÖ7FW"×cBçvV'#°¦6öç7B4”äTÔô„U$òÒ"ö–ÖvW2÷vVV³Ö†W&òÖ6–æVÖF–2çær#°¦6öç7B4”äTÔô5$TD”ôâÒ"ö–ÖvW2÷vVV³×7F÷'’Ö7&VF–öâçær#°¦6öç7B$ôDÔô%BÒ°¢"ö–ÖvW2÷vVV³×&öFÖÖ7&VF–öâçær"À¢"ö–ÖvW2÷vVV³×&öFÖÖ–ÖvRÖ&V&W'2çær"À¢"ö–ÖvW2÷vVV³×&öFÖ×'WGW&Rçær"À¢"ö–ÖvW2÷vVV³ÖVFVâÖW†–ÆRÖ6÷WÆRæ§r"À¥Ò26öç7C°¦6öç7B5Dõ%•ô%BÒ°¢4”äTÔô5$TD”ôâÀ¢"ö–ÖvW2÷vVV³Ö7&VF–öâ×6Væ§r"À¢"ö–ÖvW2÷vVV³ÖVFVâÖ6÷WÆRæ§r"À¢"ö–ÖvW2÷vVV³ÖVFVâ×fö6F–öâæ§r"À¢"ö–ÖvW2÷vVV³ÖVFVâ×FV×FF–öâæ§r"À¢"ö–ÖvW2÷vVV³ÖVFVâ×6†ÖRæ§r"À¢"ö–ÖvW2÷vVV³ÖVFVâÖW†–ÆRÖ6÷WÆRæ§r"À¢4”äTÔô„U$òÀ¥Ò26öç7C°¦6öç7B$ôÔ•4Uô%BÒ"ö–ÖvW2÷vVV³Ö†W&ò×&VfW&Væ6R×c"çær#°¦6öç7BdÔ”Å•ô%BÒ"ö–ÖvW2÷vVV³Ö†W&ò×&VfW&Væ6R×c2çær#°¦6öç7BÔõdTÔTåE2Ò°¢°¢W–V'&÷s¢#+rD„R4•‚D•2"ÂF—FÆS¢$v÷&ÆBf÷&ÖVN(	FæBf–ÆÆVBâ"À¢&öFÖF—FÆS¢%6—‚F—3¢v÷&ÆBf÷&ÖVBæBf–ÆÆVB"À¢&öFÖ7VÖÖ'“¢$vöB÷&FW'2F†R&VÆ×2Âf–ÆÇ2F†VÒv—F‚Æ–fRÂæB&W7G2÷fW"v÷&ÆBFV6Æ&VBfW'’vööBâ"À¢FV6³¢$vVæW6—2÷Vç2v—F‚Ö÷fVÖVçBÂ6WVVæ6RæB–çFVçF–öââvöBFöW2æ÷BÖW&VÇ’Ö¶RF†–æw3²†R÷&FW'2v÷&ÆB–âv†–6‚Æ–fR6âfÆ÷W&—6‚â"À¢6V7F–öåF—FÆS¢$7&VF–öâ—2&6†—FV7GW&R&Vf÷&R—B—266VæW'’â"À¢&w&‡3¢°¢$GW&–ærF—2(	32ÂvöBf÷&×2F†R&VÆ×3¢Æ–v‡BæBF&¶æW72Â6·’æB6VÂG'’ÆæBæBfVvWFF–öââGW&–ærF—2N(	3bÂ†Rf–ÆÇ2F†÷6R&VÆ×2v—F‚F†RÆ–v‡G2Â&—&G2æBf—6‚Âæ–ÖÇ2æBf–æÆÇ’‡VÖæ—G’â"À¢%F†R&WVFVB&‡—F†Ş(	DvöB7V·2Â7&VF–öâ&W7öæG2ÂvöBæÖW2ÂæBvöB6ÆÇ2—BvööN(	G&W6VçG2v÷&ÆBF†B—2æV—F†W"66–FVçFÂæ÷"6†÷F–2â—B'&—fW2'’†—2v÷&BÂVæFW"†—2WF†÷&—G’ÂæB66÷&F–ærFò†—2W'÷6Râ"À¢$F’6WfVâ6ö×ÆWFW2F†RGFW&ââvöB&W7G2Â&ÆW76W2F†RF’æBÖ¶W2—B†öÇ(	Fæ÷B&V6W6R†R—2F—&VBÂ'WB&V6W6RF†R÷&FW&VBv÷&²—26ö×ÆWFRæB†—2'VÆR—2W7F&Æ—6†VBâ"À¢ÒÀ¢&VG3¢µ²$D•2(	32"Â$vöBf÷&×2F†R&VÆ×2%ÒÂ²$D•2N(	3b"Â$vöBf–ÆÇ2v†B†Rf÷&ÖVB%ÒÂ²$D’r"Â$vöB&W7G2Â&ÆW76W2æB&V–vç2%ÕÒÀ¢–ç6–v‡C¢%F†Rf—'7BG'WF‚67&—GW&Rv—fW2W2&÷WB&VÆ—G’—2F†BF†Rv÷&ÆB&VÆöæw2FòvöBæB6'&–W2F†RÖ&·2öb†—2–çFVçF–öââ"À¢&Vg3¢²$vVæW6—2£>(	33%ÒÂ–ÖvS¢4”äTÔô5$TD”ôâÀ¢ÒÀ¢°¢W–V'&÷s¢#"+rD„R5$õtâ"ÂF—FÆS¢$–ÖvRÖ&V&W'2&V6öÖRV'F(	—2&VvVçG2â"À¢&öFÖF—FÆS¢%F†R7&÷vâöb7&VF–öã¢–ÖvRÔ&V&W'2æB&VvVçG2"À¢&öFÖ7VÖÖ'“¢$‡VÖæ—G’&V6V—fW2&÷–ÂF–væ—G’ÂFVÆVvFVBWF†÷&—G’æBfö6F–öâ&VæVF‚vöN(	—2'VÆRâ"À¢FV6³¢$7&VF–öâ&V6†W2—G26Æ–Ö‚v†VâvöBÖ¶W2‡VÖæ—G’–â†—2–ÖvRæBVçG'W7G2F†RV'F‚FòF†V—"6&Râ"À¢6V7F–öåF—FÆS¢$–FVçF—G’6öÖW2&Vf÷&R76–væÖVçBâ"À¢&w&‡3¢°¢$öâF†R6—‡F‚F’ÂvöB7&VFW2‡VÖæ¶–æN(	FÖÆRæBfVÖÆ^(	F–â†—2–ÖvRæBÆ–¶VæW72â–âF†Ræ6–VçBv÷&ÆBÂâ–ÖvR&W&W6VçFVBF†R&W6Væ6RæBWF†÷&—G’öb¶–ærâvVæW6—2v—fW2F†B&÷–ÂF–væ—G’æ÷BFòöæR'VÆW"Â'WBFòWfW'’‡VÖâ&V–ærâ"À¢$‡VÖæ—G’—26öÖÖ—76–öæVBFò&Rg'V—FgVÂÂf–ÆÂF†RV'F‚Â7V&GVR—BæB'VÆR÷fW"—G27&VGW&W2âF†—2—2æ÷BW&Ö—76–öâFòW‡Æö—B7&VF–öââ—B—2FVÆVvFVBWF†÷&—G“¢‡VÖâ&V–æw2v÷fW&âVæFW"vöBÂ&VfÆV7F–ær†—2v—6RæBÆ–fRÖv—f–ær'VÆRâ"À¢%F†Rv&FVâÖ¶W2F†Rfö6F–öâ6öæ7&WFRâ‡VÖæ—G’—2Æ6VBF†W&RFòv÷&²—BæB¶VW—BâÖVæ–ævgVÂv÷&²Â7VÇF—fF–öâæB&W7öç6–&–Æ—G’W†—7B&Vf÷&R6–ã²F†W’&VÆöærFòF†RvööFæW72öb7&VF–öâ—G6VÆbâ"À¢ÒÀ¢&VG3¢µ²$”DTåD•E’"Â$ÖFR–âvöN(	—2–ÖvR%ÒÂ²$UD„õ$•E’"Â%&÷–Â&W&W6VçFF—fW2VæFW"vöB%ÒÂ²%dô4D”ôâ"Â$7VÇF—fFRÂwV&BæBW‡FVæB÷&FW"%ÕÒÀ¢–ç6–v‡C¢%Fò&R‡VÖâ—2Fò÷76W72vöBÖv—fVâF–væ—G(	FæBFò6''’vöBÖv—fVâ&W7öç6–&–Æ—G’f÷"F†Rv÷&ÆBVçG'W7FVBFòW2â"À¢&Vg3¢²$vVæW6—2£#n(	3#‚"Â$vVæW6—2#£^(	3r%ÒÂ–ÖvS¢"ö–ÖvW2÷vVV³Ö–ÖvRÖ&V&W'2çvV'"À¢ÒÀ¢°¢W–V'&÷s¢#2+rD„R%UEU$R"ÂF—FÆS¢%6–â'&V·2G'W7N(	FæBF—6÷&FW'2WfW'—F†–ærâ"À¢&öFÖF—FÆS¢%F†R'WGW&S¢6–âæBv†B—B6†ævVB"À¢&öFÖ7VÖÖ'“¢$F—7G'W7B&V6öÖW2&V&VÆÆ–öã²6†ÖRÂF—6÷&FW"ÂÖ÷'FÆ—G’æBW†–ÆRVçFW"F†R‡VÖâ7F÷'’â"À¢FV6³¢%F†RfÆÂ&Vv–ç2v†VâvöN(	—2vööFæW72—2VW7F–öæVBæB‡VÖâ&V–æw2&V6‚f÷"F†R&–v‡BFòFVf–æRvööBæBWf–Âf÷"F†V×6VÇfW2â"À¢6V7F–öåF—FÆS¢%F†Rf—'7B&V&VÆÆ–öâ&öGV6W2F†Rf—'7B†–F–ærÆ6Râ"À¢&w&‡3¢°¢%F†R6W'VçB&Vg&ÖW2vöN(	—2vVæW&÷W2v÷&ÆB&÷VæBöæR&ö†–&—F–öã¢(	ÄF–BvöB&VÆÇ’6“ş(	ÒF—7G'W7B6öÖW2&Vf÷&RF—6ö&VF–Væ6RâF†R‡VÖç26V—¦RWFöæö×’ÂF¶–ærv†BvöB†Bv—F††VÆB&F†W"F†â&V6V—f–ærv—6FöÒöâ†—2FW&×2â"À¢%F†RVffV7G2&R–ÖÖVF–FS¢–ææö6Væ6R&V6öÖW26†ÖRÂ÷VææW72&V6öÖW2†–F–ærÂfVÆÆ÷w6†—&V6öÖW2&ÆÖRâ6–â'WGW&W2‡VÖæ—G(	—2&VÆF–öç6†—v—F‚vöBÂv—F‚öæRæ÷F†W"Âv—F‚F†R6VÆbæBv—F‚F†Rw&÷VæBg&öÒv†–6‚‡VÖæ—G’v2f÷&ÖVBâ"À¢$§VFvÖVçB&V6†W2&VÆF–öç6†—2ÂÆ&÷"Â–âæBÖ÷'FÆ—G’âf–æÆÇ’Â‡VÖæ—G’—26VçBV7BöbVFVâÂv’g&öÒF†RG&VRöbÆ–fRâF†Rv÷&ÆB&VÖ–ç2vöN(	—27&VF–öâÂ'WBÆ–fRv—F†–â—B—2æ÷rÖ&¶VB'’&W6—7Fæ6RÂg&7GW&RæBFVF‚â"À¢ÒÀ¢&VG3¢µ²$D•5E%U5B"Â$vöN(	—2vööFæW72—2VW7F–öæVB%ÒÂ²$D•4õ$DU""Â%6†ÖRÂ†–F–æræB&ÆÖRVçFW"%ÒÂ²$U„”ÄR"Â$‡VÖæ—G’Ö÷fW2V7BöbVFVâ%ÕÒÀ¢–ç6–v‡C¢%6–â—2Ö÷&RF†â'VÆRÖ'&V¶–ærâ—B—2F†R&V¦V7F–öâöbvöN(	—2'VÆ^(	FæBF†RVç&fVÆ–æröbF†R÷&FW"†—2'VÆR7W7F–æVBâ"À¢&Vg3¢²$vVæW6—23£(	3r"Â$vVæW6—23£N(	3’"Â$vVæW6—23£#.(	3#B%ÒÂ–ÖvS¢"ö–ÖvW2÷vVV³×G'W7BÖg&7GW&W2çvV'"À¢ÒÀ¢°¢W–V'&÷s¢#B+rD„Rd•%5B$ôÔ•4R"ÂF—FÆS¢$†÷R7V·2&Vf÷&RVFVâ6Æ÷6W2â"À¢&öFÖF—FÆS¢%F†Rf—'7B&öÖ—6S¢†÷R&Vf÷&RVFVâ6Æ÷6W2"À¢&öFÖ7VÖÖ'“¢$–ç6–FRF†R§VFvÖVçBÂvöB&öÖ—6W26öÖ–ær6VVBæBf–7F÷'’Wf–Â6ææ÷B&WfVçBâ"À¢FV6³¢$§VFvÖVçB—2æ÷BF†R&–&Æ^(	—2f–æÂv÷&B–âvVæW6—22â&Vf÷&R‡VÖæ—G’ÆVfW2F†Rv&FVâÂvöBÆ6W2&öÖ—6R–ç6–FRF†R6VçFVæ6Râ"À¢6V7F–öåF—FÆS¢%F†R6öæfÆ–7Bv–ÆÂ6öçF–çV^(	F'WBWf–Âv–ÆÂæ÷Bv–ââ"À¢&w&‡3¢°¢%7V¶–ærFòF†R6W'VçBÂvöBææ÷Væ6W2VæÖ—G’&WGvVVâF†R6W'VçBæBF†RvöÖâÂæB&WGvVVâF†V—"öfg7&–ærâöæR6öÖ–ær6VVBv–ÆÂ&Rv÷VæFVBÂ–WB†Rv–ÆÂ7'W6‚F†R6W'VçN(	—2†VBâ"À¢$vVæW6—23£R—2&Vv–ææ–ærÂæ÷BF†R6ö×ÆWFVBW‡ÆæF–öââ—B–çG&öGV6W26öæfÆ–7BÂ6öÖ–ærFW66VæFçBæBFV6—6—fRf–7F÷'’âF†R&W7Böb67&—GW&Rv–ÆÂ&öw&W76—fVÇ’–FVçF–g’v†W&RF†B&öÖ—6VBFVÆ—fW&æ6RÆVG2â"À¢%F†R&öÖ—6R—27ö¶Vâ&Vf÷&RF†RW‡VÇ6–öââ‡VÖæ—G’v–ÆÂÆVfRVFVâÂ'WBæ÷Bv—F†÷WB†÷Râg&öÒF†—2ÖöÖVçBöçv&BÂF†R&–&Æ–6Â7F÷'’föÆÆ÷w2vöN(	—2W'÷6RFòFVfVBWf–ÂÂ&W7F÷&R†—2V÷ÆRæB'&–ær7&VF–öâVæFW"†—2vööB'VÆRv–ââ"À¢ÒÀ¢&VG3¢µ²$4ôädÄ”5B"Â%F†R6W'VçBv–ÆÂ&R÷÷6VB%ÒÂ²%4TTB"Â$6öÖ–æröfg7&–ærv–ÆÂVçFW"%ÒÂ²%d”5Dõ%’"Â%v÷VæFVN(	G–WBf–æÆÇ’7'W6†–ærWf–Â%ÕÒÀ¢–ç6–v‡C¢$w&6RV'2BF†RfW'’Æ6R&V&VÆÆ–öâ—2§VFvVC¢vöB†–×6VÆb&öÖ—6W2F†BF†RFW7G&÷–W"v–ÆÂæ÷B†fRF†RÆ7Bv÷&Bâ"À¢&Vg3¢²$vVæW6—23£R"Â#¦ö†â3£‚%ÒÂ–ÖvS¢"ö–ÖvW2÷vVV³ÖFÆ2ÖVFVâçær"À¢ÒÀ¥Ò26öç7C° ¦6öç7BÄ4Uô4$EôÔUD¢&V6÷&CÇ7G&–ærÂ²¶–6¶W#¢7G&–æs²F—FÆS¢7G&–æs²&öG“¢7G&–æs²&Vc¢7G&–æs²–ÖvS¢7G&–æs²fÆÆ&6³¢7G&–ærÓâÒ°¢$vöB7&VFW2æB6ÆÇ27&VF–öâvööB#¢°¢¶–6¶W#¢$dõ$ÔTB²d”ÄÄTB"ÂF—FÆS¢$v÷&ÆB6ÆÆVBvööB"À¢&öG“¢$7&÷726—‚÷&FW&VBF—2ÂvöBf÷&×2F†R&VÆ×2Âf–ÆÇ2F†VÒv—F‚Æ–fRæBFV6Æ&W2F†Rv†öÆR7&VF–öâfW'’vööBâ"À¢&Vc¢$vVæW6—2£>(	33"Â–ÖvS¢"ö–ÖvW2÷Æ6RÓÖ7&VF–öâ×c#BçvV'"ÂfÆÆ&6³¢"ö–ÖvW2÷vVV³Ö7&VF–öâ×6Væ§s÷Æ6S×c#B"À¢ÒÀ¢$‡VÖæ—G’&V'2vöBw2–ÖvR#¢°¢¶–6¶W#¢%D„R5$õtâ"ÂF—FÆS¢%&÷–Â–ÖvRÔ&V&W'2"À¢&öG“¢$ÖÆRæBfVÖÆR&V6V—fRvöBÖv—fVâF–væ—G’æB&R6öÖÖ—76–öæVBFò&W&W6VçB†—2'VÆRv—F†–â7&VF–öââ"À¢&Vc¢$vVæW6—2£#n(	3#‚"Â–ÖvS¢"ö–ÖvW2÷Æ6RÓ"Ö–ÖvRÖ&V&W'2×c#BçvV'"ÂfÆÆ&6³¢"ö–ÖvW2÷vVV³ÖVFVâÖ6÷WÆRæ§s÷Æ6S×c#B"À¢ÒÀ¢$vöBv—fW2'VæFæ6RæB&÷VæF'’#¢°¢¶–6¶W#¢$t”eB²E%U5B"ÂF—FÆS¢$'VæFæ6Rv—F‚&÷VæF'’"À¢&öG“¢%F†Rv&FVâ—2vVæW&÷W2Âv÷&²—2ÖVæ–ævgVÂæBöæR6öÖÖæBÖ¶W2G'W7F–ærF†Rv—fW"f—6–&ÆRâ"À¢&Vc¢$vVæW6—2#£^(	3r"Â–ÖvS¢"ö–ÖvW2÷Æ6RÓ2×fö6F–öâ×c#BçvV'"ÂfÆÆ&6³¢"ö–ÖvW2÷vVV³ÖVFVâ×fö6F–öâæ§s÷Æ6S×c#B"À¢ÒÀ¢%F†R6W'VçBVW7F–öç2vöBw2v÷&B#¢°¢¶–6¶W#¢%D„RTU5D”ôâ"ÂF—FÆS¢%G'W7B6öÖW2VæFW"GF6²"À¢&öG“¢%F†R6W'VçB&Vg&ÖW2vöN(	—2vVæW&÷6—G’æBÆçG27W7–6–öâ&Vf÷&RF†Rf—'7B7BöbF—6ö&VF–Væ6Râ"À¢&Vc¢$vVæW6—23£(	3r"Â–ÖvS¢"ö–ÖvW2÷Æ6RÓB×FV×FF–öâ×c#BçvV'"ÂfÆÆ&6³¢"ö–ÖvW2÷vVV³ÖVFVâ×FV×FF–öâæ§s÷Æ6S×c#B"À¢ÒÀ¢%&V&VÆÆ–öâ'&–æw26†ÖRÂ&ÆÖRÂæB§VFvÖVçB#¢°¢¶–6¶W#¢%D„R%UEU$R"ÂF—FÆS¢%6†ÖRÂ&ÆÖRæB§VFvÖVçB"À¢&öG“¢%6–âF—6÷&FW'2‡VÖæ—G(	—2&VÆF–öç6†—v—F‚vöBÂöæRæ÷F†W"ÂF†R6VÆbæBF†Rw&÷VæB&VæVF‚F†VÒâ"À¢&Vc¢$vVæW6—23£(	32"Â–ÖvS¢"ö–ÖvW2÷Æ6RÓR×'WGW&R×c#BçvV'"ÂfÆÆ&6³¢"ö–ÖvW2÷vVV³ÖVFVâ×6†ÖRæ§s÷Æ6S×c#B"À¢ÒÀ¢%&öÖ—6RV'2&Vf÷&R‡VÖæ—G’—2W†–ÆVB#¢°¢¶–6¶W#¢$„õR5Tµ2"ÂF—FÆS¢%&öÖ—6R&Vf÷&RW†–ÆR"À¢&öG“¢$&Vf÷&RVFVâ6Æ÷6W2ÂvöBææ÷Væ6W26öÖ–ær6VVBæBf–7F÷'’F†R6W'VçB6ææ÷B&WfVçBâ"À¢&Vc¢$vVæW6—23£R"Â–ÖvS¢"ö–ÖvW2÷Æ6RÓb×&öÖ—6R×c#BçvV'"ÂfÆÆ&6³¢"ö–ÖvW2ö6–æVÖÖæ–v‡Bçæs÷Æ6S×c#B"À¢ÒÀ§Ó° ¦gVæ7F–öâæ÷&ÖÆ—¦R‡fÇVS¢7G&–ær’°¢&WGW&âfÇVRçFôÆ÷vW$66R‚’çG&–Ò‚’ç&WÆ6R‚õ²âÂó³¢r.(	Î(	Ş(	(	•ÒörÂ""’ç&WÆ6R‚õÇ2²örÂ""“°§Ğ ¦gVæ7F–öâææ÷FFU67&—GW&T‡FÖÂ†‡FÖÃ¢7G&–ærÂææ÷FF–öç3¢67&—GW&U6VÆV7F–öåµÒ’°¢–b‚ææ÷FF–öç2æÆVæwF‚’&WGW&â‡FÖÃ°¢ÆWBöfg6WBÒ°¢&WGW&â†‡FÖÂæÖF6‚‚óÅµãåÒ³çÅµãÅÒ²ör’ÇÂµÒ’æÖ‚‡Fö¶Vâ’Óâ°¢–b‡Fö¶Vâç7F'G5v—F‚‚#Â"’’&WGW&âFö¶Vã°¢6öç7B7F'BÒöfg6WC°¢6öç7BVæBÒ7F'B²Fö¶VâæÆVæwFƒ°¢öfg6WBÒVæC°¢6öç7BÆö6ÂÒææ÷FF–öç2æf–ÇFW"‚†—FVÒ’Óâ—FVÒç7F'BÂVæBbb—FVÒæVæBâ7F'B“°¢–b‚Æö6ÂæÆVæwF‚’&WGW&âFö¶Vã°¢6öç7B&÷VæF&–W2ÒæWr6WCÆçVÖ&W#â…³ÂFö¶VâæÆVæwF…Ò“°¢Æö6Âæf÷$V6‚‚†—FVÒ’Óâ°¢&÷VæF&–W2æFB„ÖF‚æÖ‚ƒÂ—FVÒç7F'BÒ7F'B’“°¢&÷VæF&–W2æFB„ÖF‚æÖ–â‡Fö¶VâæÆVæwF‚Â—FVÒæVæBÒ7F'B’“°¢Ò“°¢6öç7Bö–çG2Ò²ââæ&÷VæF&–W5Òç6÷'B‚†Â"’ÓâÒ"“°¢&WGW&âö–çG2ç6Æ–6RƒÂÓ’æÖ‚†g&öÒÂ–æFW‚’Óâ°¢6öç7BFòÒö–çG5¶–æFW‚²Ó°¢6öç7BFW‡BÒFö¶Vâç6Æ–6R†g&öÒÂFò“°¢6öç7B7F—fRÒÆö6Âæf–ÇFW"‚†—FVÒ’Óâ—FVÒç7F'BÂ7F'B²Fòbb—FVÒæVæBâ7F'B²g&öÒ“°¢–b‚7F—fRæÆVæwF‚’&WGW&âFW‡C°¢6öç7B6Æ76W2Ò²'67&—GW&R×6VÆV7F–öâ%Ó°¢–b†7F—fRç6öÖR‚†—FVÒ’Óâ—FVÒçG—RÓÓÒ&†–v†Æ–v‡B"’’6Æ76W2çW6‚‚&—2Ö†–v†Æ–v‡FVB"“°¢–b†7F—fRç6öÖR‚†—FVÒ’Óâ—FVÒçG—RÓÓÒ'VæFW&Æ–æR"’’6Æ76W2çW6‚‚&—2×VæFW&Æ–æVB"“°¢&WGW&âÇ7â6Æ73Ò"G¶6Æ76W2æ¦ö–â‚""—Ò#âG·FW‡GÓÂ÷7ãæ°¢Ò’æ¦ö–â‚""“°¢Ò’æ¦ö–â‚""“°§Ğ ¦gVæ7F–öâ&W7F÷&U7FFR‡6fVC¢Væ¶æ÷vâ“¢7FFR°¢–b‚6fVBÇÂG—Vöb6fVBÓÒ&ö&¦V7B"’&WGW&âDTdTÅEõ5DDS°¢6öç7B6æF–FFRÒ6fVB2'F–ÃÄ7FFSã°¢6öç7BfÆ–EÆ6RÒ'&’æ—4'&’†6æF–FFRçÆ6R¢ò6æF–FFRçÆ6Ræf–ÇFW"‚†—FVÒ“¢—FVÒ—27G&–ærÓâG—Vöb—FVÒÓÓÒ'7G&–ær"bbÄ4Ræ–æ6ÇVFW2†—FVÒ’¢¢µÓ°¢6öç7BfÆ–EÆ6T÷&FW"Ò'&’æ—4'&’†6æF–FFRçÆ6T÷&FW"’bb6æF–FFRçÆ6T÷&FW"æÆVæwF‚ÓÓÒÄ4RæÆVæwF‚b`¢æWr6WB†6æF–FFRçÆ6T÷&FW"’ç6—¦RÓÓÒÄ4RæÆVæwF‚bb6æF–FFRçÆ6T÷&FW"æWfW'’‚†—FVÒ’ÓâG—Vöb—FVÒÓÓÒ'7G&–ær"bbÄ4Ræ–æ6ÇVFW2†—FVÒ’¢ò6æF–FFRçÆ6T÷&FW"27G&–æuµÒ¢45$Ô$ÄTEõÄ4S°¢6öç7BfÆ–EFV6†&6²Ò'&’æ—4'&’†6æF–FFRçFV6†&6²¢ò²ââæ6æF–FFRçFV6†&6²æf–ÇFW"‚†—FVÒ“¢—FVÒ—27G&–ærÓâG—Vöb—FVÒÓÓÒ'7G&–ær"’Â""Â""Â""Â"%Òç6Æ–6RƒÂB¢¢²ââäDTdTÅEõ5DDRçFV6†&6µÓ° ¢&WGW&â°¢7F'FVC¢&ööÆVâ†6æF–FFRç7F'FVB’À¢7F÷'“¢G—Vöb6æF–FFRç7F÷'’ÓÓÒ&çVÖ&W""bbçVÖ&W"æ—4f–æ—FR†6æF–FFRç7F÷'’’ò6æF–FFRç7F÷'’¢À¢Æ6S¢fÆ–EÆ6RÂÆ6T÷&FW#¢fÆ–EÆ6T÷&FW"À¢f–ÆÄç7vW'3¢6æF–FFRæf–ÆÄç7vW'2bbG—Vöb6æF–FFRæf–ÆÄç7vW'2ÓÓÒ&ö&¦V7B"ò6æF–FFRæf–ÆÄç7vW'2¢·ÒÀ¢f–ÆÄ6÷'&V7C¢6æF–FFRæf–ÆÄ6÷'&V7BbbG—Vöb6æF–FFRæf–ÆÄ6÷'&V7BÓÓÒ&ö&¦V7B"ò6æF–FFRæf–ÆÄ6÷'&V7B¢·ÒÀ¢6öææV7C¢G—Vöb6æF–FFRæ6öææV7BÓÓÒ&çVÖ&W""bbçVÖ&W"æ—4f–æ—FR†6æF–FFRæ6öææV7B’ò6æF–FFRæ6öææV7B¢À¢FV6†&6³¢fÆ–EFV6†&6²À¢FV6†&6´6ö×ÆWFS¢&ööÆVâ†6æF–FFRçFV6†&6´6ö×ÆWFR’À¢FVW6ö×ÆWFVC¢6æF–FFRæFVW6ö×ÆWFVBbbG—Vöb6æF–FFRæFVW6ö×ÆWFVBÓÓÒ&ö&¦V7B"ò6æF–FFRæFVW6ö×ÆWFVB¢·ÒÀ¢FVWæ÷FW3¢6æF–FFRæFVWæ÷FW2bbG—Vöb6æF–FFRæFVWæ÷FW2ÓÓÒ&ö&¦V7B"ò6æF–FFRæFVWæ÷FW2¢·ÒÀ¢FVW&VfÆV7F–öç3¢6æF–FFRæFVW&VfÆV7F–öç2bbG—Vöb6æF–FFRæFVW&VfÆV7F–öç2ÓÓÒ&ö&¦V7B"ò6æF–FFRæFVW&VfÆV7F–öç2¢·ÒÀ¢67&—GW&UFööÇ3¢6æF–FFRç67&—GW&UFööÇ2bbG—Vöb6æF–FFRç67&—GW&UFööÇ2ÓÓÒ&ö&¦V7B"ò6æF–FFRç67&—GW&UFööÇ2¢·ÒÀ¢&VF–æt†—7F÷'“¢6æF–FFRç&VF–æt†—7F÷'’bbG—Vöb6æF–FFRç&VF–æt†—7F÷'’ÓÓÒ&ö&¦V7B"ò6æF–FFRç&VF–æt†—7F÷'’¢·ÒÀ¢7F—f—G”WfVçG3¢'&’æ—4'&’†6æF–FFRæ7F—f—G”WfVçG2¢ò6æF–FFRæ7F—f—G”WfVçG2æf–ÇFW"‚†WfVçB“¢WfVçB—27GVG”7F—f—G”WfVçBÓâ&ööÆVâ†WfVçBbbG—VöbWfVçBÓÓÒ&ö&¦V7B"’’ç6Æ–6R‚ÓS¢¢µÒÀ¢Ó°§Ğ ¦W‡÷'BFVfVÇBgVæ7F–öâvVV´öæR‡²öä6÷W'6T†öÖRÂ–æ—F–Ä÷Vå7GVG’ÒfÇ6RÓ¢²öä6÷W'6T†öÖSó¢‚’Óâfö–C²–æ—F–Ä÷Vå7GVG“ó¢&ööÆVâÒ’°¢6öç7B·7FFRÂ6WE7FFUÒÒW6U7FFSÄ7FFSâ„DTdTÅEõ5DDR“°¢6öç7B·&VG’Â6WE&VG•ÒÒW6U7FFR†fÇ6R“°¢6öç7B·67&VVâÂ6WE67&VVåÒÒW6U7FFSÅ67&VVãâ‚'&öFÖ"“°¢6öç7B·7F÷'”–æFW‚Â6WE7F÷'”–æFW…ÒÒW6U7FFRƒ“°¢6öç7B¶Ö÷fVÖVçD–æFW‚Â6WDÖ÷fVÖVçD–æFW…ÒÒW6U7FFRƒ“°¢6öç7B¶f–ÆÄ–æFW‚Â6WDf–ÆÄ–æFW…ÒÒW6U7FFRƒ“°¢6öç7B¶f–ÆÄ†–çBÂ6WDf–ÆÄ†–çEÒÒW6U7FFR†fÇ6R“°¢6öç7B¶f–ÆÄÖW76vRÂ6WDf–ÆÄÖW76vUÒÒW6U7FFR‚""“°¢6öç7B·Æ6TÖW76vRÂ6WEÆ6TÖW76vUÒÒW6U7FFR‚""“°¢6öç7B·67&—GW&U&VbÂ6WE67&—GW&U&VeÒÒW6U7FFSÇ7G&–ærÂçVÆÃâ†çVÆÂ“°¢6öç7B¶FVWF’Â6WDFVWF•ÒÒW6U7FFRƒ“°¢6öç7B¶FVW÷VâÂ6WDFVW÷VåÒÒW6U7FFR†fÇ6R“°¢6öç7B¶–ç6–v‡D¶W’Â6WD–ç6–v‡D¶W•ÒÒW6U7FFSÇ7G&–ærÂçVÆÃâ†çVÆÂ“°¢6öç7B·FV6†&6µ7FWÂ6WEFV6†&6µ7FWÒÒW6U7FFRƒ“°¢6öç7B·FV6†&6µ7VÖÖ'’Â6WEFV6†&6µ7VÖÖ'•ÒÒW6U7FFR‚""“°¢6öç7B·6†÷tÖöFVÂÂ6WE6†÷tÖöFVÅÒÒW6U7FFR†fÇ6R“°¢6öç7B·FV6†&6´ÖW76vRÂ6WEFV6†&6´ÖW76vUÒÒW6U7FFR‚""“°¢6öç7B¶×•7GVG”÷VâÂ6WD×•7GVG”÷VåÒÒW6U7FFR†–æ—F–Ä÷Vå7GVG’“°¢6öç7B6Æ÷VDÆöFVDf÷"ÒW6U&VcÇ7G&–ærÂçVÆÃâ†çVÆÂ“°¢6öç7B²W6W"Â6Æ÷VD6öæf–wW&VBÂÆöF–æs¢66÷VçDÆöF–ærÂ÷Vä66÷VçBÂÆöE÷'FföÆ–òÂ6fU÷'FföÆ–òÂ7V&Ö—EVW7F–öâÒÒW6U7GVG”66÷VçB‚“° ¢gVæ7F–öâÖ¶T7F—f—G’‡G—S¢7GVG”7F—f—G•G—RÂ&VfW&Væ6Só¢7G&–ærÂFWF–Ãó¢7GVG”7F—f—G”WfVçE²&FWF–Â%Ò“¢7GVG”7F—f—G”WfVçB°¢&WGW&â°¢–C¢7'—Fòç&æFöÕUT”Còâ‚’ÇÂG´FFRææ÷r‚—ÒÒG´ÖF‚ç&æFöÒ‚—ÖÀ¢G—RÀ¢7&VFVDC¢æWrFFR‚’çFô•4õ7G&–ær‚’À¢&VfW&Væ6RÀ¢FWF–ÂÀ¢Ó°¢Ğ ¢gVæ7F–öâ¶VW7F—f—G’†WfVçG3¢7GVG”7F—f—G”WfVçEµÒÂWfVçC¢7GVG”7F—f—G”WfVçB’°¢&WGW&â²ââæWfVçG2ÂWfVçEÒç6Æ–6R‚ÓS“°¢Ğ ¢W6TVffV7B‚‚’Óâ°¢6öç7BÆöE6fVE&öw&W72Òv–æF÷rç6WEF–ÖV÷WB‚‚’Óâ°¢G'’°¢6öç7B6W76–öâÒ¥4ôâç'6R‡6W76–öå7F÷&vRævWD—FVÒ…4U54”ôåõ5Dõ$tUô´U’’ÇÂ&çVÆÂ"“°¢6öç7B6fVEW'6öæÂÒ¥4ôâç'6R†Æö6Å7F÷&vRævWD—FVÒ…U%4ôäÅõ5Dõ$tUô´U’’ÇÂ&çVÆÂ"“°¢6öç7BÆVv7’Ò¥4ôâç'6R„ÄTt5•õ5Dõ$tUô´U•2æÖ‚†¶W’’ÓâÆö6Å7F÷&vRævWD—FVÒ†¶W’’’æf–æB„&ööÆVâ’ÇÂ&çVÆÂ"“°¢6öç7BW'6öæÂÒ6fVEW'6öæÂbbG—Vöb6fVEW'6öæÂÓÓÒ&ö&¦V7B"ò6fVEW'6öæÂ¢ÆVv7“°¢6öç7BW'6öæÅ&V6÷&BÒW'6öæÂbbG—VöbW'6öæÂÓÓÒ&ö&¦V7B"òW'6öæÂ2'F–ÃÄ7FFSâ¢·Ó°¢6WE7FFR‡&W7F÷&U7FFR‡°¢âââ‡6W76–öâbbG—Vöb6W76–öâÓÓÒ&ö&¦V7B"ò6W76–öâ¢·Ò’À¢FVW6ö×ÆWFVC¢W'6öæÅ&V6÷&BæFVW6ö×ÆWFVBÇÂ·ÒÀ¢FVWæ÷FW3¢W'6öæÅ&V6÷&BæFVWæ÷FW2ÇÂ·ÒÀ¢FVW&VfÆV7F–öç3¢W'6öæÅ&V6÷&BæFVW&VfÆV7F–öç2ÇÂ·ÒÀ¢67&—GW&UFööÇ3¢W'6öæÅ&V6÷&Bç67&—GW&UFööÇ2ÇÂ·ÒÀ¢&VF–æt†—7F÷'“¢W'6öæÅ&V6÷&Bç&VF–æt†—7F÷'’ÇÂ·ÒÀ¢7F—f—G”WfVçG3¢W'6öæÅ&V6÷&Bæ7F—f—G”WfVçG2ÇÂµÒÀ¢Ò’“°¢ÄTt5•õ5Dõ$tUô´U•2æf÷$V6‚‚†¶W’’ÓâÆö6Å7F÷&vRç&VÖ÷fT—FVÒ†¶W’’“°¢Ò6F6‚²ò¢ÖÆf÷&ÖVBÆö6Â&öw&W72×W7BæWfW"&Æö6²F†RÆW76öâ¢òĞ¢6WE&VG’‡G'VR“°¢ÒÂ“°¢&WGW&â‚’Óâv–æF÷ræ6ÆV%F–ÖV÷WB†ÆöE6fVE&öw&W72“°¢ÒÂµÒ“°¢W6TVffV7B‚‚’Óâ°¢–b‚&VG’’&WGW&ã°¢G'’°¢6W76–öå7F÷&vRç6WD—FVÒ…4U54”ôåõ5Dõ$tUô´U’Â¥4ôâç7G&–æv–g’‡°¢7F'FVC¢7FFRç7F'FVBÀ¢7F÷'“¢7FFRç7F÷'’À¢Æ6S¢7FFRçÆ6RÀ¢Æ6T÷&FW#¢7FFRçÆ6T÷&FW"À¢f–ÆÄç7vW'3¢7FFRæf–ÆÄç7vW'2À¢f–ÆÄ6÷'&V7C¢7FFRæf–ÆÄ6÷'&V7BÀ¢6öææV7C¢7FFRæ6öææV7BÀ¢FV6†&6³¢7FFRçFV6†&6²À¢FV6†&6´6ö×ÆWFS¢7FFRçFV6†&6´6ö×ÆWFRÀ¢Ò’“°¢Æö6Å7F÷&vRç6WD—FVÒ…U%4ôäÅõ5Dõ$tUô´U’Â¥4ôâç7G&–æv–g’‡°¢FVW6ö×ÆWFVC¢7FFRæFVW6ö×ÆWFVBÀ¢FVWæ÷FW3¢7FFRæFVWæ÷FW2À¢FVW&VfÆV7F–öç3¢7FFRæFVW&VfÆV7F–öç2À¢67&—GW&UFööÇ3¢7FFRç67&—GW&UFööÇ2À¢&VF–æt†—7F÷'“¢7FFRç&VF–æt†—7F÷'’À¢7F—f—G”WfVçG3¢7FFRæ7F—f—G”WfVçG2À¢Ò’“°¢ææ÷Væ6U7GVG•WFFR‚“°¢Ò6F6‚²ò¢7F÷&vR&W7G&–7F–öç2×W7BæWfW"&Æö6²F†RÆW76öâ¢òĞ¢ÒÂ·&VG’Â7FFUÒ“° ¢W6TVffV7B‚‚’Óâ°¢–b‚&VG’ÇÂW6W"ÇÂ6Æ÷VDÆöFVDf÷"æ7W'&VçBÓÓÒW6W"æ–B’&WGW&ã°¢ÆWB6æ6VÆÆVBÒfÇ6S°¢ÆöE÷'FföÆ–ò‚’çF†Vâ‚†6Æ÷VB’Óâ°¢–b†6æ6VÆÆVB’&WGW&ã°¢6WE7FFR‚†7W'&VçB’Óâ°¢–b‚6Æ÷VB’&WGW&â7W'&VçC°¢6öç7BÖW&vVBÒÖW&vU÷'FföÆ–÷2†6Æ÷VBÂ7W'&VçB“°¢&WGW&â²ââæ7W'&VçBÂââæÖW&vVBÓ°¢Ò“°¢6Æ÷VDÆöFVDf÷"æ7W'&VçBÒW6W"æ–C°¢Ò’æ6F6‚‚‚’Óâ²6Æ÷VDÆöFVDf÷"æ7W'&VçBÒW6W"æ–C²Ò“°¢&WGW&â‚’Óâ²6æ6VÆÆVBÒG'VS²Ó°¢ÒÂ·&VG’ÂW6W"ÂÆöE÷'FföÆ–õÒ“° ¢W6TVffV7B‚‚’Óâ°¢–b‚&VG’ÇÂW6W"ÇÂ6Æ÷VDÆöFVDf÷"æ7W'&VçBÓÒW6W"æ–B’&WGW&ã°¢6öç7B÷'FföÆ–ó¢7GVG•÷'FföÆ–òÒ°¢FVW6ö×ÆWFVC¢7FFRæFVW6ö×ÆWFVBÀ¢FVWæ÷FW3¢7FFRæFVWæ÷FW2À¢FVW&VfÆV7F–öç3¢7FFRæFVW&VfÆV7F–öç2À¢67&—GW&UFööÇ3¢7FFRç67&—GW&UFööÇ2À¢&VF–æt†—7F÷'“¢7FFRç&VF–æt†—7F÷'’À¢7F—f—G”WfVçG3¢7FFRæ7F—f—G”WfVçG2À¢Ó°¢6öç7BF–ÖW"Òv–æF÷rç6WEF–ÖV÷WB‚‚’Óâ6fU÷'FföÆ–ò‡÷'FföÆ–ò’æ6F6‚‚‚’ÓâVæFVf–æVB’Âs“°¢&WGW&â‚’Óâv–æF÷ræ6ÆV%F–ÖV÷WB‡F–ÖW"“°¢ÒÂ·&VG’ÂW6W"Â7FFRæFVW6ö×ÆWFVBÂ7FFRæFVWæ÷FW2Â7FFRæFVW&VfÆV7F–öç2Â7FFRç67&—GW&UFööÇ2Â7FFRç&VF–æt†—7F÷'’Â7FFRæ7F—f—G”WfVçG2Â6fU÷'FföÆ–õÒ“° ¢W6TVffV7B‚‚’Óâ°¢–b‚&VG’’&WGW&ã°¢6öç7BF–ÖW"Òv–æF÷rç6WEF–ÖV÷WB‚‚’Óâ°¢G'’°¢6öç7BF&vWBÒ¥4ôâç'6R‡6W76–öå7F÷&vRævWD—FVÒ…tTTµôôäUõ$U5TÔUô´U’’ÇÂ&çVÆÂ"’2&W7VÖUF&vWBÂçVÆÃ°¢–b‚F&vWCòç67&VVâ’&WGW&ã°¢6W76–öå7F÷&vRç&VÖ÷fT—FVÒ…tTTµôôäUõ$U5TÔUô´U’“°¢–b‡F&vWBç67&VVâÓÓÒ'67&—GW&R"’°¢÷Vå67&—GW&R‡F&vWBçF—FÆR“°¢&WGW&ã°¢Ğ¢6öç7BÆÆ÷vVC¢67&VVåµÒÒ²&Ö÷fVÖVçB"Â'7F÷'’"Â'Æ6R"Â&f–ÆÂ"Â&6öææV7B"Â'VæÆö6²"Â&FVW"Â&6ö×ÆWFR%Ó°¢–b‚ÆÆ÷vVBæ–æ6ÇVFW2‡F&vWBç67&VVâ267&VVâ’’&WGW&ã°¢–b‡F&vWBç67&VVâÓÓÒ&Ö÷fVÖVçB"bbG—VöbF&vWBæ–æFW‚ÓÓÒ&çVÖ&W""’6WDÖ÷fVÖVçD–æFW‚„ÖF‚æÖ‚ƒÂÖF‚æÖ–âƒ2ÂF&vWBæ–æFW‚’’“°¢–b‡F&vWBç67&VVâÓÓÒ'7F÷'’"bbG—VöbF&vWBæ–æFW‚ÓÓÒ&çVÖ&W""’6WE7F÷'”–æFW‚„ÖF‚æÖ‚ƒÂÖF‚æÖ–â…5Dõ%’æÆVæwF‚ÒÂF&vWBæ–æFW‚’’“°¢–b‡F&vWBç67&VVâÓÓÒ&f–ÆÂ"bbG—VöbF&vWBæ–æFW‚ÓÓÒ&çVÖ&W""’6WDf–ÆÄ–æFW‚„ÖF‚æÖ‚ƒÂÖF‚æÖ–â„d”ÄÂæÆVæwF‚ÒÂF&vWBæ–æFW‚’’“°¢–b‡F&vWBç67&VVâÓÓÒ&6öææV7B"bbG—VöbF&vWBæ–æFW‚ÓÓÒ&çVÖ&W""’6WE7FFR‚†7W'&VçB’Óâ‡²ââæ7W'&VçBÂ6öææV7C¢ÖF‚æÖ‚ƒÂÖF‚æÖ–âƒ2ÂF&vWBæ–æFW‚ÇÂ’’Ò’“°¢–b‡F&vWBç67&VVâÓÓÒ&FVW"bbG—VöbF&vWBæ–æFW‚ÓÓÒ&çVÖ&W""’6WDFVWF’„ÖF‚æÖ‚ƒÂÖF‚æÖ–â„DTUôD•2æÆVæwF‚ÒÂF&vWBæ–æFW‚’’“°¢æf–vFR‡F&vWBç67&VVâ267&VVâ“°¢Ò6F6‚°¢6W76–öå7F÷&vRç&VÖ÷fT—FVÒ…tTTµôôäUõ$U5TÔUô´U’“°¢Ğ¢ÒÂ“°¢&WGW&â‚’Óâv–æF÷ræ6ÆV%F–ÖV÷WB‡F–ÖW"“°¢òòF†R&W7VÖRF&vWB—2–çFVçF–öæÆÇ’6öç7VÖVBöæ6RÂgFW"6fVB6÷W'6R7FFR†2ÆöFVBà¢òòW6Æ–çBÖF—6&ÆRÖæW‡BÖÆ–æR&V7BÖ†öö·2öW††W7F—fRÖFW0¢ÒÂ·&VG•Ò“° ¢6öç7B&öw&W72ÒW6TÖVÖò‚‚’Óâ°¢6öç7B7F÷'’Ò7FFRç7F'FVBò‚„ÖF‚æÖ‚‡7FFRç7F÷'’Â’²’ò5Dõ%’æÆVæwF‚’¢#¢°¢6öç7BÆ6RÒ‡7FFRçÆ6RæÆVæwF‚òÄ4RæÆVæwF‚’¢#°¢6öç7Bf–ÆÂÒ„ö&¦V7BçfÇVW2‡7FFRæf–ÆÄ6÷'&V7B’æf–ÇFW"„&ööÆVâ’æÆVæwF‚òd”ÄÂæÆVæwF‚’¢#°¢6öç7B6öææV7BÒ„ÖF‚æÖ–â‡7FFRæ6öææV7BÂB’òB’¢#°¢6öç7BVæÆö6²Ò7FFRçFV6†&6´6ö×ÆWFRò#¢°¢&WGW&âÖF‚æÖ–âƒÂÖF‚ç&÷VæB‡7F÷'’²Æ6R²f–ÆÂ²6öææV7B²VæÆö6²’“°¢ÒÂ·7FFUÒ“° ¢gVæ7F–öâæf–vFR†æW‡C¢67&VVâ’°¢6WE67&VVâ†æW‡B“°¢&WVW7Dæ–ÖF–öäg&ÖR‚‚’ÓâFö7VÖVçBçVW'•6VÆV7F÷#Ä…DÔÄVÆVÖVçCâ‚"ç67&VVâ×67&öÆÂ"“òç67&öÆÅFò‡²F÷¢Ò’“°¢Ğ¢gVæ7F–öâ&Vv–ä¦÷W&æW’‚’°¢6WE7FFR‚†7W'&VçB’Óâ‡²ââæ7W'&VçBÂ7F'FVC¢G'VRÒ’“°¢æf–vFR‚'&öFÖ"“°¢Ğ¢gVæ7F–öâ÷Vå67&—GW&R‡&Vc¢7G&–ær’°¢–b‚45$•EU$U5·&VeÒ’&WGW&ã°¢6öç7Bæ÷rÒæWrFFR‚’çFô•4õ7G&–ær‚“°¢6WE7FFR‚†7W'&VçB’Óâ°¢6öç7B&–÷"Ò7W'&VçBç&VF–æt†—7F÷'•·&VeÓ°¢&WGW&â°¢ââæ7W'&VçBÀ¢&VF–æt†—7F÷'“¢°¢ââæ7W'&VçBç&VF–æt†—7F÷'’À¢·&VeÓ¢°¢&VfW&Væ6S¢&VbÀ¢÷Vç3¢‡&–÷#òæ÷Vç2ÇÂ’²À¢&VG3¢&–÷#òç&VG2ÇÂÀ¢f—'7D÷VæVDC¢&–÷#òæf—'7D÷VæVDBÇÂæ÷rÀ¢Æ7D÷VæVDC¢æ÷rÀ¢6ö×ÆWFVDC¢&–÷#òæ6ö×ÆWFVDBÀ¢Æ7E&VDC¢&–÷#òæÆ7E&VDBÀ¢fW'6T6÷VçC¢&–÷#òçfW'6T6÷VçBÀ¢ÒÀ¢ÒÀ¢7F—f—G”WfVçG3¢¶VW7F—f—G’†7W'&VçBæ7F—f—G”WfVçG2ÂÖ¶T7F—f—G’‚'67&—GW&Uö÷VæVB"Â&Vb’’À¢Ó°¢Ò“°¢6WE67&—GW&U&Vb‡&Vb“°¢Ğ ¢gVæ7F–öâÖ&µ67&—GW&U&VB‡&Vc¢7G&–ærÂfW'6T6÷VçC¢çVÖ&W"’°¢6öç7Bæ÷rÒæWrFFR‚’çFô•4õ7G&–ær‚“°¢6WE7FFR‚†7W'&VçB’Óâ°¢6öç7B&–÷"Ò7W'&VçBç&VF–æt†—7F÷'•·&VeÓ°¢6öç7BÇ&VG•&VEF†—4÷VâÒ&–÷#òæÆ7E&VDBbb&–÷"æÆ7D÷VæVDBbb&–÷"æÆ7E&VDBãÒ&–÷"æÆ7D÷VæVDC°¢–b†Ç&VG•&VEF†—4÷Vâ’&WGW&â7W'&VçC°¢&WGW&â°¢ââæ7W'&VçBÀ¢&VF–æt†—7F÷'“¢°¢ââæ7W'&VçBç&VF–æt†—7F÷'’À¢·&VeÓ¢°¢&VfW&Væ6S¢&VbÀ¢÷Vç3¢ÖF‚æÖ‚ƒÂ&–÷#òæ÷Vç2ÇÂ’À¢&VG3¢‡&–÷#òç&VG2ÇÂ’²À¢f—'7D÷VæVDC¢&–÷#òæf—'7D÷VæVDBÇÂæ÷rÀ¢Æ7D÷VæVDC¢&–÷#òæÆ7D÷VæVDBÇÂæ÷rÀ¢6ö×ÆWFVDC¢&–÷#òæ6ö×ÆWFVDBÇÂæ÷rÀ¢Æ7E&VDC¢æ÷rÀ¢fW'6T6÷VçBÀ¢ÒÀ¢ÒÀ¢7F—f—G”WfVçG3¢¶VW7F—f—G’†7W'&VçBæ7F—f—G”WfVçG2ÂÖ¶T7F—f—G’‚'67&—GW&U÷&VB"Â&VbÂ²fW'6T6÷VçBÒ’’À¢Ó°¢Ò“°¢Ğ¢gVæ7F–öâ6VÆV7E7F÷'’†–æFWƒ¢çVÖ&W"’°¢6WE7F÷'”–æFW‚†–æFW‚“°¢6WE7FFR‚†7W'&VçB’Óâ‡²ââæ7W'&VçBÂ7F'FVC¢G'VRÂ7F÷'“¢ÖF‚æÖ‚†7W'&VçBç7F÷'’Â–æFW‚’Ò’“°¢Ğ¢gVæ7F–öâWFFUÆ6T÷&FW"†÷&FW#¢7G&–æuµÒ’°¢6WE7FFR‚†7W'&VçB’Óâ‡²ââæ7W'&VçBÂÆ6T÷&FW#¢÷&FW"ÂÆ6S¢µÒÒ’“°¢6WEÆ6TÖW76vR‚""“°¢Ğ¢gVæ7F–öâ6†V6µÆ6T÷&FW"‚’°¢6öç7B6÷'&V7BÒ7FFRçÆ6T÷&FW"æWfW'’‚†—FVÒÂ–æFW‚’Óâ—FVÒÓÓÒÄ4U¶–æFW…Ò“°¢–b†6÷'&V7B’°¢6WE7FFR‚†7W'&VçB’Óâ‡²ââæ7W'&VçBÂÆ6S¢²ââåÄ4UÒÀ¢7F—f—G”WfVçG3¢¶VW7F—f—G’†7W'&VçBæ7F—f—G”WfVçG2ÂÖ¶T7F—f—G’‚'Æ6Uö6ö×ÆWFVB"’’Ò’“°¢6WEÆ6TÖW76vR‚%–÷R&V'V–ÇBF†R&Vv–ææ–ærâÆÂ6—‚Ö÷fVÖVçG2&R–âF†V—"&–&Æ–6Â÷&FW"â"“°¢ÒVÇ6R°¢6WE7FFR‚†7W'&VçB’Óâ‡²ââæ7W'&VçBÂÆ6S¢µÒÒ’“°¢6WEÆ6TÖW76vR‚$æ÷BV—FR–WBâ&R×&VBF†R6&B7VÖÖ&–W2ÂÖ÷fRF†R6WVVæ6RÂæB6†V6²—Bv–ââ"“°¢Ğ¢Ğ¢gVæ7F–öâ7V&Ö—Df–ÆÂ‚’°¢6öç7B—FVÒÒd”ÄÅ¶f–ÆÄ–æFW…Ó°¢6öç7Bç7vW"Ò7FFRæf–ÆÄç7vW'5µ7G&–ær†f–ÆÄ–æFW‚•ÒÇÂ"#°¢6öç7B6÷'&V7BÒ¶—FVÒæç7vW"Âââæ—FVÒæ66WFVEÒæÖ†æ÷&ÖÆ—¦R’æ–æ6ÇVFW2†æ÷&ÖÆ—¦R†ç7vW"’“°¢–b†6÷'&V7B’°¢6WE7FFR‚†7W'&VçB’Óâ‡²ââæ7W'&VçBÂf–ÆÄ6÷'&V7C¢²ââæ7W'&VçBæf–ÆÄ6÷'&V7BÂ¶f–ÆÄ–æFW…Ó¢G'VRÒÀ¢7F—f—G”WfVçG3¢¶VW7F—f—G’†7W'&VçBæ7F—f—G”WfVçG2ÂÖ¶T7F—f—G’‚&f–ÆÅöGFV×B"ÂVæFVf–æVBÂ²VW7F–öã¢f–ÆÄ–æFW‚²Â6÷'&V7C¢G'VRÒ’’Ò’“°¢6WDf–ÆÄ†–çB†fÇ6R“°¢6WDf–ÆÄÖW76vR†—FVÒçv‡’“°¢ÒVÇ6R°¢6WE7FFR‚†7W'&VçB’Óâ‡²ââæ7W'&VçBÀ¢7F—f—G”WfVçG3¢¶VW7F—f—G’†7W'&VçBæ7F—f—G”WfVçG2ÂÖ¶T7F—f—G’‚&f–ÆÅöGFV×B"ÂVæFVf–æVBÂ²VW7F–öã¢f–ÆÄ–æFW‚²Â6÷'&V7C¢fÇ6RÒ’’Ò’“°¢6WDf–ÆÄÖW76vR‚%&VBF†R6VçFVæ6Röæ6RÖ÷&RâW6RF†R†–çB–b–÷RæVVB—Bâ"“°¢Ğ¢Ğ¢gVæ7F–öâ6fUFV6†&6²‚’°¢6öç7Bç7vW"Ò7FFRçFV6†&6µ·FV6†&6µ7FWÓòçG&–Ò‚“°¢–b‚ç7vW"ÇÂç7vW"æÆVæwF‚Â‚’°¢6WEFV6†&6´ÖW76vR‚$FBöæR6ÆV"6VçFVæ6R&Vf÷&RÖ÷f–æröââ–Òf÷"BÆV7B6ö×ÆWFRF†÷Vv‡Bâ"“°¢&WGW&ã°¢Ğ¢6WEFV6†&6´ÖW76vR‚""“°¢–b‡FV6†&6µ7FWÂ2’6WEFV6†&6µ7FW‚‡7FW’Óâ7FW²“°¢VÇ6R6WEFV6†&6µ7VÖÖ'’‡7FFRçFV6†&6²æ¦ö–â‚""’“°¢Ğ¢gVæ7F–öâ6ö×ÆWFUFV6†&6²‚’°¢–b‚7FFRçFV6†&6²æWfW'’‚†ç7vW"’Óâç7vW"çG&–Ò‚’æÆVæwF‚ãÒ‚’’°¢6WEFV6†&6´ÖW76vR‚%&WGW&âFòç’Væf–æ—6†VB7FWæBFBöæR6ö×ÆWFRF†÷Vv‡Bâ"“°¢&WGW&ã°¢Ğ¢–b‡FV6†&6µ7VÖÖ'’çG&–Ò‚’æÆVæwF‚Âƒ’°¢6WEFV6†&6´ÖW76vR‚$'&–ærF†Rf÷W"Ö÷fVÖVçG2FövWF†W"–â6†÷'B&w&‚&Vf÷&RVæÆö6¶–ærF†RÆW76öââ"“°¢&WGW&ã°¢Ğ¢6WEFV6†&6´ÖW76vR‚""“°¢6WE7FFR‚†7W'&VçB’Óâ‡²ââæ7W'&VçBÂFV6†&6´6ö×ÆWFS¢G'VRÀ¢7F—f—G”WfVçG3¢¶VW7F—f—G’†7W'&VçBæ7F—f—G”WfVçG2ÂÖ¶T7F—f—G’‚'VæÆö6µö6ö×ÆWFVB"’’Ò’“°¢Ğ¢gVæ7F–öâWFFU67&—GW&UFööÂ†¶W“¢&†–v†Æ–v‡B"Â'VæFW&Æ–æR"Â&&öö¶Ö&²"’°¢–b‚67&—GW&U&Vb’&WGW&ã°¢6WE7FFR‚†7W'&VçB’Óâ°¢6öç7BæW‡EfÇVRÒ7W'&VçBç67&—GW&UFööÇ5·67&—GW&U&VeÓòå¶¶W•Ó°¢&WGW&â²ââæ7W'&VçBÂ67&—GW&UFööÇ3¢²ââæ7W'&VçBç67&—GW&UFööÇ2À¢·67&—GW&U&VeÓ¢²ââæ7W'&VçBç67&—GW&UFööÇ5·67&—GW&U&VeÒÂ¶¶W•Ó¢æW‡EfÇVRÒÒÀ¢7F—f—G”WfVçG3¢¶W’ÓÓÒ&&öö¶Ö&²"bbæW‡EfÇVP¢ò¶VW7F—f—G’†7W'&VçBæ7F—f—G”WfVçG2ÂÖ¶T7F—f—G’‚&&öö¶Ö&µ÷6fVB"Â67&—GW&U&Vb’¢¢7W'&VçBæ7F—f—G”WfVçG2Ó°¢Ò“°¢Ğ¢gVæ7F–öâWFFU67&—GW&UFW‡B†¶W“¢&æ÷FW2"Â'VW7F–öâ"ÂfÇVS¢7G&–ær’°¢–b‚67&—GW&U&Vb’&WGW&ã°¢6WE7FFR‚†7W'&VçB’Óâ°¢6öç7Bv4V×G’Ò7W'&VçBç67&—GW&UFööÇ5·67&—GW&U&VeÓòå¶¶W•ÓòçG&–Ò‚“°¢6öç7BWfVçEG—RÒ¶W’ÓÓÒ&æ÷FW2"ò&æ÷FU÷w&—GFVâ"¢'VW7F–öå÷w&—GFVâ#°¢&WGW&â²ââæ7W'&VçBÂ67&—GW&UFööÇ3¢²ââæ7W'&VçBç67&—GW&UFööÇ2À¢·67&—GW&U&VeÓ¢²ââæ7W'&VçBç67&—GW&UFööÇ5·67&—GW&U&VeÒÂ¶¶W•Ó¢fÇVRÒÒÀ¢7F—f—G”WfVçG3¢v4V×G’bbfÇVRçG&–Ò‚¢ò¶VW7F—f—G’†7W'&VçBæ7F—f—G”WfVçG2ÂÖ¶T7F—f—G’†WfVçEG—RÂ67&—GW&U&Vb’¢¢7W'&VçBæ7F—f—G”WfVçG2Ó°¢Ò“°¢Ğ¢gVæ7F–öâFE67&—GW&U6VÆV7F–öâ‡6VÆV7F–öã¢67&—GW&U6VÆV7F–öâ’°¢–b‚67&—GW&U&Vb’&WGW&ã°¢6WE7FFR‚†7W'&VçB’Óâ‡²ââæ7W'&VçBÂ67&—GW&UFööÇ3¢²ââæ7W'&VçBç67&—GW&UFööÇ2À¢·67&—GW&U&VeÓ¢²ââæ7W'&VçBç67&—GW&UFööÇ5·67&—GW&U&VeÒÂ6VÆV7F–öç3¢²âââ†7W'&VçBç67&—GW&UFööÇ5·67&—GW&U&VeÓòç6VÆV7F–öç2ÇÂµÒ’Â6VÆV7F–öåÒÒÒÀ¢7F—f—G”WfVçG3¢¶VW7F—f—G’†7W'&VçBæ7F—f—G”WfVçG2ÂÖ¶T7F—f—G’‡6VÆV7F–öâçG—RÓÓÒ&†–v†Æ–v‡B"ò&†–v†Æ–v‡Eö7&VFVB"¢'VæFW&Æ–æUö7&VFVB"Â67&—GW&U&Vb’’Ò’“°¢Ğ¢gVæ7F–öâ6ö×ÆWFTFVWF’‚’°¢–b‚‡7FFRæFVW&VfÆV7F–öç5µ7G&–ær†FVWF’•ÒÇÂ""’çG&–Ò‚’æÆVæwF‚ÂR’&WGW&ã°¢6WE7FFR‚†7W'&VçB’Óâ‡²ââæ7W'&VçBÂFVW6ö×ÆWFVC¢²ââæ7W'&VçBæFVW6ö×ÆWFVBÂ¶FVWF•Ó¢G'VRÒÀ¢7F—f—G”WfVçG3¢¶VW7F—f—G’†7W'&VçBæ7F—f—G”WfVçG2ÂÖ¶T7F—f—G’‚&FWf÷F–öæÅö6ö×ÆWFVB"ÂVæFVf–æVBÂ²F“¢FVWF’²Ò’’Ò’“°¢6WDFVW÷Vâ†fÇ6R“°¢–b†FVWF’Âb’6WDFVWF’‚†F’’ÓâF’²“°¢VÇ6Ræf–vFR‚&6ö×ÆWFR"“°¢Ğ ¢6öç7B6öÖÖöâÒ²æf–vFRÂ÷Vå67&—GW&RÓ°¢&WGW&â€¢ÆÖ–â6Æ74æÖSÒ'&öGV7B×6†VÆÂ#à¢ÄFW6·F÷&–Â67&VVã×·67&VVçÒ&öw&W73×·&öw&W77Òæf–vFS×¶æf–vFWÒóà¢Ç6V7F–öâ6Æ74æÖSÒ'†öæRÖ6çf2"&–ÖÆ&VÃÒ%F‡&÷Vv‚F†R&–&ÆRvVV²#à¢Æ'WGFöâ6Æ74æÖS×¶×’×7GVG’×G&–vvW"Gµ²&†öÖR"Â&Ö÷fVÖVçB"Â'7F÷'’"Â'&öÖ—6R"Â&fÖ–Ç’"Â&6ö×ÆWFR%Òæ–æ6ÇVFW2‡67&VVâ’ò&öâÖF&²"¢"'ÖÒöä6Æ–6³×²‚’Óâ6WD×•7GVG”÷Vâ‡G'VR—Ò&–ÖÆ&VÃÒ$÷Vâ×’7GVG’#ãÄæ÷FV&ööµVâóç·W6W"bbÇ7âóçÓÂö'WGFöãà¢·67&VVâÓÓÒ&†öÖR"bbÄ†öÖU67&VVâ&Vv–ä¦÷W&æW“×¶&Vv–ä¦÷W&æW—Òöä6÷W'6T†öÖS×¶öä6÷W'6T†öÖWÒóçĞ¢·67&VVâÓÓÒ'&öFÖ"bbÅ&öFÖ67&VVâæf–vFS×¶æf–vFWÒ÷VäÖ÷fVÖVçC×²†–æFW‚’Óâ²6WDÖ÷fVÖVçD–æFW‚†–æFW‚“²æf–vFR‚&Ö÷fVÖVçB"“²×ÒóçĞ¢·67&VVâÓÓÒ&Ö÷fVÖVçB"bbÄÖ÷fVÖVçE67&VVâ–æFWƒ×¶Ö÷fVÖVçD–æFW‡Ò6WD–æFWƒ×·6WDÖ÷fVÖVçD–æFW‡Ò²ââæ6öÖÖöçÒóçĞ¢·67&VVâÓÓÒ'7F÷'’"bbÅ7F÷'•67&VVâ–æFWƒ×·7F÷'”–æFW‡Ò6VÆV7E7F÷'“×·6VÆV7E7F÷'—Ò²ââæ6öÖÖöçÒóçĞ¢·67&VVâÓÓÒ'&öÖ—6R"bbÅ&öÖ—6U67&VVâ²ââæ6öÖÖöçÒóçĞ¢·67&VVâÓÓÒ&fÖ–Ç’"bbÄfÖ–Ç•67&VVâ²ââæ6öÖÖöçÒóçĞ¢·67&VVâÓÓÒ'Æ6T–çG&ò"bbÅFööÄ–çG&õ67&VVâFööÃÒ'Æ6R"7FFS×·7FFWÒæf–vFS×¶æf–vFWÒóçĞ¢·67&VVâÓÓÒ&f–ÆÄ–çG&ò"bbÅFööÄ–çG&õ67&VVâFööÃÒ&f–ÆÂ"7FFS×·7FFWÒæf–vFS×¶æf–vFWÒóçĞ¢·67&VVâÓÓÒ&6öææV7D–çG&ò"bbÅFööÄ–çG&õ67&VVâFööÃÒ&6öææV7B"7FFS×·7FFWÒæf–vFS×¶æf–vFWÒóçĞ¢·67&VVâÓÓÒ'VæÆö6´–çG&ò"bbÅFööÄ–çG&õ67&VVâFööÃÒ'VæÆö6²"7FFS×·7FFWÒæf–vFS×¶æf–vFWÒóçĞ¢·67&VVâÓÓÒ'Æ6R"bbÅÆ6U67&VVâ÷&FW#×·7FFRçÆ6T÷&FW'Ò6ö×ÆWFVC×·7FFRçÆ6RæÆVæwF‚ÓÓÒÄ4RæÆVæwF‡ÒÖW76vS×·Æ6TÖW76vWĞ¢6WD÷&FW#×·WFFUÆ6T÷&FW'Ò6†V6´÷&FW#×¶6†V6µÆ6T÷&FW'Ğ¢&W6WC×²‚’Óâ²6WE7FFR‚†7W'&VçB’Óâ‡²ââæ7W'&VçBÂÆ6S¢µÒÂÆ6T÷&FW#¢45$Ô$ÄTEõÄ4RÒ’“²6WEÆ6TÖW76vR‚""“²×Ò²ââæ6öÖÖöçÒóçĞ¢·67&VVâÓÓÒ&f–ÆÂ"bbÄf–ÆÅ67&VVâ7FFS×·7FFWÒ–æFWƒ×¶f–ÆÄ–æFW‡Ò†–çC×¶f–ÆÄ†–çGÒÖW76vS×¶f–ÆÄÖW76vWĞ¢6WD–æFWƒ×²†–æFW‚’Óâ²6WDf–ÆÄ–æFW‚†–æFW‚“²6WDf–ÆÄ†–çB†fÇ6R“²6WDf–ÆÄÖW76vR‚""“²×Ò6WD†–çC×·6WDf–ÆÄ†–çGĞ¢6WDç7vW#×²‡fÇVR’Óâ6WE7FFR‚†7W'&VçB’Óâ‡²ââæ7W'&VçBÂf–ÆÄç7vW'3¢²ââæ7W'&VçBæf–ÆÄç7vW'2Â¶f–ÆÄ–æFW…Ó¢fÇVRÒÒ’—Ğ¢6ÆV$ÖW76vS×²‚’Óâ6WDf–ÆÄÖW76vR‚""—Ò6ö×ÆWFU&WfVÆVC×²‚’Óâ°¢6WE7FFR‚†7W'&VçB’Óâ‡²ââæ7W'&VçBÂf–ÆÄ6÷'&V7C¢²ââæ7W'&VçBæf–ÆÄ6÷'&V7BÂ¶f–ÆÄ–æFW…Ó¢G'VRÒÒ’“°¢6WDf–ÆÄÖW76vR‚""“°¢×Ò7V&Ö—C×·7V&Ö—Df–ÆÇÒæf–vFS×¶æf–vFWÒóçĞ¢·67&VVâÓÓÒ&6öææV7B"bbÄ6öææV7E67&VVâ7FW×·7FFRæ6öææV7GĞ¢Gfæ6S×²‚’Óâ6WE7FFR‚†7W'&VçB’Óâ²6öç7BæW‡BÒÖF‚æÖ–âƒBÂ7W'&VçBæ6öææV7B²“²&WGW&â²ââæ7W'&VçBÂ6öææV7C¢æW‡BÀ¢7F—f—G”WfVçG3¢æW‡BÓÓÒBbb7W'&VçBæ6öææV7BÂBò¶VW7F—f—G’†7W'&VçBæ7F—f—G”WfVçG2ÂÖ¶T7F—f—G’‚&6öææV7Eö6ö×ÆWFVB"’’¢7W'&VçBæ7F—f—G”WfVçG2Ó²Ò—Ò²ââæ6öÖÖöçÒóçĞ¢·67&VVâÓÓÒ'VæÆö6²"bbÅVæÆö6µ67&VVâ7FFS×·7FFWÒ7FW×·FV6†&6µ7FWÒ7VÖÖ'“×·FV6†&6µ7VÖÖ'—Ğ¢6†÷tÖöFVÃ×·6†÷tÖöFVÇÒÖW76vS×·FV6†&6´ÖW76vWÒ6WE7FW×²†æW‡E7FW’Óâ²6WEFV6†&6µ7FW†æW‡E7FW“²6WEFV6†&6´ÖW76vR‚""“²×Ğ¢6WE7VÖÖ'“×²‡fÇVR’Óâ²6WEFV6†&6µ7VÖÖ'’‡fÇVR“²6WEFV6†&6´ÖW76vR‚""“²×Ò6WE6†÷tÖöFVÃ×·6WE6†÷tÖöFVÇĞ¢6WDç7vW#×²‡fÇVR’Óâ²6WEFV6†&6´ÖW76vR‚""“²6WE7FFR‚†7W'&VçB’Óâ²6öç7Bç7vW'2Ò²ââæ7W'&VçBçFV6†&6µÓ²ç7vW'5·FV6†&6µ7FWÒÒfÇVS²&WGW&â²ââæ7W'&VçBÂFV6†&6³¢ç7vW'2Ó²Ò“²×Ğ¢6fS×·6fUFV6†&6·Ò6ö×ÆWFS×¶6ö×ÆWFUFV6†&6·Òæf–vFS×¶æf–vFWÒóçĞ¢·67&VVâÓÓÒ&FVW"bbÄFVW7GVG•67&VVâ6ö×ÆWFVC×·7FFRæFVW6ö×ÆWFVGĞ¢÷VäF“×²†–æFW‚’Óâ²6WDFVWF’†–æFW‚“²6WDFVW÷Vâ‡G'VR“²×Òæf–vFS×¶æf–vFWÒóçĞ¢·67&VVâÓÓÒ&6ö×ÆWFR"bbÅvVV´6ö×ÆWFU67&VVâ7FFS×·7FFWÒæf–vFS×¶æf–vFWÒóçĞ ¢Å67&—GW&U&VFW"¶W“×·67&—GW&U&VbÇÂ&6Æ÷6VB×67&—GW&R'Ò&VfW&Væ6S×·67&—GW&U&VgÒ67&—GW&S×·67&—GW&U&Vbò45$•EU$U5·67&—GW&U&VeÒ¢çVÆÇĞ¢Ö&³×·67&—GW&U&Vbò7FFRç67&—GW&UFööÇ5·67&—GW&U&VeÒÇÂ·Ò¢·×Òöä6Æ÷6S×²‚’Óâ6WE67&—GW&U&Vb†çVÆÂ—Ğ¢öåFööÃ×·WFFU67&—GW&UFööÇÒöåFW‡C×·WFFU67&—GW&UFW‡GÒöå6VÆV7F–öã×¶FE67&—GW&U6VÆV7F–öçĞ¢&VF–æs×·67&—GW&U&Vbò7FFRç&VF–æt†—7F÷'•·67&—GW&U&VeÒ¢VæFVf–æVGĞ¢öå&VC×¶Ö&µ67&—GW&U&VGÒöäæf–vFS×¶÷Vå67&—GW&WÒóà¢ÄFVW&VFW"¶W“×¶FVW×&VFW"ÒG¶FVWF—ÖÒ÷Vã×¶FVW÷VçÒF”–æFWƒ×¶FVWF—ÒF“×´DTUôD•5¶FVWF•×Ğ¢6ö×ÆWFVC×´&ööÆVâ‡7FFRæFVW6ö×ÆWFVE¶FVWF•Ò—Ò&VfÆV7F–öã×·7FFRæFVW&VfÆV7F–öç5¶FVWF•ÒÇÂ"'Ğ¢æ÷FW3×·7FFRæFVWæ÷FW5¶FVWF•ÒÇÂ"'Òöä6Æ÷6S×²‚’Óâ6WDFVW÷Vâ†fÇ6R—Òöå67&—GW&S×¶÷Vå67&—GW&WĞ¢öä–ç6–v‡C×·6WD–ç6–v‡D¶W—Òöå&VfÆV7F–öã×²‡fÇVR’Óâ6WE7FFR‚†7W'&VçB’Óâ‡²ââæ7W'&VçBÂFVW&VfÆV7F–öç3¢²ââæ7W'&VçBæFVW&VfÆV7F–öç2Â¶FVWF•Ó¢fÇVRÒÒ’—Ğ¢öäæ÷FW3×²‡fÇVR’Óâ6WE7FFR‚†7W'&VçB’Óâ‡²ââæ7W'&VçBÂFVWæ÷FW3¢²ââæ7W'&VçBæFVWæ÷FW2Â¶FVWF•Ó¢fÇVRÒÒ’—Ğ¢öä6ö×ÆWFS×¶6ö×ÆWFTFVWF—Òóà¢Ä×•7GVG•6†VWB÷Vã×¶×•7GVG”÷VçÒöä÷Vä6†ævS×·6WD×•7GVG”÷VçÒ7FFS×·7FFWÒW6W$VÖ–Ã×·W6W#òæVÖ–ÂÇÂçVÆÇĞ¢6Æ÷VD6öæf–wW&VC×¶6Æ÷VD6öæf–wW&VGÒ66÷VçDÆöF–æs×¶66÷VçDÆöF–æwÒ÷Vä66÷VçC×¶÷Vä66÷VçGĞ¢÷Vå67&—GW&S×²‡&Vb’Óâ²6WD×•7GVG”÷Vâ†fÇ6R“²÷Vå67&—GW&R‡&Vb“²×Ğ¢÷VäF“×²†–æFW‚’Óâ²6WD×•7GVG”÷Vâ†fÇ6R“²6WDFVWF’†–æFW‚“²6WDFVW÷Vâ‡G'VR“²×Ò7V&Ö—EVW7F–öã×·7V&Ö—EVW7F–öçÒóà¢Å6†VWB÷Vã×´&ööÆVâ†–ç6–v‡D¶W’—Òöä÷Vä6†ævS×²†÷Vâ’Óâ÷Vâbb6WD–ç6–v‡D¶W’†çVÆÂ—Óà¢Å6†VWD6öçFVçB6–FSÒ&&÷GFöÒ"6Æ74æÖSÒ&–ç6–v‡B×6†VWB#à¢Å6†VWD†VFW#ãÄÖ–7&ôÆ&VÃç¶–ç6–v‡D¶W’òDTUô”å4”t…E5¶–ç6–v‡D¶W•ÓòçG—R¢%5ETE’äõDR'ÓÂôÖ–7&ôÆ&VÃà¢Å6†VWEF—FÆSç¶–ç6–v‡D¶W’bbDTUô”å4”t…E5¶–ç6–v‡D¶W•ÓòçF—FÆWÓÂõ6†VWEF—FÆSà¢Å6†VWDFW67&—F–öãç¶–ç6–v‡D¶W’bbDTUô”å4”t…E5¶–ç6–v‡D¶W•Óòç6÷W&6WÓÂõ6†VWDFW67&—F–öããÂõ6†VWD†VFW#à¢Çç¶–ç6–v‡D¶W’bbDTUô”å4”t…E5¶–ç6–v‡D¶W•Óòæ&öG—ÓÂ÷à¢Âõ6†VWD6öçFVçCà¢Âõ6†VWCà¢Â÷6V7F–öãà¢ÂöÖ–ãà¢“°§Ğ ¦gVæ7F–öâ†öÖU67&VVâ‡²&Vv–ä¦÷W&æW’Âöä6÷W'6T†öÖRÓ¢²&Vv–ä¦÷W&æW“¢‚’Óâfö–C²öä6÷W'6T†öÖSó¢‚’Óâfö–BÒ’°¢&WGW&â€¢Ç6V7F–öâ6Æ74æÖSÒ&×67&VVâ6–æVÖ×67&VVâ†öÖR×67&VVâ"7G–ÆS×·²"ÒÖ6–æVÖÖ–ÖvR#¢W&Â‚rG´„ôÔUô„U$÷Òr–Ò2555&÷W'F–W7Óà¢Ä6–æVÖ†VFW"öä†öÖS×¶öä6÷W'6T†öÖWÒóà¢ÆF—b6Æ74æÖSÒ&†öÖRÖ6öçFVçB#à¢ÆF—b6Æ74æÖSÒ&†öÖRÖ6÷’#à¢ÆƒãÇ7ãä7&VF–öâÂ'WGW&Rf×³Â÷7ããÇ7ãçF†Rf—'7B&öÖ—6SÂ÷7ããÂöƒà¢ÇävööBv÷&ÆB—2f÷&ÖVBâG'W7Bg&7GW&W2â†÷RV'2&Vf÷&RVFVâ6Æ÷6W2ãÂ÷ãÂöF—cà¢ÆF—b6Æ74æÖSÒ&†öÖR×76W""óà¢Æ'WGFöâ6Æ74æÖSÒ&¦÷W&æW’Ö'WGFöâ"öä6Æ–6³×¶&Vv–ä¦÷W&æW—Óä&Vv–â¦÷W&æW“Âö'WGFöãà¢ÂöF—cà¢Â÷6V7F–öãà¢“°§Ğ ¦gVæ7F–öâ&öFÖ67&VVâ‡²æf–vFRÂ÷VäÖ÷fVÖVçBÓ¢²æf–vFS¢‡67&VVã¢67&VVâ’Óâfö–C²÷VäÖ÷fVÖVçC¢†–æFWƒ¢çVÖ&W"’Óâfö–BÒ’°¢6öç7B6†FW%F‡&VG2Ò°¢$dõ$Ò+rd”ÄÂ+rtôôB"À¢$”ÔtR+rdô4D”ôâ+r$õTäD%’"À¢%TU5D”ôâ+r$T$TÄÄ”ôâ+r¥TDtÔTåB"À¢%4TTB+r„õR+rU„”ÄR"À¢Ó°¢&WGW&â€¢Ç6V7F–öâ6Æ74æÖSÒ&×67&VVâFÆ2×67&VVâ&öFÖ×67&VVâ#à¢ÄFÆ4†VFW"Æ&VÃÒ%D…$õTt‚D„R$”$ÄR+rtTT²"öä&6³×²‚’Óâæf–vFR‚&†öÖR"—Òóà¢ÆF—b6Æ74æÖSÒ'67&VVâ×67&öÆÂ&öFÖÖ&öG’#à¢Æ†VFW"6Æ74æÖSÒ'&öFÖÖ–çG&ò#à¢ÆF—b6Æ74æÖSÒ'&öFÖÖ–çG&ò×F÷#ãÇåtTT²+rtTäU4•2(	33Â÷ãÆVÓã‚Ô”â+rd•5TÂ5Dõ%“ÂöVÓãÂöF—cà¢ÆƒäföÆÆ÷rF†R7F÷'“Æ'"óæ2—B6†ævW2ãÂöƒà¢Ç7ãäf÷W"FV6—6—fRÖ÷fVÖVçG2W7F&Æ—6‚F†Rv÷&ÆBÂF†R‡VÖâ6ÆÆ–ærÂF†R'WGW&RæBF†R&öÖ—6RF†B6'&–W2F†R&–&ÆRf÷'v&BãÂ÷7ãà¢ÆF—b6Æ74æÖSÒ'&öFÖ×F‡&VBÖÖ"&–ÖÆ&VÃÒ%vVV²7F÷'’&öw&W76–öâ#à¢´ÔõdTÔTåE2æÖ‚†Ö÷fVÖVçBÂ–æFW‚’ÓâÆ'WGFöâ¶W“×¶Ö÷fVÖVçBç&öFÖF—FÆWÒöä6Æ–6³×²‚’Óâ÷VäÖ÷fVÖVçB†–æFW‚—ÓãÆ“çµ7G&–ær†–æFW‚²’çE7F'Bƒ"Â#"—ÓÂö“ãÆ#çµ²$dõ$ÔTB"Â$5$õtäTB"Â%%UEU$TB"Â%$ôÔ•4TB%Õ¶–æFW…×ÓÂö#ãÂö'WGFöãâ—Ğ¢ÂöF—cà¢Ç6ÖÆÃä4„ôõ4R4„DU"+rT4‚õTå22d•5TÂ5Dõ%“Â÷6ÖÆÃà¢Âö†VFW#à¢ÆF—b6Æ74æÖSÒ'&öFÖÖ6–æVÖÖÆ—7B#ç´ÔõdTÔTåE2æÖ‚†Ö÷fVÖVçBÂ–æFW‚’Óâ€¢Æ'WGFöà¢6Æ74æÖS×¶&öFÖÖ6–æVÖÖ6&B&öFÖÖ6†FW"ÒG¶–æFW‚²ÖĞ¢¶W“×¶Ö÷fVÖVçBç&öFÖF—FÆWĞ¢öä6Æ–6³×²‚’Óâ÷VäÖ÷fVÖVçB†–æFW‚—Ğ¢&–ÖÆ&VÃ×¶÷Vâ6†FW"G¶–æFW‚²Ó¢G¶Ö÷fVÖVçBç&öFÖF—FÆWÖĞ¢à¢Ç7â6Æ74æÖSÒ'&öFÖÖ–ÖvRÖg&ÖR#ãÆ–Ör7&3×µ$ôDÔô%E¶–æFW…×ÒÇCÒ""&–Ö†–FFVãÒ'G'VR"óãÇ7â6Æ74æÖSÒ'&öFÖÖ6–æVÖ×6†FR"óãÂ÷7ãà¢Ç7â6Æ74æÖSÒ'&öFÖÖ6–æVÖÖ6÷’#à¢Ç7â6Æ74æÖSÒ'&öFÖÖ6–æVÖÖÖWF#ä4„DU"µ7G&–ær†–æFW‚²’çE7F'Bƒ"Â#"—Ò+rõTâ5Dõ%“Â÷7ãà¢Ç7G&öæsç¶Ö÷fVÖVçBç&öFÖF—FÆWÓÂ÷7G&öæsà¢Ç7â6Æ74æÖSÒ'&öFÖÖ6–æVÖ×7VÖÖ'’#ç¶Ö÷fVÖVçBç&öFÖ7VÖÖ'—ÓÂ÷7ãà¢Ç7â6Æ74æÖSÒ'&öFÖÖ6–æVÖ×&Vg2#ç¶Ö÷fVÖVçBç&Vg2æ¦ö–â‚"+r"—ÓÂ÷7ãà¢Ç7â6Æ74æÖSÒ'&öFÖÖ6–æVÖ×F‡&VB#ç¶6†FW%F‡&VG5¶–æFW…×ÓÂ÷7ãà¢Ç7â6Æ74æÖSÒ'&öFÖÖ6–æVÖÖVçFW"#ãÆ#äTåDU"4„DU#Âö#ãÄ'&÷u&–v‡BóãÂ÷7ãà¢Â÷7ãà¢Âö'WGFöãà¢’—ÓÂöF—cà¢Æfö÷FW"6Æ74æÖSÒ'&öFÖÖf–æÆR#à¢Çäf÷W"6†FW'2âöæR÷Væ–ærÖ÷fVÖVçBãÂ÷à¢Æ'WGFöâöä6Æ–6³×²‚’Óâ÷VäÖ÷fVÖVçBƒ—ÓãÇ7ããÇ6ÖÆÃå5D%BBD„R$Tt”ää”äsÂ÷6ÖÆÃãÇ7G&öæsäVçFW"F†Rf—7VÂ7F÷'“Â÷7G&öæsãÂ÷7ããÄ'&÷u&–v‡BóãÂö'WGFöãà¢Âöfö÷FW#à¢ÂöF—cà¢Â÷6V7F–öãà¢“°§Ğ ¦gVæ7F–öâÖ÷fVÖVçE67&VVâ‡²–æFW‚Â6WD–æFW‚Âæf–vFRÂ÷Vå67&—GW&RÓ¢²–æFWƒ¢çVÖ&W#²6WD–æFWƒ¢†–æFWƒ¢çVÖ&W"’Óâfö–C²æf–vFS¢‡67&VVã¢67&VVâ’Óâfö–C²÷Vå67&—GW&S¢‡&Vc¢7G&–ær’Óâfö–BÒ’°¢6öç7BÖ÷fVÖVçBÒÔõdTÔTåE5¶–æFW…Ó°¢6öç7B—4Æ7BÒ–æFW‚ÓÓÒÔõdTÔTåE2æÆVæwF‚Ò°¢W6TVffV7B‚‚’Óâ°¢Fö7VÖVçBçVW'•6VÆV7F÷#Ä…DÔÄVÆVÖVçCâ‚"æÖ÷fVÖVçB×67&öÆÂ"“òç67&öÆÅFò‡²F÷¢Ò“°¢ÒÂ¶–æFW…Ò“° ¢gVæ7F–öâ6öçF–çVU7F÷'’‚’°¢–b†—4Æ7B’æf–vFR‚'Æ6T–çG&ò"“°¢VÇ6R6WD–æFW‚†–æFW‚²“°¢Ğ ¢gVæ7F–öâ67&öÆÄ–çFõ7F÷'’‚’°¢Fö7VÖVçBçVW'•6VÆV7F÷#Ä…DÔÄVÆVÖVçCâ‚"æÖ÷fVÖVçBÖÆW76öâ"“òç67&öÆÄ–çFõf–Wr‡²&V†f–÷#¢'6Öö÷F‚"Â&Æö6³¢'7F'B"Ò“°¢Ğ ¢&WGW&â€¢Ç6V7F–öâ6Æ74æÖSÒ&×67&VVâ6–æVÖ×67&VVâÖ÷fVÖVçB×67&VVâ"7G–ÆS×·²"ÒÖ6–æVÖÖ–ÖvR#¢W&Â‚rG¶Ö÷fVÖVçBæ–ÖvWÒr–Ò2555&÷W'F–W7Óà¢Æ†VFW"6Æ74æÖSÒ&Ö÷fVÖVçBÖ†VFW"#ãÆ'WGFöâ&–ÖÆ&VÃÒ$&6²Fò&öFÖ"öä6Æ–6³×²‚’Óâæf–vFR‚'&öFÖ"—ÓãÄ'&÷tÆVgBóãÂö'WGFöããÆ#åd•5TÂ5Dõ%’+r¶–æFW‚²Òò´ÔõdTÔTåE2æÆVæwF‡ÓÂö#ãÇ7â6Æ74æÖSÒ&†VFW"×76W""&–Ö†–FFVãÒ'G'VR"óãÂö†VFW#à¢ÆF—b6Æ74æÖSÒ&Ö÷fVÖVçB×67&öÆÂ#à¢ÆF—b6Æ74æÖSÒ&Ö÷fVÖVçBÖ†W&òÖ&Æö6²#à¢ÆF—b6Æ74æÖSÒ&Ö÷fVÖVçBÖ6÷’#ãÇ7ãç¶Ö÷fVÖVçBæW–V'&÷wÓÂ÷7ããÆƒç¶Ö÷fVÖVçBçF—FÆWÓÂöƒãÇç¶Ö÷fVÖVçBæFV6·ÓÂ÷ãÂöF—cà¢Æ'WGFöâ6Æ74æÖSÒ&Ö÷fVÖVçB×67&öÆÂÖ7VR"öä6Æ–6³×·67&öÆÄ–çFõ7F÷'—ÓãÇ7ãä6öçF–çVR–çFòF†R7F÷'“Â÷7ããÄ6†Wg&öäF÷vâóãÂö'WGFöãà¢ÂöF—cà¢Æ'F–6ÆR6Æ74æÖSÒ&Ö÷fVÖVçBÖÆW76öâ#à¢Æ†VFW"6Æ74æÖSÒ&Ö÷fVÖVçBÖÆW76öâÖ†VFW"#à¢Ç7ãã¶–æFW‚²ÓÂ÷7ãà¢ÆF—cãÇ6ÖÆÃåD„R5Dõ%“Â÷6ÖÆÃãÆ#ç¶Ö÷fVÖVçBæW–V'&÷rç&WÆ6R‚õåÆB²+ròÂ""—ÓÂö#ãÂöF—cà¢Âö†VFW#à¢Æƒ#ç¶Ö÷fVÖVçBç6V7F–öåF—FÆWÓÂöƒ#à¢ÆF—b6Æ74æÖSÒ&Ö÷fVÖVçB×&w&‡2#ç¶Ö÷fVÖVçBç&w&‡2æÖ‚‡&w&‚Â&w&„–æFW‚’Óâ€¢Ç6Æ74æÖS×·&w&„–æFW‚ÓÓÒò&Ö÷fVÖVçBÖÆVFR"¢"'Ò¶W“×·&w&‡Óç·&w&‡ÓÂ÷à¢’—ÓÂöF—cà ¢Ç6V7F–öâ6Æ74æÖSÒ&Ö÷fVÖVçBÖ&VG2"&–ÖÆ&VÃÒ$¶W’Ö÷fVÖVçG2#à¢ÆF—b6Æ74æÖSÒ&Ö÷fVÖVçB×6V7F–öâÖÆ&VÂ#ãÇ7ãädôÄÄõrD„RÔõdTÔTåCÂ÷7ããÇ6ÖÆÃç¶Ö÷fVÖVçBæ&VG2æÆVæwF‡ÒÔôÔTåE3Â÷6ÖÆÃãÂöF—cà¢¶Ö÷fVÖVçBæ&VG2æÖ‚…¶Æ&VÂÂFW67&—F–öåÒÂ&VD–æFW‚’Óâ€¢Æ'F–6ÆR¶W“×¶Æ&VÇÓãÇ7ãã¶&VD–æFW‚²ÓÂ÷7ããÆF—cãÇ6ÖÆÃç¶Æ&VÇÓÂ÷6ÖÆÃãÇ7G&öæsç¶FW67&—F–öçÓÂ÷7G&öæsãÂöF—cãÂö'F–6ÆSà¢’—Ğ¢Â÷6V7F–öãà ¢Æ&Æö6·V÷FR6Æ74æÖSÒ&Ö÷fVÖVçBÖ–ç6–v‡B#ãÇ6ÖÆÃåt…’•BÔEDU%3Â÷6ÖÆÃãÇç¶Ö÷fVÖVçBæ–ç6–v‡GÓÂ÷ãÂö&Æö6·V÷FSà ¢Ç6V7F–öâ6Æ74æÖSÒ&Ö÷fVÖVçB×&VF–ær#à¢ÆF—cãÇ6ÖÆÃå$TB•B”â4ôåDU…CÂ÷6ÖÆÃãÇä÷VâF†R76vRv—F†÷WBÆVf–ærF†RÆW76öâãÂ÷ãÂöF—cà¢¶Ö÷fVÖVçBç&Vg2æÖ‚‡&Vb’ÓâÆ'WGFöâ¶W“×·&VgÒöä6Æ–6³×²‚’Óâ÷Vå67&—GW&R‡&Vb—ÓãÄ&öö´÷VâóãÇ7ãç·&VgÓÂ÷7ããÄ6†Wg&öå&–v‡BóãÂö'WGFöãâ—Ğ¢Â÷6V7F–öãà ¢Æ'WGFöâ6Æ74æÖSÒ&Ö÷fVÖVçBÖæW‡B"öä6Æ–6³×¶6öçF–çVU7F÷'—Óà¢Ç7ããÇ6ÖÆÃç¶—4Æ7Bò%5Dõ%’4ôÕÄUDR"¢UäU…B+r4„DU"G¶–æFW‚²'ÖÓÂ÷6ÖÆÃãÇ7G&öæsç¶—4Æ7Bò$'V–ÆBv†B–÷RÆV&æVB"¢ÔõdTÔTåE5¶–æFW‚²Òç&öFÖF—FÆWÓÂ÷7G&öæsãÂ÷7ããÄ'&÷u&–v‡Bóà¢Âö'WGFöãà¢Âö'F–6ÆSà¢ÂöF—cà¢Â÷6V7F–öãà¢“°§Ğ ¦gVæ7F–öâ7F÷'•67&VVâ‡²–æFW‚Â6VÆV7E7F÷'’Âæf–vFRÂ÷Vå67&—GW&RÓ¢²–æFWƒ¢çVÖ&W#²6VÆV7E7F÷'“¢†–æFWƒ¢çVÖ&W"’Óâfö–C²æf–vFS¢‡67&VVã¢67&VVâ’Óâfö–C²÷Vå67&—GW&S¢‡&Vc¢7G&–ær’Óâfö–BÒ’°¢6öç7B7F÷'’Ò5Dõ%•¶–æFW…Ó°¢&WGW&â€¢Ç6V7F–öâ6Æ74æÖSÒ&×67&VVâ6–æVÖ×67&VVâ7F÷'’×67&VVâ"7G–ÆS×·²"ÒÖ6–æVÖÖ–ÖvR#¢W&Â‚rGµ5Dõ%•ô%E¶–æFW…×Òr–Ò2555&÷W'F–W7Óà¢Ä6–æVÖ†VFW"öä&6³×²‚’Óâæf–vFR‚'&öFÖ"—ÒÆ&VÃÒ%5Dõ%’"óà¢ÆF—b6Æ74æÖSÒ'7F÷'’×&öw&W72"&–ÖÆ&VÃ×¶7F÷'’Ö÷fVÖVçBG¶–æFW‚²Òöb†Óçµ5Dõ%’æÖ‚…òÂ—FVÔ–æFW‚’Óâ€¢Æ'WGFöâ¶W“×¶—FVÔ–æFW‡Ò&–ÖÆ&VÃ×¶÷VâÖ÷fVÖVçBG¶—FVÔ–æFW‚²ÖÒ6Æ74æÖS×¶—FVÔ–æFW‚ÃÒ–æFW‚ò&7F—fR"¢"'Òöä6Æ–6³×²‚’Óâ6VÆV7E7F÷'’†—FVÔ–æFW‚—Òóà¢’—ÓÂöF—cà¢Æ'F–6ÆR6Æ74æÖSÒ'7F÷'’Ö6öçFVçB#ãÄÖ–7&ôÆ&VÂÆ–v‡Cç·7F÷'•³×Ò+rµ7G&–ær†–æFW‚²’çE7F'Bƒ"Â#"—ÒôbƒÂôÖ–7&ôÆ&VÃà¢Æƒç·7F÷'•³×ÓÂöƒãÇç·7F÷'•³%Õ³×ÓÂ÷ãÆ&Æö6·V÷FSç·7F÷'•³5×ÓÂö&Æö6·V÷FSà¢ÆF—b6Æ74æÖSÒ'7F÷'’Ö7F–öç2#ãÆ'WGFöâ6Æ74æÖSÒ&vÆ72Ö7F–öâ"öä6Æ–6³×²‚’Óâ÷Vå67&—GW&R‡7F÷'•³EÒ—ÓãÄ&öö´÷Vâóâ·7F÷'•³E×ÓÂö'WGFöãà¢Æ'WGFöâ6Æ74æÖSÒ'7F÷'’ÖæW‡B"öä6Íú÷{h‘éì¶»§q«^uµ”ô‰ÁÉ¥µ…Éäµ…Ñ¥½¸ˆ½¹±¥¬õí¡•­=É‘•Éôùí½µÁ±•Ñ•€ü€‰=É‘•È½¹™¥Éµ•ˆ€è€‰¡•¬½É‘•È‰ôñ¡•¬€¼øğ½‰ÕÑÑ½¸ø(€€€€€€€€€€ñ‰ÕÑÑ½¸±…ÍÍ9…µ”ô‰Ñ•áĞµ…Ñ¥½¸ˆ½¹±¥¬õíÉ•Í•ÑôøñI½Ñ…Ñ•Ü€¼øMÉ…µ‰±”……¥¸ğ½‰ÕÑÑ½¸øğ½‘¥Øø(€€€€€€€í½µÁ±•Ñ•€˜˜€ñ…ÉÑ¥±”±…ÍÍ9…µ”ô‰Á±…”µ½µÁ±•Ñ”µ…ÉˆøñÍÁ…¸øñ¡•¬€¼øğ½ÍÁ…¸øñÍµ…±°ùMQ=Id=IHIMQ=Iğ½Íµ…±°øñ Èù½½‘¹•ÍÌ½µ•Ì‰•™½É”ÉÕÁÑÕÉ”¸AÉ½µ¥Í”…ÁÁ•…ÉÌ‰•™½É”•á¥±”¸ğ½ Èø(€€€€€€€€€€ñÀùQ¡”Í•ÅÕ•¹”µ…ÑÑ•ÉÌèMÉ¥ÁÑÕÉ”‰•¥¹Ìİ¥Ñ ½“ŠeÌ½½‘•Í¥¸°Ñ•±±ÌÑ¡”ÑÉÕÑ …‰½ÕĞİ¡…ĞÍ¥¸¡…¹•°…¹¥¹ÑÉ½‘Õ•Ì¡½Á”‰•™½É”¡Õµ…¹¥Ñä±•…Ù•Ì‘•¸¸ğ½Àø(€€€€€€€€€€ñ‰ÕÑÑ½¸½¹±¥¬õì ¤€ôø¹…Ù¥…Ñ” ‰™¥±±%¹ÑÉ¼ˆ¥ôù½¹Ñ¥¹Õ”Ñ¼¥±°€ñÉÉ½İI¥¡Ğ€¼øğ½‰ÕÑÑ½¸øğ½…ÉÑ¥±”ùô(€€€€€€ğ½‘¥ØøñQ½½±½¬…Ñ¥Ù”ô‰Á±…”ˆ¹…Ù¥…Ñ”õí¹…Ù¥…Ñ•ô€¼ø(€€€€ğ½Í•Ñ¥½¸ø(€€¤ì)ô()™Õ¹Ñ¥½¸¥±±MÉ••¸¡ìÍÑ…Ñ”°¥¹‘•à°¡¥¹Ğ°µ•ÍÍ…”°Í•Ñ%¹‘•à°Í•Ñ!¥¹Ğ°Í•Ñ¹Íİ•È°ÍÕ‰µ¥Ğ°±•…É5•ÍÍ…”°½µÁ±•Ñ•I•Ù•…±•°¹…Ù¥…Ñ”ôèì(€ÍÑ…Ñ”èÁÁMÑ…Ñ”ì¥¹‘•àè¹Õµ‰•Èì¡¥¹Ğè‰½½±•…¸ìµ•ÍÍ…”èÍÑÉ¥¹œìÍ•Ñ%¹‘•àè€¡¥¹‘•àè¹Õµ‰•È¤€ôøÙ½¥ì(€Í•Ñ!¥¹Ğè€¡Ù…±Õ”è‰½½±•…¸¤€ôøÙ½¥ìÍ•Ñ¹Íİ•Èè€¡Ù…±Õ”èÍÑÉ¥¹œ¤€ôøÙ½¥ìÍÕ‰µ¥Ğè€ ¤€ôøÙ½¥ì±•…É5•ÍÍ…”è€ ¤€ôøÙ½¥ì(€½µÁ±•Ñ•I•Ù•…±•è€ ¤€ôøÙ½¥ì¹…Ù¥…Ñ”è€¡ÍÉ••¸èMÉ••¸¤€ôøÙ½¥ì)ô¤ì(€½¹ÍĞ½ÉÉ•Ğ€ô	½½±•…¸¡ÍÑ…Ñ”¹™¥±±½ÉÉ•Ñm¥¹‘•át¤ì(€½¹ÍĞmÍ¡½İ¹Íİ•È°Í•ÑM¡½İ¹Íİ•Ét€ôÕÍ•MÑ…Ñ”¡™…±Í”¤ì(€½¹ÍĞÁÉ½µÁÑA…ÉÑÌ€ô%11m¥¹‘•át¹Ä¹ÍÁ±¥Ğ ½}ìÌ±ô¼¤ì(€½¹ÍĞÕÉÉ•¹Ñ¹Íİ•È€ôÍÑ…Ñ”¹™¥±±¹Íİ•ÉÍm¥¹‘•átñğ€ˆˆì(€½¹ÍĞ…¹Íİ•É]¥‘Ñ €ô5…Ñ ¹µ¥¸ ÄàÈ°5…Ñ ¹µ…à ÄÄÈ°5…Ñ ¹µ…à¡ÕÉÉ•¹Ñ¹Íİ•È¹±•¹Ñ °%11m¥¹‘•át¹…¹Íİ•È¹±•¹Ñ ¤€¨€ÄØ€¬€ÌÈ¤¤ì((€™Õ¹Ñ¥½¸‰±ÕÉ¹‘I•Ù•…°¡Í•±•Ñ½ÈüèÍÑÉ¥¹œ¤ì(€€€€¡‘½Õµ•¹Ğ¹…Ñ¥Ù•±•µ•¹Ğ…Ì!Q51±•µ•¹Ğğ¹Õ±°¤ü¹‰±ÕÈü¸ ¤ì(€€€İ¥¹‘½Ü¹Í•ÑQ¥µ•½ÕĞ  ¤€ôøì(€€€€€½¹ÍĞ‰½‘ä€ô‘½Õµ•¹Ğ¹ÅÕ•ÉåM•±•Ñ½Èñ!Q51±•µ•¹Ğø ˆ¹™¥±°µ‰½‘äˆ¤ì(€€€€€¥˜€¡Í•±•Ñ½È¤‘½Õµ•¹Ğ¹ÅÕ•ÉåM•±•Ñ½Èñ!Q51±•µ•¹Ğø¡Í•±•Ñ½È¤ü¹ÍÉ½±±%¹Ñ½Y¥•Ü¡ì‰•¡…Ù¥½Èè€‰Íµ½½Ñ ˆ°‰±½¬è€‰¹•…É•ÍĞˆô¤ì(€€€€€•±Í”‰½‘äü¹ÍÉ½±±Q¼¡ìÑ½Àè€À°‰•¡…Ù¥½Èè€‰Íµ½½Ñ ˆô¤ì(€€€ô°€àÀ¤ì(€ô((€™Õ¹Ñ¥½¸Í•±•ÑEÕ•ÍÑ¥½¸¡¹•áÑ%¹‘•àè¹Õµ‰•È¤ì(€€€Í•ÑM¡½İ¹Íİ•È¡™…±Í”¤ì(€€€Í•Ñ%¹‘•à¡¹•áÑ%¹‘•à¤ì(€€€‰±ÕÉ¹‘I•Ù•…° ¤ì(€ô((€™Õ¹Ñ¥½¸¡•­¹Íİ•È ¤ì(€€€‰±ÕÉ¹‘I•Ù•…° ˆ¹™¥±°µ½ÉÉ•Ğµ…É°€¹™¥±°µ‰½‘ä€¹¥¹±¥¹”µ¹½Ñ”ˆ¤ì(€€€ÍÕ‰µ¥Ğ ¤ì(€ô((€™Õ¹Ñ¥½¸Ñ½±•!¥¹Ğ ¤ì(€€€±•…É5•ÍÍ…” ¤ì(€€€Í•Ñ!¥¹Ğ …¡¥¹Ğ¤ì(€€€Í•ÑM¡½İ¹Íİ•È¡™…±Í”¤ì(€€€‰±ÕÉ¹‘I•Ù•…° ˆ¹¡¥¹Ğµ¹½Ñ”ˆ¤ì(€ô((€™Õ¹Ñ¥½¸É•Ù•…±¹Íİ•È ¤ì(€€€Í•Ñ¹Íİ•È¡%11m¥¹‘•át¹…¹Íİ•È¤ì(€€€Í•ÑM¡½İ¹Íİ•È¡ÑÉÕ”¤ì(€€€Í•Ñ!¥¹Ğ¡™…±Í”¤ì(€€€±•…É5•ÍÍ…” ¤ì(€€€‰±ÕÉ¹‘I•Ù•…° ˆ¹…¹Íİ•ÈµÉ•Ù•…°ˆ¤ì(€ô((€™Õ¹Ñ¥½¸½¹Ñ¥¹Õ•™Ñ•ÉI•Ù•…° ¤ì(€€€½µÁ±•Ñ•I•Ù•…±• ¤ì(€€€¥˜€¡¥¹‘•à€ğ%10¹±•¹Ñ €´€Ä¤Í•±•ÑEÕ•ÍÑ¥½¸¡¥¹‘•à€¬€Ä¤ì(€€€•±Í”¹…Ù¥…Ñ” ‰½¹¹•Ñ%¹ÑÉ¼ˆ¤ì(€ô((€É•ÑÕÉ¸€ (€€€€ñÍ•Ñ¥½¸±…ÍÍ9…µ”ô‰…ÁÀµÍÉ••¸…Ñ±…ÌµÍÉ••¸ˆøñÑ±…Í!•…‘•È±…‰•°ô‰%10ƒ
+ÜU%9=QLˆ½¹	…¬õì ¤€ôø¹…Ù¥…Ñ” ‰™¥±±%¹ÑÉ¼ˆ¥ô½¹%¹™¼õì ¤€ôø¹…Ù¥…Ñ” ‰™¥±±%¹ÑÉ¼ˆ¥ô€¼ø(€€€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰ÍÉ••¸µÍÉ½±°…Ñ±…Ìµ‰½‘äÑ½½°µ‰½‘ä™¥±°µ‰½‘äˆø(€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰™¥±°µÁÉ½É•ÍÌµ¡•…ˆøñÍÁ…¸ùEUMQ%=8í¥¹‘•à€¬€Åô=í%10¹±•¹Ñ¡ôğ½ÍÁ…¸øñˆùí=‰©•Ğ¹Ù…±Õ•Ì¡ÍÑ…Ñ”¹™¥±±½ÉÉ•Ğ¤¹™¥±Ñ•È¡	½½±•…¸¤¹±•¹Ñ¡ô€¼í%10¹±•¹Ñ¡ôğ½ˆøğ½‘¥Øø(€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰™¥±°µÁÉ½É•ÍÌµ±¥¹”ˆøñÍÁ…¸ÍÑå±”õíìİ¥‘Ñ è€‘ì ¡¥¹‘•à€¬€Ä¤€¼%10¹±•¹Ñ ¤€¨€ÄÀÁô•€õô€¼øğ½‘¥Øø(€€€€€€€€ñ…ÉÑ¥±”±…ÍÍ9…µ”õíÅÕ•ÍÑ¥½¸µ…É€‘í½ÉÉ•Ğ€ü€‰½ÉÉ•Ğˆ€è€ˆ‰õôø(€€€€€€€€€€ñ È±…ÍÍ9…µ”ô‰¥¹±¥¹”µ™¥±°µÁÉ½µÁĞˆøñÍÁ…¸ùíÁÉ½µÁÑA…ÉÑÍlÁuôğ½ÍÁ…¸øñ¥¹ÁÕĞ¥ô‰™¥±°µ…¹Íİ•Èˆ±…ÍÍ9…µ”ô‰¥¹±¥¹”µ™¥±°µ…¹Íİ•Èˆ…É¥„µ±…‰•°ô‰QåÁ”Ñ¡”µ¥ÍÍ¥¹œİ½É½ÈÁ¡É…Í”ˆ(€€€€€€€€€€€Ù…±Õ”õíÕÉÉ•¹Ñ¹Íİ•ÉôÍÑå±”õíìİ¥‘Ñ è€‘í…¹Íİ•É]¥‘Ñ¡õÁá€õôÉ•…‘=¹±äõí½ÉÉ•ĞñğÍ¡½İ¹Íİ•Éô(€€€€€€€€€€€½¹¡…¹”õì¡•Ù•¹Ğ¤€ôøìÍ•Ñ¹Íİ•È¡•Ù•¹Ğ¹Ñ…É•Ğ¹Ù…±Õ”¤ì¥˜€¡Í¡½İ¹Íİ•È¤Í•ÑM¡½İ¹Íİ•È¡™…±Í”¤ì±•…É5•ÍÍ…” ¤ìõô(€€€€€€€€€€€½¹-•å½İ¸õì¡•Ù•¹Ğ¤€ôø•Ù•¹Ğ¹­•ä€ôôô€‰¹Ñ•Èˆ€˜˜€…½ÉÉ•Ğ€˜˜€…Í¡½İ¹Íİ•È€˜˜¡•­¹Íİ•È ¥ô…ÕÑ½…Á¥Ñ…±¥é”ô‰¹½¹”ˆ…ÕÑ½½µÁ±•Ñ”ô‰½™˜ˆ€¼øñÍÁ…¸ùíÁÉ½µÁÑA…ÉÑÍlÅuôğ½ÍÁ…¸øğ½ Èø(€€€€€€€€€€ñÀ±…ÍÍ9…µ”ô‰¥¹±¥¹”µ™¥±°µÕ¥‘”ˆùQeAe=UH9M]H=8Q!1%9	=Yğ½Àø(€€€€€€€€€ì…½ÉÉ•Ğ€˜˜€…Í¡½İ¹Íİ•È€˜˜€ñ‰ÕÑÑ½¸±…ÍÍ9…µ”ô‰ÁÉ¥µ…Éäµ…Ñ¥½¸™¥±°µ¡•¬ˆ½¹±¥¬õí¡•­¹Íİ•Éôù¡•¬…¹Íİ•È€ñÉÉ½İI¥¡Ğ€¼øğ½‰ÕÑÑ½¸ùô(€€€€€€€€€í½ÉÉ•Ğ€˜˜€ñ‘¥Ø±…ÍÍ9…µ”ô‰™¥±°µ½ÉÉ•Ğµ…ÉˆøñÍÁ…¸øñ¡•¬€¼øğ½ÍÁ…¸øñ‘¥ØøñÍÑÉ½¹œù½ÉÉ•Ğ„ğ½ÍÑÉ½¹œøñÀùí%11m¥¹‘•át¹İ¡åôğ½Àø(€€€€€€€€€€€€ñ‰ÕÑÑ½¸½¹±¥¬õì ¤€ôø¥¹‘•à€ğ%10¹±•¹Ñ €´€Ä€üÍ•±•ÑEÕ•ÍÑ¥½¸¡¥¹‘•à€¬€Ä¤€è¹…Ù¥…Ñ” ‰½¹¹•Ñ%¹ÑÉ¼ˆ¥ôùí¥¹‘•à€ğ%10¹±•¹Ñ €´€Ä€ü€‰9•áĞÅÕ•ÍÑ¥½¸ˆ€è€‰½¹Ñ¥¹Õ”Ñ¼½¹¹•Ğ‰ôñÉÉ½İI¥¡Ğ€¼øğ½‰ÕÑÑ½¸øğ½‘¥Øøğ½‘¥Øùô(€€€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰™¥±°µ¡•±Àµ…Ñ¥½¹Ìˆøñ‰ÕÑÑ½¸±…ÍÍ9…µ”ô‰™¥±°µ¡•±ÀµÉ½Üˆ½¹±¥¬õíÑ½±•!¥¹Ñôøñ¥É±•!•±À€¼øñÍÁ…¸øñÍµ…±°ù99Uüğ½Íµ…±°øñˆùí¡¥¹Ğ€ü€‰!¥‘”Ñ¡”±Õ”ˆ€è€‰=Á•¸„±Õ”‰ôğ½ˆøğ½ÍÁ…¸øñ¡•ÙÉ½¹I¥¡Ğ€¼øğ½‰ÕÑÑ½¸ø(€€€€€€€€€€€€ñ‰ÕÑÑ½¸±…ÍÍ9…µ”ô‰™¥±°µ¡•±ÀµÉ½Üˆ½¹±¥¬õíÉ•Ù•…±¹Íİ•Éôøñ	½½­=Á•¸€¼øñÍÁ…¸øñÍµ…±°ù9=PMUIüğ½Íµ…±°øñˆùM¡½Üµ”€¬•áÁ±…¥¸İ¡äğ½ˆøğ½ÍÁ…¸øñ¡•ÙÉ½¹I¥¡Ğ€¼øğ½‰ÕÑÑ½¸øğ½‘¥Øø(€€€€€€€€€í¡¥¹Ğ€˜˜€…½ÉÉ•Ğ€˜˜€…Í¡½İ¹Íİ•È€˜˜€ñÀ±…ÍÍ9…µ”ô‰¥¹±¥¹”µ¹½Ñ”¡¥¹Ğµ¹½Ñ”ˆøñˆù1UŠQ9=PQ!9M]Hğ½ˆùí%11m¥¹‘•át¹¡¥¹Ñôğ½Àùô(€€€€€€€€€íÍ¡½İ¹Íİ•È€˜˜€ñ‘¥Ø±…ÍÍ9…µ”ô‰…¹Íİ•ÈµÉ•Ù•…°ˆøñÍµ…±°ùQ!9M]Hğ½Íµ…±°øñÍÑÉ½¹œùí%11m¥¹‘•át¹…¹Íİ•Éôğ½ÍÑÉ½¹œøñÀùí%11m¥¹‘•át¹İ¡åôğ½Àø(€€€€€€€€€€€€ñÍÁ…¸ùI•…Ñ¡”•áÁ±…¹…Ñ¥½¸½¹”°Ñ¡•¸½¹Ñ¥¹Õ”İ¡•¸å½Ô…É”É•…‘ä¸ğ½ÍÁ…¸øğ½‘¥Øùô(€€€€€€€€€íµ•ÍÍ…”€˜˜€…½ÉÉ•Ğ€˜˜€…¡¥¹Ğ€˜˜€…Í¡½İ¹Íİ•È€˜˜€ñÀ±…ÍÍ9…µ”ô‰¥¹±¥¹”µ¹½Ñ”ˆøñˆùQÉä……¥¸¸ğ½ˆùíµ•ÍÍ…•ôğ½Àùô(€€€€€€€€€íÍ¡½İ¹Íİ•È€˜˜€…½ÉÉ•Ğ€˜˜€ñ‰ÕÑÑ½¸±…ÍÍ9…µ”ô‰ÁÉ¥µ…Éäµ…Ñ¥½¸™¥±°µ½¹Ñ¥¹Õ”ˆ½¹±¥¬õí½¹Ñ¥¹Õ•™Ñ•ÉI•Ù•…±ôùí¥¹‘•à€ğ%10¹±•¹Ñ €´€Ä€ü€‰½¹Ñ¥¹Õ”Ñ¼¹•áĞÅÕ•ÍÑ¥½¸ˆ€è€‰½µÁ±•Ñ”¥±°‰ôñÉÉ½İI¥¡Ğ€¼øğ½‰ÕÑÑ½¸ùô(€€€€€€€€ğ½…ÉÑ¥±”ø(€€€€€€ğ½‘¥ØøñQ½½±½¬…Ñ¥Ù”ô‰™¥±°ˆ¹…Ù¥…Ñ”õí¹…Ù¥…Ñ•ô€¼ø(€€€€ğ½Í•Ñ¥½¸ø(€€¤ì)ô()™Õ¹Ñ¥½¸½¹¹•ÑMÉ••¸¡ìÍÑ•À°…‘Ù…¹”°¹…Ù¥…Ñ”°½Á•¹MÉ¥ÁÑÕÉ”ôèìÍÑ•Àè¹Õµ‰•Èì…‘Ù…¹”è€ ¤€ôøÙ½¥ì¹…Ù¥…Ñ”è€¡ÍÉ••¸èMÉ••¸¤€ôøÙ½¥ì½Á•¹MÉ¥ÁÑÕÉ”è€¡É•˜èÍÑÉ¥¹œ¤€ôøÙ½¥ô¤ì(€½¹ÍĞ¹½‘•Ì€ôl(€€€ìÑ¡É•…è€‰IQ=HQ!Iˆ°É•˜è€‰•¹•Í¥Ì€ÄèÄˆ°Ñ¥Ñ±”è€‰½É•…Ñ•Ìˆ°‘¥Í½Ù•Éå%¹‘•àè€Àô°(€€€ìÑ¡É•…è€‰IQ=HQ!Iˆ°É•˜è€‰)½¡¸€ÄèÇŠLÌˆ°Ñ¥Ñ±”è€‰Q¡”]½Éİ…ÌÑ¡•É”ˆ°‘¥Í½Ù•Éå%¹‘•àè€Äô°(€€€ìÑ¡É•…è€‰MQ!Iˆ°É•˜è€‰•¹•Í¥Ì€ÌèÄÔˆ°Ñ¥Ñ±”è€‰ÁÉ½µ¥Í•Ù¥Ñ½Èˆ°‘¥Í½Ù•Éå%¹‘•àè€Ìô°(€€€ìÑ¡É•…è€‰%90=99Q%=8ˆ°É•˜è€‰½±½ÍÍ¥…¹Ì€ÄèÄ×ŠLÄÜˆ°Ñ¥Ñ±”è€‰Q¡”•¹Ñ•È¥Ì¹…µ•ˆ°‘¥Í½Ù•Éå%¹‘•àè€Èô°(€tì(€½¹ÍĞ½µÁ±•Ñ•€ô5…Ñ ¹µ¥¸¡ÍÑ•À°¹½‘•Ì¹±•¹Ñ ¤ì(€½¹ÍĞ¡É¥ÍÑI•Ù•…±•€ô½µÁ±•Ñ•€øô¹½‘•Ì¹±•¹Ñ ì(€½¹ÍĞm…Ñ¥Ù•¥Í½Ù•Éä°Í•ÑÑ¥Ù•¥Í½Ù•Éåt€ôÕÍ•MÑ…Ñ”ñ¹Õµ‰•Èğ¹Õ±°ø¡¹Õ±°¤ì(€½¹ÍĞ‘¥Í½Ù•Éä€ô…Ñ¥Ù•¥Í½Ù•Éä€ôôô¹Õ±°€ü¹Õ±°€è%M=YI%Mm¹½‘•Ím…Ñ¥Ù•¥Í½Ù•Éåt¹‘¥Í½Ù•Éå%¹‘•átì(€½¹ÍĞ™¥¹…±I•Ù•…±…Ñ”€ô…Ñ¥Ù•¥Í½Ù•Éä€ôôô¹½‘•Ì¹±•¹Ñ €´€Ä€˜˜½µÁ±•Ñ•€ôôô¹½‘•Ì¹±•¹Ñ €´€Äì((€™Õ¹Ñ¥½¸½Á•¹¥Í½Ù•Éä¡¥¹‘•àè¹Õµ‰•È¤ì(€€€¥˜€¡¥¹‘•à€ø½µÁ±•Ñ•¤É•ÑÕÉ¸ì(€€€Í•ÑÑ¥Ù•¥Í½Ù•Éä¡¥¹‘•à¤ì(€€€İ¥¹‘½Ü¹Í•ÑQ¥µ•½ÕĞ  ¤€ôø‘½Õµ•¹Ğ¹ÅÕ•ÉåM•±•Ñ½Èñ!Q51±•µ•¹Ğø ˆ¹½¹¹•Ğµ‘¥Í½Ù•Éäµ…Éˆ¤ü¹ÍÉ½±±%¹Ñ½Y¥•Ü¡ì‰•¡…Ù¥½Èè€‰Íµ½½Ñ ˆ°‰±½¬è€‰ÍÑ…ÉĞˆô¤°€ØÀ¤ì(€ô((€™Õ¹Ñ¥½¸½¹Ñ¥¹Õ•Q¡É•… ¤ì(€€€¥˜€¡…Ñ¥Ù•¥Í½Ù•Éä€ôôô½µÁ±•Ñ•€˜˜½µÁ±•Ñ•€ğ¹½‘•Ì¹±•¹Ñ ¤…‘Ù…¹” ¤ì(€€€Í•ÑÑ¥Ù•¥Í½Ù•Éä¡¹Õ±°¤ì(€€€İ¥¹‘½Ü¹Í•ÑQ¥µ•½ÕĞ  ¤€ôø‘½Õµ•¹Ğ¹ÅÕ•ÉåM•±•Ñ½Èñ!Q51±•µ•¹Ğø¡½µÁ±•Ñ•€ôôô¹½‘•Ì¹±•¹Ñ €´€Ä€ü€ˆ¹½¹¹•Ğµ½µÁ±•Ñ”µ…Éˆ€è€ˆ¹¡É¥ÍĞµÑ¡É•…µµ…Àˆ¤ü¹ÍÉ½±±%¹Ñ½Y¥•Ü¡ì‰•¡…Ù¥½Èè€‰Íµ½½Ñ ˆ°‰±½¬è€‰•¹Ñ•Èˆô¤°€àÀ¤ì(€ô((€É•ÑÕÉ¸€ (€€€€ñÍ•Ñ¥½¸±…ÍÍ9…µ”ô‰…ÁÀµÍÉ••¸…Ñ±…ÌµÍÉ••¸ˆøñÑ±…Í!•…‘•È±…‰•°ô‰=99Pˆ½¹	…¬õì ¤€ôø¹…Ù¥…Ñ” ‰½¹¹•Ñ%¹ÑÉ¼ˆ¥ô½¹%¹™¼õì ¤€ôø¹…Ù¥…Ñ” ‰½¹¹•Ñ%¹ÑÉ¼ˆ¥ô€¼ø(€€€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰ÍÉ••¸µÍÉ½±°…Ñ±…Ìµ‰½‘äÑ½½°µ‰½‘ä½¹¹•Ğµ‰½‘äˆøñ5¥É½1…‰•°ùIQ=H€¬MQ!ILğ½5¥É½1…‰•°ø(€€€€€€€€ñ Äù]…Ñ Ñ¡”‰•¥¹¹¥¹œ½¹Ù•É”¸ğ½ ÄøñÀ±…ÍÍ9…µ”ô‰ÍÉ••¸µ±•‘”ˆùQ…À•… ÁÕ±Í¥¹œ¹½‘”…¹™½±±½ÜÑ¡”±¥Ù¥¹œÑ¡É•…¸%ÑÌ•¹Ñ•ÈÍÑ…åÌ¡¥‘‘•¸Õ¹Ñ¥°Ñ¡”™¥¹…°½¹¹•Ñ¥½¸¥Ìµ…‘”¸ğ½Àø((€€€€€€€€ñÍ•Ñ¥½¸±…ÍÍ9…µ”õí¡É¥ÍĞµÑ¡É•…µµ…À½¹¹•ĞµÁÉ½É•ÍÌ´‘í½µÁ±•Ñ•‘õô…É¥„µ±…‰•°ô‰¹¥µ…Ñ•MÉ¥ÁÑÕÉ”½¹¹•Ñ¥½¸µ…Àˆø(€€€€€€€€€€ñ¡•…‘•ÈøñÍÁ…¸øñÍµ…±°ùQ!1%Y%9Q!Iğ½Íµ…±°øñÍÑÉ½¹œùí½µÁ±•Ñ•€ğ¹½‘•Ì¹±•¹Ñ €ü¥Í½Ù•Éä€‘í½µÁ±•Ñ•€¬€Åô¥ÌÉ•…‘å€€è€‰Q¡”µ…À¥Ì½Á•¸‰ôğ½ÍÑÉ½¹œøğ½ÍÁ…¸ø(€€€€€€€€€€€€ñ•´ùí½µÁ±•Ñ•‘ô€¼í¹½‘•Ì¹±•¹Ñ¡ôğ½•´øğ½¡•…‘•Èø(€€€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰Ñ¡É•…µ±••¹ˆøñÍÁ…¸øñ¤€¼ùÉ•…Ñ½ÈÑ¡É•…ğ½ÍÁ…¸øñÍÁ…¸øñ¤€¼ùAÉ½µ¥Í”…ÉÉ¥•™½Éİ…Éğ½ÍÁ…¸øğ½‘¥Øø(€€€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰Ñ¡É•…µÍÑ…”ˆø(€€€€€€€€€€€€ñÍÙœÙ¥•İ	½àôˆÀ€À€ÌØÀ€ÔÈÀˆÁÉ•Í•ÉÙ•ÍÁ•ÑI…Ñ¥¼ô‰¹½¹”ˆ…É¥„µ¡¥‘‘•¸ô‰ÑÉÕ”ˆø(€€€€€€€€€€€€€€ñÁ…Ñ ±…ÍÍ9…µ”ô‰Ñ¡É•…µ¡½ÍĞˆô‰4ÜÔ€ÜÜÄÔÀ€ÜÜ€ÄÔÄ€ÄØÜ€ÈÜÌ€ÄØÜˆ€¼ø(€€€€€€€€€€€€€€ñÁ…Ñ ±…ÍÍ9…µ”ô‰Ñ¡É•…µ¡½ÍĞˆô‰4ÈÜÌ€ÄØÜÈÀØ€ÄØÜ€ÈÄÔ€ÈØÄ€ÜÔ€ÈØÄˆ€¼ø(€€€€€€€€€€€€€€ñÁ…Ñ ±…ÍÍ9…µ”ô‰Ñ¡É•…µ¡½ÍĞˆô‰4ÜÔ€ÈØÄÄÌÜ€ÈàÀ€ÄÌÔ€ÌØÜ€ÄàÀ€ÌÜÜˆ€¼ø(€€€€€€€€€€€€€€ñÁ…Ñ ±…ÍÍ9…µ”ô‰Ñ¡É•…µ¡½ÍĞÍ••ˆô‰4ÄàÀ€ÌÜÜÈÌÔ€ÌàÔ€ÈÈÌ€ĞÔà€ÈÜÌ€ĞÔàˆ€¼ø(€€€€€€€€€€€€€€ñÁ…Ñ ±…ÍÍ9…µ”õíÑ¡É•…µ±¥Ù”€‘í½µÁ±•Ñ•€øô€Ä€ü€‰‘É…İ¸ˆ€è€ˆ‰õôÁ…Ñ¡1•¹Ñ ôˆÄˆô‰4ÜÔ€ÜÜÄÔÀ€ÜÜ€ÄÔÄ€ÄØÜ€ÈÜÌ€ÄØÜˆ€¼ø(€€€€€€€€€€€€€€ñÁ…Ñ ±…ÍÍ9…µ”õíÑ¡É•…µ±¥Ù”€‘í½µÁ±•Ñ•€øô€È€ü€‰‘É…İ¸ˆ€è€ˆ‰õôÁ…Ñ¡1•¹Ñ ôˆÄˆô‰4ÈÜÌ€ÄØÜÈÀØ€ÄØÜ€ÈÄÔ€ÈØÄ€ÜÔ€ÈØÄˆ€¼ø(€€€€€€€€€€€€€€ñÁ…Ñ ±…ÍÍ9…µ”õíÑ¡É•…µ±¥Ù”€‘í½µÁ±•Ñ•€øô€Ì€ü€‰‘É…İ¸ˆ€è€ˆ‰õôÁ…Ñ¡1•¹Ñ ôˆÄˆô‰4ÜÔ€ÈØÄÄÌÜ€ÈàÀ€ÄÌÔ€ÌØÜ€ÄàÀ€ÌÜÜˆ€¼ø(€€€€€€€€€€€€€€ñÁ…Ñ ±…ÍÍ9…µ”õíÑ¡É•…µ±¥Ù”Í••€‘í½µÁ±•Ñ•€øô€Ğ€ü€‰‘É…İ¸ˆ€è€ˆ‰õôÁ…Ñ¡1•¹Ñ ôˆÄˆô‰4ÄàÀ€ÌÜÜÈÌÔ€ÌàÔ€ÈÈÌ€ĞÔà€ÈÜÌ€ĞÔàˆ€¼ø(€€€€€€€€€€€€ğ½ÍÙœø(€€€€€€€€€€€í¹½‘•Ì¹µ…À ¡¹½‘”°¥¹‘•à¤€ôø€ñ‰ÕÑÑ½¸­•äõí¹½‘”¹É•™ô±…ÍÍ9…µ”õíÑ¡É•…µ¹½‘”Ñ¡É•…µ¹½‘”´‘í¥¹‘•áô€‘í¥¹‘•à€ğ½µÁ±•Ñ•€ü€‰‘½¹”ˆ€è€ˆ‰ô€‘í¥¹‘•à€ôôô½µÁ±•Ñ•€ü€‰É•…‘äˆ€è€ˆ‰ô€‘í¥¹‘•à€ø½µÁ±•Ñ•€ü€‰±½­•ˆ€è€ˆ‰õô(€€€€€€€€€€€€€½¹±¥¬õì ¤€ôø½Á•¹¥Í½Ù•Éä¡¥¹‘•à¥ô…É¥„µ±…‰•°õí€‘í¥¹‘•à€ğ½µÁ±•Ñ•€ü€‰I•Ù¥•Üˆ€è€‰=Á•¸‰ô‘¥Í½Ù•Éä€‘í¥¹‘•à€¬€Åôè€‘í¹½‘”¹É•™õôø(€€€€€€€€€€€€€€ñÍÁ…¸±…ÍÍ9…µ”ô‰Ñ¡É•…µ¹½‘”µ‘½Ğˆùí¥¹‘•à€ğ½µÁ±•Ñ•€ü€ñ¡•¬€¼ø€è¥¹‘•à€¬€Åôğ½ÍÁ…¸øñÍÁ…¸øñÍµ…±°ùí¹½‘”¹Ñ¡É•…‘ôğ½Íµ…±°øñÍÑÉ½¹œùí¹½‘”¹É•™ôğ½ÍÑÉ½¹œøñ•´ùí¹½‘”¹Ñ¥Ñ±•ôğ½•´øğ½ÍÁ…¸ø(€€€€€€€€€€€€ğ½‰ÕÑÑ½¸ø¥ô(€€€€€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”õí¡É¥ÍĞµ•¹Ñ•È€‘í¡É¥ÍÑI•Ù•…±•€ü€‰™½Õ¹É•Ù•…±•ˆ€è€‰Ù•¥±•‰õôøñÍÁ…¸ùí¡É¥ÍÑI•Ù•…±•€ü€ñMÁ…É­±•Ì€¼ø€è€ñ1½­-•å¡½±”€¼ùôğ½ÍÁ…¸øñÍµ…±°ùí¡É¥ÍÑI•Ù•…±•€ü€‰IQ=HIY1ˆ€è€‰%90IY0‰ôğ½Íµ…±°øñÍÑÉ½¹œùí¡É¥ÍÑI•Ù•…±•€ü€‰!I%MPˆ€è€ˆü‰ôğ½ÍÑÉ½¹œøğ½‘¥Øø(€€€€€€€€€€ğ½‘¥Øø(€€€€€€€€€€ñÀ±…ÍÍ9…µ”ô‰Ñ¡É•…µ¥¹ÍÑÉÕÑ¥½¸ˆøñÍÁ…¸ùí½µÁ±•Ñ•€ğ¹½‘•Ì¹±•¹Ñ €ü½µÁ±•Ñ•€¬€Ä€è€ñ¡•¬€¼ùôğ½ÍÁ…¸ùí½µÁ±•Ñ•€ğ¹½‘•Ì¹±•¹Ñ €ü€‰Q…ÀÑ¡”ÁÕ±Í¥¹œ¹½‘”Ñ¼½Á•¸Ñ¡”¹•áĞ‘¥Í½Ù•Éä¸ˆ€è€‰Q…À…¹ä½µÁ±•Ñ•¹½‘”Ñ¼É•Ù¥Í¥Ğ¥ÑÌMÉ¥ÁÑÕÉ”‘¥Í½Ù•Éä¸‰ôğ½Àø(€€€€€€€€ğ½Í•Ñ¥½¸ø((€€€€€€€í‘¥Í½Ù•Éä€˜˜…Ñ¥Ù•¥Í½Ù•Éä€„ôô¹Õ±°€˜˜€ñ…ÉÑ¥±”±…ÍÍ9…µ”ô‰½¹¹•Ğµ‘¥Í½Ù•Éäµ…Éˆ½¹±¥¬õì¡•Ù•¹Ğ¤€ôøì½¹ÍĞÑ…É•Ğ€ô€¡•Ù•¹Ğ¹Ñ…É•Ğ…Ì!Q51±•µ•¹Ğ¤¹±½Í•ÍĞñ!Q51±•µ•¹Ğø ‰m‘…Ñ„µÉ•™tˆ¤ì¥˜€¡Ñ…É•Ğü¹‘…Ñ…Í•Ğ¹É•˜¤ì•Ù•¹Ğ¹ÁÉ•Ù•¹Ñ•™…Õ±Ğ ¤ì½Á•¹MÉ¥ÁÑÕÉ”¡Ñ…É•Ğ¹‘…Ñ…Í•Ğ¹É•˜¤ìôõôø(€€€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰½¹¹•Ğµ‘¥Í½Ù•Éäµ¡•…ˆøñÍÁ…¸øÁí…Ñ¥Ù•¥Í½Ù•Éä€¬€Åôğ½ÍÁ…¸øñ‘¥ØøñÍµ…±°ùí¹½‘•Ím…Ñ¥Ù•¥Í½Ù•Éåt¹Ñ¡É•…‘ôğ½Íµ…±°øñÍÑÉ½¹œù%M=YIdí…Ñ¥Ù•¥Í½Ù•Éä€¬€Åô=í¹½‘•Ì¹±•¹Ñ¡ôğ½ÍÑÉ½¹œøğ½‘¥Øøğ½‘¥Øø(€€€€€€€€€€ñ Èùí™¥¹…±I•Ù•…±…Ñ”€ü€‰=¹”™¥¹…°½¹¹•Ñ¥½¸É•µ…¥¹Ì¸ˆ€è‘¥Í½Ù•Éä¹Ñ¥Ñ±•ôğ½ Èø(€€€€€€€€€í™¥¹…±I•Ù•…±…Ñ”€ü€ñ‘¥Ø±…ÍÍ9…µ”ô‰½¹¹•ĞµÉ•Ù•…°µ…Ñ”ˆøñ1½­-•å¡½±”€¼øñÀù½±½ÍÍ¥…¹ÌÑ…­•ÌÑ¡”É•…Ñ½ÈÑ¡É•……¹¹…µ•Ì¥ÑÌ•¹Ñ•È¸5…­”Ñ¡”™¥¹…°½¹¹•Ñ¥½¸İ¡•¸å½Ô…É”É•…‘ä¸ğ½Àøğ½‘¥Øø(€€€€€€€€€€€€è€ñ‘¥Ø±…ÍÍ9…µ”ô‰½¹¹•Ğµ‘¥Í½Ù•Éäµ½¹Ñ•¹Ğˆ‘…¹•É½ÕÍ±åM•Ñ%¹¹•É!Q50õíì}}¡Ñµ°è‘¥Í½Ù•Éä¹‰½‘äõô€¼ùô(€€€€€€€€€€ñ‰ÕÑÑ½¸±…ÍÍ9…µ”ô‰±¥¡Ğµ…Ñ¥½¸ˆ½¹±¥¬õí½¹Ñ¥¹Õ•Q¡É•…‘ôùí™¥¹…±I•Ù•…±…Ñ”€ü€‰I•Ù•…°Ñ¡”•¹Ñ•Èˆ€è…Ñ¥Ù•¥Í½Ù•Éä€ôôô½µÁ±•Ñ•€˜˜½µÁ±•Ñ•€ğ¹½‘•Ì¹±•¹Ñ €ü€‰½¹Ñ¥¹Õ”Ñ¡”Ñ¡É•…ˆ€è€‰	…¬Ñ¼Ñ¡”µ…À‰ôñÉÉ½İI¥¡Ğ€¼øğ½‰ÕÑÑ½¸ø(€€€€€€€€ğ½…ÉÑ¥±”ùô((€€€€€€€í½µÁ±•Ñ•€øô¹½‘•Ì¹±•¹Ñ €˜˜…Ñ¥Ù•¥Í½Ù•Éä€ôôô¹Õ±°€˜˜€ñ…ÉÑ¥±”±…ÍÍ9…µ”ô‰½¹¹•Ğµ½µÁ±•Ñ”µ…ÉˆøñÍÁ…¸øñMÁ…É­±•Ì€¼øğ½ÍÁ…¸øñÍµ…±°ùQ!Q!ILI9=\Y%M%	1ğ½Íµ…±°øñ Èù¡É¥ÍĞ¥Ì¹½Ğ…‘‘•Ñ¼Ñ¡”‰•¥¹¹¥¹œ¸!”¥Ì¥ÑÌ•¹Ñ•È¸ğ½ Èø(€€€€€€€€€€ñÀù)½¡¸…¹½±½ÍÍ¥…¹Ì¥‘•¹Ñ¥™ä¡É¥ÍĞ…ÌÑ¡”•Ñ•É¹…°]½ÉÑ¡É½Õ İ¡½´É•…Ñ¥½¸…µ”…¹™½Èİ¡½´¥Ğ•á¥ÍÑÌ¸•¹•Í¥Ì€ÌèÄÔ½Á•¹ÌÑ¡”M••ÁÉ½µ¥Í”ìÑ¡”½ÕÉÍ”İ¥±°­••ÀÑÉ…¥¹œ¥ĞÕ¹Ñ¥°±…Ñ•ÈMÉ¥ÁÑÕÉ”‰É¥¹Ì¥Ğ™Õ±±ä¥¹Ñ¼™½ÕÌ¸ğ½Àø(€€€€€€€€€€ñ‘¥ØøñˆùIQ=HQ!Iğ½ˆøñÍÑÉ½¹œùI•Í½±Ù•¥¸¡É¥ÍĞğ½ÍÑÉ½¹œøğ½‘¥Øøñ‘¥ØøñˆùMQ!Iğ½ˆøñÍÑÉ½¹œù=Á•»ŠQ…ÉÉä¥Ğ™½Éİ…Éğ½ÍÑÉ½¹œøğ½‘¥Øø(€€€€€€€€€€ñ‰ÕÑÑ½¸½¹±¥¬õì ¤€ôø¹…Ù¥…Ñ” ‰Õ¹±½­%¹ÑÉ¼ˆ¥ôù½¹Ñ¥¹Õ”Ñ¼U¹±½¬€ñÉÉ½İI¥¡Ğ€¼øğ½‰ÕÑÑ½¸øğ½…ÉÑ¥±”ùô(€€€€€€ğ½‘¥ØøñQ½½±½¬…Ñ¥Ù”ô‰½¹¹•Ğˆ¹…Ù¥…Ñ”õí¹…Ù¥…Ñ•ô€¼ø(€€€€ğ½Í•Ñ¥½¸ø(€€¤ì)ô()™Õ¹Ñ¥½¸U¹±½­MÉ••¸¡ìÍÑ…Ñ”°ÍÑ•À°ÍÕµµ…Éä°Í¡½İ5½‘•°°µ•ÍÍ…”°Í•ÑMÑ•À°Í•ÑMÕµµ…Éä°Í•ÑM¡½İ5½‘•°°Í•Ñ¹Íİ•È°Í…Ù”°½µÁ±•Ñ”°¹…Ù¥…Ñ”ôèì(€ÍÑ…Ñ”èÁÁMÑ…Ñ”ìÍÑ•Àè¹Õµ‰•ÈìÍÕµµ…ÉäèÍÑÉ¥¹œìÍ¡½İ5½‘•°è‰½½±•…¸ìµ•ÍÍ…”èÍÑÉ¥¹œìÍ•ÑMÑ•Àè€¡ÍÑ•Àè¹Õµ‰•È¤€ôøÙ½¥ì(€Í•ÑMÕµµ…Éäè€¡Ù…±Õ”èÍÑÉ¥¹œ¤€ôøÙ½¥ìÍ•ÑM¡½İ5½‘•°è€¡Ù…±Õ”è‰½½±•…¸¤€ôøÙ½¥ìÍ•Ñ¹Íİ•Èè€¡Ù…±Õ”èÍÑÉ¥¹œ¤€ôøÙ½¥ì(€Í…Ù”è€ ¤€ôøÙ½¥ì½µÁ±•Ñ”è€ ¤€ôøÙ½¥ì¹…Ù¥…Ñ”è€¡ÍÉ••¸èMÉ••¸¤€ôøÙ½¥ì)ô¤ì(€É•ÑÕÉ¸€ (€€€€ñÍ•Ñ¥½¸±…ÍÍ9…µ”ô‰…ÁÀµÍÉ••¸…Ñ±…ÌµÍÉ••¸ˆøñÑ±…Í!•…‘•È±…‰•°ô‰U91=,ˆ½¹	…¬õì ¤€ôø¹…Ù¥…Ñ” ‰Õ¹±½­%¹ÑÉ¼ˆ¥ô€¼ø(€€€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰ÍÉ••¸µÍÉ½±°…Ñ±…Ìµ‰½‘äÑ½½°µ‰½‘äÕ¹±½¬µ‰½‘äˆøñ5¥É½1…‰•°ùQ 	,ƒ
+Ü€ØÀM=9Lğ½5¥É½1…‰•°ø(€€€€€€€€ñ ÄùQ•±°Ñ¡”‰•¥¹¹¥¹œ±•…É±ä¸ğ½ ÄøñÀ±…ÍÍ9…µ”ô‰ÍÉ••¸µ±•‘”ˆùáÁ±…¥¸İ¡…Ğİ…Ì½½°İ¡…Ğ‰É½­”°…¹İ¡…Ğ¡½Á”½…Ù”¸ğ½Àø(€€€€€€€ì…ÍÑ…Ñ”¹Ñ•…¡‰…­½µÁ±•Ñ”€˜˜€…ÍÕµµ…Éä€˜˜€ñ…ÉÑ¥±”±…ÍÍ9…µ”ô‰Ñ•…¡‰…¬µ…Éˆø(€€€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰Ñ•…¡‰…¬µÍÑ•ÁÌˆùíQ!	,¹µ…À ¡¥Ñ•´°¥¹‘•à¤€ôø€ (€€€€€€€€€€€€ñ‰ÕÑÑ½¸­•äõí¥Ñ•´¹ÑÉ…¥±ô±…ÍÍ9…µ”õí€‘í¥¹‘•à€ôôôÍÑ•À€ü€‰…Ñ¥Ù”ˆ€è€ˆ‰ô€‘íÍÑ…Ñ”¹Ñ•…¡‰…­m¥¹‘•átü¹±•¹Ñ €øô€Äà€ü€‰‘½¹”ˆ€è€ˆ‰õô½¹±¥¬õì ¤€ôø¥¹‘•à€ğôÍÑ•À€˜˜Í•ÑMÑ•À¡¥¹‘•à¥ôø(€€€€€€€€€€€€€€ñÍÁ…¸ùí¥¹‘•à€¬€Åôğ½ÍÁ…¸øñÍµ…±°ùí¥Ñ•´¹ÑÉ…¥±ôğ½Íµ…±°øğ½‰ÕÑÑ½¸ø(€€€€€€€€€€¤¥ôğ½‘¥Øø(€€€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰ÅÕ•ÍÑ¥½¸µµ•Ñ„ˆøñÍÁ…¸ùíQ!	-mÍÑ•Át¹±…‰•±ôğ½ÍÁ…¸øñˆùíÍÑ•À€¬€Åô€¼€Ğğ½ˆøğ½‘¥Øøñ ÈùíQ!	-mÍÑ•Át¹Ñ¥Ñ±•ôğ½ ÈøñÀùíQ!	-mÍÑ•Át¹ÁÉ½µÁÑôğ½Àø(€€€€€€€€€€ñ±…‰•°¡Ñµ±½Èô‰Ñ•…¡‰…¬ˆùe=UHaA19Q%=8ğ½±…‰•°øñÑ•áÑ…É•„¥ô‰Ñ•…¡‰…¬ˆÙ…±Õ”õíÍÑ…Ñ”¹Ñ•…¡‰…­mÍÑ•Átñğ€ˆ‰ôÁ±…•¡½±‘•ÈõíQ!	-mÍÑ•Át¹Á±…•¡½±‘•Éô½¹¡…¹”õì¡•Ù•¹Ğ¤€ôøÍ•Ñ¹Íİ•È¡•Ù•¹Ğ¹Ñ…É•Ğ¹Ù…±Õ”¥ô€¼ø(€€€€€€€€€€ñ‘•Ñ…¥±ÌøñÍÕµµ…Éäù9••„¹Õ‘”üğ½ÍÕµµ…ÉäøñÀùíQ!	-mÍÑ•Át¹¹Õ‘•ôğ½Àøğ½‘•Ñ…¥±Ìùíµ•ÍÍ…”€˜˜€ñÀ±…ÍÍ9…µ”ô‰Õ¹±½¬µµ•ÍÍ…”ˆøñ¥É±•!•±À€¼ùíµ•ÍÍ…•ôğ½Àùô(€€€€€€€€€€ñ‰ÕÑÑ½¸±…ÍÍ9…µ”ô‰ÁÉ¥µ…Éäµ…Ñ¥½¸ˆ½¹±¥¬õíÍ…Ù•ôùíÍÑ•À€ôôô€Ì€ü€‰	Õ¥±µä•áÁ±…¹…Ñ¥½¸ˆ€è€‰M…Ù”€¬¹•áĞ‰ôñÉÉ½İI¥¡Ğ€¼øğ½‰ÕÑÑ½¸ø(€€€€€€€€ğ½…ÉÑ¥±”ùô(€€€€€€€ì…ÍÑ…Ñ”¹Ñ•…¡‰…­½µÁ±•Ñ”€˜˜ÍÕµµ…Éä€˜˜€ñ…ÉÑ¥±”±…ÍÍ9…µ”ô‰Ñ•…¡‰…¬µ…ÉÍÕµµ…Éäµ…Éˆøñ5¥É½1…‰•°ù%90AMLğ½5¥É½1…‰•°øñ Èù5…­”¥Ğ½¹”±•…ÈÍÑ½Éä¸ğ½ Èø(€€€€€€€€€€ñÑ•áÑ…É•„Ù…±Õ”õíÍÕµµ…Éåô½¹¡…¹”õì¡•Ù•¹Ğ¤€ôøÍ•ÑMÕµµ…Éä¡•Ù•¹Ğ¹Ñ…É•Ğ¹Ù…±Õ”¥ô€¼øñ‰ÕÑÑ½¸±…ÍÍ9…µ”ô‰Ñ•áĞµ…Ñ¥½¸ˆ½¹±¥¬õì ¤€ôøÍ•ÑM¡½İ5½‘•° …Í¡½İ5½‘•°¥ôùíÍ¡½İ5½‘•°€ü€‰!¥‘”ˆ€è€‰½µÁ…É”İ¥Ñ ‰ô„ÍÑÉ½¹œ…¹Íİ•Èğ½‰ÕÑÑ½¸ø(€€€€€€€€€íÍ¡½İ5½‘•°€˜˜€ñ‘¥Ø±…ÍÍ9…µ”ô‰µ½‘•°µ…¹Íİ•ÈˆøñÍµ…±°ùMQI=99M]Hğ½Íµ…±°øñÀù½É•…Ñ••Ù•ÉåÑ¡¥¹œ½½°…¹¡Õµ…¹¥ÑçŠQµ…±”…¹™•µ…±—ŠQİ…Ìµ…‘”¥¸!¥Ì¥µ…”°¥Ù•¸„Á±…”°İ½É¬°É•±…Ñ¥½¹Í¡¥À°ÁÉ½Ù¥Í¥½¸°…¹„‰½Õ¹‘…Éä¸Q¡”Í•ÉÁ•¹ĞÅÕ•ÍÑ¥½¹•½™…Á½ÌíÌİ½É°¡Õµ…¹¥ÑäÉ•‰•±±•°…¹Í¡…µ”°©Õ‘µ•¹Ğ°‘•…Ñ °…¹•á¥±”•¹Ñ•É•Ñ¡”ÍÑ½Éä¸e•Ğ‰•™½É”‘•¸±½Í•Ì°½ÁÉ½µ¥Í•ÌÑ¡…ĞÑ¡”İ½µ…¸™…Á½ÌíÌM••İ¥±°½¹™É½¹ĞÑ¡”Í•ÉÁ•¹Ğ¸ğ½Àøğ½‘¥Øùô(€€€€€€€€€íµ•ÍÍ…”€˜˜€ñÀ±…ÍÍ9…µ”ô‰Õ¹±½¬µµ•ÍÍ…”ˆøñ¥É±•!•±À€¼ùíµ•ÍÍ…•ôğ½Àùôñ‰ÕÑÑ½¸±…ÍÍ9…µ”ô‰ÁÉ¥µ…Éäµ…Ñ¥½¸ˆ½¹±¥¬õí½µÁ±•Ñ•ôù$…¸•áÁ±…¥¸]••¬€Ä€ñ¡•¬€¼øğ½‰ÕÑÑ½¸øğ½…ÉÑ¥±”ùô(€€€€€€€íÍÑ…Ñ”¹Ñ•…¡‰…­½µÁ±•Ñ”€˜˜€ñ…ÉÑ¥±”±…ÍÍ9…µ”ô‰Õ¹±½¬µÉ•İ…ÉˆøñÍÁ…¸øñ¡•¬€¼øğ½ÍÁ…¸øñ5¥É½1…‰•°±¥¡ĞùU9IMQ9%9U91=-ğ½5¥É½1…‰•°ø(€€€€€€€€€€ñ Èùe½Ô…¸•áÁ±…¥¸İ¡äÑ¡”	¥‰±”¹••‘Ì„É•ÍÕ”ÍÑ½Éä¸ğ½ ÈøñÀùe½Ô‘¥µ½É”Ñ¡…¸É•½¹¥é”…¸…¹Íİ•ËŠQå½ÔÉ•‰Õ¥±ĞÑ¡”‰•¥¹¹¥¹œ¥¸å½ÕÈ½İ¸İ½É‘Ì¸ğ½Àø(€€€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰Õ¹±½¬µÉ•İ…Éµ…Ñ¥½¹Ìˆøñ‰ÕÑÑ½¸±…ÍÍ9…µ”ô‰±¥¡Ğµ…Ñ¥½¸ˆ½¹±¥¬õì ¤€ôø¹…Ù¥…Ñ” ‰‘••Àˆ¥ôù¼‘••Á•È™½ÈÍ•Ù•¸‘…åÌ€ñÉÉ½İI¥¡Ğ€¼øğ½‰ÕÑÑ½¸ø(€€€€€€€€€€€€ñ‰ÕÑÑ½¸±…ÍÍ9…µ”ô‰Õ¹±½¬µ™¥¹¥Í µ…Ñ¥½¸ˆ½¹±¥¬õì ¤€ôø¹…Ù¥…Ñ” ‰½µÁ±•Ñ”ˆ¥ôù¥¹¥Í ]••¬€Ä€ñÉÉ½İI¥¡Ğ€¼øğ½‰ÕÑÑ½¸øğ½‘¥Øøğ½…ÉÑ¥±”ùô(€€€€€€€ì…ÍÑ…Ñ”¹Ñ•…¡‰…­½µÁ±•Ñ”€˜˜€ñ‰ÕÑÑ½¸±…ÍÍ9…µ”ô‰Õ¹±½¬µ‘•Ù½Ñ¥½¸µÉ½ÕÑ”ˆ½¹±¥¬õì ¤€ôø¹…Ù¥…Ñ” ‰‘••Àˆ¥ôøñÍÁ…¸øñÍµ…±°ùIdQ<=9Q%9Uüğ½Íµ…±°øñÍÑÉ½¹œù=Á•¸Ñ¡”€Üµ‘…ä‘•Ù½Ñ¥½¹…°ğ½ÍÑÉ½¹œøğ½ÍÁ…¸øñÉÉ½İI¥¡Ğ€¼øğ½‰ÕÑÑ½¸ùô(€€€€€€ğ½‘¥ØøñQ½½±½¬…Ñ¥Ù”ô‰Õ¹±½¬ˆ¹…Ù¥…Ñ”õí¹…Ù¥…Ñ•ô€¼ø(€€€€ğ½Í•Ñ¥½¸ø(€€¤ì)ô()™Õ¹Ñ¥½¸••ÁMÑÕ‘åMÉ••¸¡ì½µÁ±•Ñ•°½Á•¹…ä°¹…Ù¥…Ñ”ôèì½µÁ±•Ñ•èI•½ÉñÍÑÉ¥¹œ°‰½½±•…¸øì½Á•¹…äè€¡¥¹‘•àè¹Õµ‰•È¤€ôøÙ½¥ì¹…Ù¥…Ñ”è€¡ÍÉ••¸èMÉ••¸¤€ôøÙ½¥ô¤ì(€½¹ÍĞ½µÁ±•Ñ•‘½Õ¹Ğ€ô=‰©•Ğ¹Ù…±Õ•Ì¡½µÁ±•Ñ•¤¹™¥±Ñ•È¡	½½±•…¸¤¹±•¹Ñ ì(€½¹ÍĞ¹•áÑ…ä€ôA}eL¹™¥¹‘%¹‘•à ¡|°¥¹‘•à¤€ôø€…½µÁ±•Ñ•‘m¥¹‘•át¤ì(€½¹ÍĞ™•…ÑÕÉ•‘…ä€ô¹•áÑ…ä€ôôô€´Ä€ü€Ø€è¹•áÑ…äì(€É•ÑÕÉ¸€ (€€€€ñÍ•Ñ¥½¸±…ÍÍ9…µ”ô‰…ÁÀµÍÉ••¸…Ñ±…ÌµÍÉ••¸‘••ÀµÍÉ••¸ˆøñÑ±…Í!•…‘•È±…‰•°ô‰<AHƒ
+Ü],€ÀÄˆ½¹	…¬õì ¤€ôø¹…Ù¥…Ñ” ‰¡½µ”ˆ¥ô€¼ø(€€€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰ÍÉ••¸µÍÉ½±°‘••Àµ‰½‘äˆø(€€€€€€€€ñÍ•Ñ¥½¸±…ÍÍ9…µ”ô‰‘••ÀµÁ±…¸µ¡•É¼ˆø(€€€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰‘••Àµ©½ÕÉ¹…°µ…ÉĞˆøñ¥µœÍÉŒõíA}=YIô…±Ğô‰ÑÉ…Ù•±•È±½½­¥¹œ…É½ÍÌ„±…¹‘Í…Á”Í¡…Á•‰ä±¥¡Ğ…¹İ…Ñ•Èˆ€¼øñÍÁ…¸øñÍµ…±°ùMY8µdI%9)=UI90ğ½Íµ…±°øñˆù],€ÀÄğ½ˆøğ½ÍÁ…¸øğ½‘¥Øø(€€€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰‘••ÀµÁ±…¸µ½ÁäˆøñÍµ…±°ù<AHğ½Íµ…±°øñ Äù…ÉÉäÑ¡”‰•¥¹¹¥¹œ¥¹Ñ¼å½ÕÈİ••¬¸ğ½ Äø(€€€€€€€€€€€€ñÀùM•Ù•¸Õ¹¡ÕÉÉ¥••¹½Õ¹Ñ•ÉÌİ¥Ñ MÉ¥ÁÑÕÉ”°½¹Ñ•áĞ°É•™±•Ñ¥½¸…¹ÁÉ…å•È¸e½ÕÈ¹½Ñ•ÌÉ•µ…¥¸ÁÉ¥Ù…Ñ”…¹Í…Ù•½¸Ñ¡¥Ì‘•Ù¥”¸ğ½Àøğ½‘¥Øø(€€€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰‘••ÀµÁÉ½É•ÍÌˆ…É¥„µ±…‰•°õí€‘í½µÁ±•Ñ•‘½Õ¹Ñô½˜€Ü‘•Ù½Ñ¥½¹…±Ì½µÁ±•Ñ•ôø(€€€€€€€€€€€íA}eL¹µ…À ¡‘…ä°¥¹‘•à¤€ôø€ñÍÁ…¸±…ÍÍ9…µ”õí½µÁ±•Ñ•‘m¥¹‘•át€ü€‰‘½¹”ˆ€è¥¹‘•à€ôôô™•…ÑÕÉ•‘…ä€ü€‰ÕÉÉ•¹Ğˆ€è€ˆ‰ô­•äõí‘…ä¹Ñ¥Ñ±•ôøñ¤€¼ùdí¥¹‘•à€¬€Åôğ½ÍÁ…¸ø¥ô(€€€€€€€€€€ğ½‘¥Øø(€€€€€€€€ğ½Í•Ñ¥½¸ø((€€€€€€€€ñÍ•Ñ¥½¸±…ÍÍ9…µ”ô‰‘••ÀµÑ½‘…äˆø(€€€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰‘••ÀµÑ½‘…äµ¡•…‘¥¹œˆøñÍÁ…¸øñÍµ…±°ùí½µÁ±•Ñ•‘½Õ¹Ğ€ôôô€Ü€ü€‰IQUI8Q<Q!MQ=Idˆ€è€‰=9Q%9U!I‰ôğ½Íµ…±°øñÍÑÉ½¹œùí½µÁ±•Ñ•‘½Õ¹Ğ€ôôô€Ü€ü€‰I•Ù¥Í¥ĞÑ¡”™¥¹…°‘…äˆ€è€‰Q½‘…çŠeÌÉ•…‘¥¹œ‰ôğ½ÍÑÉ½¹œøğ½ÍÁ…¸øñ•´ùí½µÁ±•Ñ•‘½Õ¹Ñô€¼€Ü=5A1Qğ½•´øğ½‘¥Øø(€€€€€€€€€€ñ‰ÕÑÑ½¸½¹±¥¬õì ¤€ôø½Á•¹…ä¡™•…ÑÕÉ•‘…ä¥ôøñ¥µœÍÉŒõíA}IQm™•…ÑÕÉ•‘…åuô…±Ğôˆˆ€¼øñÍÁ…¸±…ÍÍ9…µ”ô‰‘••ÀµÑ½‘…äµ½ÁäˆøñÍµ…±°ùdíMÑÉ¥¹œ¡™•…ÑÕÉ•‘…ä€¬€Ä¤¹Á…‘MÑ…ÉĞ È°€ˆÀˆ¥ôƒ
+ÜíA}eMm™•…ÑÕÉ•‘…åt¹•å•‰É½İôğ½Íµ…±°øñˆùíA}eMm™•…ÑÕÉ•‘…åt¹½Ù•Éôğ½ˆøñÀùíA}eMm™•…ÑÕÉ•‘…åt¹ÍÕ‰Ñ¥Ñ±•ôğ½ÀøñÍÑÉ½¹œùí½µÁ±•Ñ•‘m™•…ÑÕÉ•‘…åt€ü€‰I•………¥¸ˆ€è€‰¹Ñ•ÈÑ½‘…çŠeÌÍÑÕ‘ä‰ôñÉÉ½İI¥¡Ğ€¼øğ½ÍÑÉ½¹œøğ½ÍÁ…¸øğ½‰ÕÑÑ½¸ø(€€€€€€€€ğ½Í•Ñ¥½¸ø((€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰‘••Àµİ••¬µ¡•…‘¥¹œˆøñÍÁ…¸øñÍµ…±°ùQ!],!ğ½Íµ…±°øñÍÑÉ½¹œùM•Ù•¸¥¹Ù¥Ñ…Ñ¥½¹ÌÑ¼¼‘••Á•Èğ½ÍÑÉ½¹œøğ½ÍÁ…¸øñ•´ù9=QLMY=8Q!%LY%ğ½•´øğ½‘¥Øø(€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰‘••ÀµÍÑ½ÉäµÍÑ…¬ˆùíA}eL¹µ…À ¡‘…ä°¥¹‘•à¤€ôø¥¹‘•à€ôôô™•…ÑÕÉ•‘…ä€ü¹Õ±°€è€ (€€€€€€€€€€ñ‰ÕÑÑ½¸±…ÍÍ9…µ”ô‰‘••ÀµÍÑ½ÉäµÁ…¹•°ˆ­•äõí‘…ä¹Ñ¥Ñ±•ô½¹±¥¬õì ¤€ôø½Á•¹…ä¡¥¹‘•à¥ôøñ¥µœÍÉŒõíA}IQm¥¹‘•áuô…±Ğôˆˆ€¼øñÍÁ…¸±…ÍÍ9…µ”ô‰‘••ÀµÍ¡…‘”ˆ€¼ø(€€€€€€€€€€€€ñÍÁ…¸±…ÍÍ9…µ”ô‰‘••Àµ¹Õµ‰•Èˆùd€Áí¥¹‘•à€¬€Åôğ½ÍÁ…¸ùí½µÁ±•Ñ•‘m¥¹‘•át€˜˜€ñÍÁ…¸±…ÍÍ9…µ”ô‰‘••Àµ¡•¬ˆøñ¡•¬€¼øğ½ÍÁ…¸ùô(€€€€€€€€€€€€ñÍÁ…¸±…ÍÍ9…µ”ô‰‘••Àµ½ÁäˆøñÍµ…±°ùí‘…ä¹•å•‰É½İôğ½Íµ…±°øñˆùí‘…ä¹½Ù•Éôğ½ˆøñÀùí‘…ä¹ÍÕ‰Ñ¥Ñ±•ôğ½Àøñ•´ùí‘…ä¹Ñ¥µ•ôƒ
+ÜI%9€¬I1Q%=8ğ½•´øñÍÑÉ½¹œùí½µÁ±•Ñ•‘m¥¹‘•át€ü€‰I•………¥¸ˆ€è€‰¹Ñ•ÈÑ½‘…çŠeÌÍÑÕ‘ä‰ôñÉÉ½İI¥¡Ğ€¼øğ½ÍÑÉ½¹œøğ½ÍÁ…¸øğ½‰ÕÑÑ½¸ø(€€€€€€€€¤¥ô(€€€€€€€€€€ñÍ•Ñ¥½¸±…ÍÍ9…µ”ô‰‘••Àµ™¥¹¥Í µ…ÉˆøñÍÁ…¸ùí½µÁ±•Ñ•‘½Õ¹Ğ€ôôô€Ü€ü€ñ¡•¬€¼ø€è€ñ	½½­=Á•¸€¼ùôğ½ÍÁ…¸øñÍµ…±°ùí½µÁ±•Ñ•‘½Õ¹Ğ€ôôô€Ü€ü€‰MY8eL=5A1Qˆ€è€‰],€ÀÄƒ
+Ü1=M%9Q!MQ=Id‰ôğ½Íµ…±°øñ Èù…ÉÉäÑ¡”‰•¥¹¹¥¹œ™½Éİ…É¸ğ½ Èø(€€€€€€€€€€€€ñÀùí½µÁ±•Ñ•‘½Õ¹Ğ€ôôô€Ü€ü€‰e½ÕÈÉ•™±•Ñ¥½¹Ì…É”Í…Ù•¸±½Í”Ñ¡”‘•Ù½Ñ¥½¹…°İ¥Ñ Ñ¡”]••¬€ÄÍÑ½Éä¥¸½¹”±•…ÈÙ¥•Ü¸ˆ€è€‰e½Ô…¸É•ÑÕÉ¸Ñ¼…¹ä‘•Ù½Ñ¥½¹…°Ñ¡É½Õ¡½ÕĞÑ¡”İ••¬¸]¡•¸å½Ô…É”É•…‘ä°ÍÑ•À¥¹Ñ¼Ñ¡”]••¬€Ä½¹±ÕÍ¥½¸…¹Í•”Ñ¡”İ¡½±”‰•¥¹¹¥¹œ…Ì½¹”ÍÑ½Éä¸‰ôğ½Àø(€€€€€€€€€€€€ñ‰ÕÑÑ½¸½¹±¥¬õì ¤€ôø¹…Ù¥…Ñ” ‰½µÁ±•Ñ”ˆ¥ôù¹Ñ•ÈÑ¡”]••¬€Ä½¹±ÕÍ¥½¸€ñÉÉ½İI¥¡Ğ€¼øğ½‰ÕÑÑ½¸øğ½Í•Ñ¥½¸ø(€€€€€€€€ğ½‘¥Øø(€€€€€€ğ½‘¥ØøñQ½½±½¬…Ñ¥Ù”ô‰‘••Àˆ¹…Ù¥…Ñ”õí¹…Ù¥…Ñ•ô€¼ø(€€€€ğ½Í•Ñ¥½¸ø(€€¤ì)ô()™Õ¹Ñ¥½¸]••­½µÁ±•Ñ•MÉ••¸¡ìÍÑ…Ñ”°¹…Ù¥…Ñ”ôèìÍÑ…Ñ”èÁÁMÑ…Ñ”ì¹…Ù¥…Ñ”è€¡ÍÉ••¸èMÉ••¸¤€ôøÙ½¥ô¤ì(€½¹ÍĞ‘•Ù½Ñ¥½¹…±½Õ¹Ğ€ô=‰©•Ğ¹Ù…±Õ•Ì¡ÍÑ…Ñ”¹‘••Á½µÁ±•Ñ•¤¹™¥±Ñ•È¡	½½±•…¸¤¹±•¹Ñ ì(€½¹ÍĞÑ¡É•…€ôl‰=ˆ°€‰==IQ%=8ˆ°€‰%5ˆ°€‰	=U9Idˆ°€‰10ˆ°€‰Mˆ°€‰a%1‰tì(€É•ÑÕÉ¸€ñÍ•Ñ¥½¸±…ÍÍ9…µ”ô‰…ÁÀµÍÉ••¸½µÁ±•Ñ”µÍÉ••¸ˆø(€€€€ñ¥¹•µ…!•…‘•È½¹	…¬õì ¤€ôø¹…Ù¥…Ñ” ‰Õ¹±½¬ˆ¥ô±…‰•°ô‰],€ÀÄ=5A1Qˆ€¼ø(€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰ÍÉ••¸µÍÉ½±°½µÁ±•Ñ”µÍÉ½±°ˆø(€€€€€€ñÍ•Ñ¥½¸±…ÍÍ9…µ”ô‰½µÁ±•Ñ”µ¡•É¼ˆøñÍÁ…¸±…ÍÍ9…µ”ô‰½µÁ±•Ñ”µ¡•É¼µÍ¡…‘”ˆ€¼ø(€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰½µÁ±•Ñ”µµ…É¬ˆøñ¡•¬€¼øğ½‘¥Øøñ‘¥Ø±…ÍÍ9…µ”ô‰½µÁ±•Ñ”µ½ÁäˆøñÍµ…±°ùIQ%=8ƒ
+Ü10ƒ
+Ü%IMPAI=5%Mğ½Íµ…±°ø(€€€€€€€€€€ñ Äùe½Ô¹½Ü­¹½Üİ¡äÑ¡”	¥‰±”¹••‘Ì„É•ÍÕ”ÍÑ½Éä¸ğ½ ÄøñÀù]¡…Ğ½µ…‘”İ…Ì½½¸!Õµ…¹¥Ñä‰É½­”ÑÉÕÍĞ¸	•™½É”‘•¸±½Í•°½ÍÁ½­”¡½Á”¸ğ½Àøğ½‘¥Øø(€€€€€€ğ½Í•Ñ¥½¸ø(€€€€€€ñÍ•Ñ¥½¸±…ÍÍ9…µ”ô‰½µÁ±•Ñ”µÍÑ½Éäˆøñ5¥É½1…‰•°ùQ!]!=1	%99%9ƒ
+Ü=9Q!Iğ½5¥É½1…‰•°øñ Èù-••ÀÑ¡”½É‘•È¸…ÉÉäÑ¡”ÁÉ½µ¥Í”¸ğ½ Èø(€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰½µÁ±•Ñ”µÑ¡É•…ˆùíÑ¡É•…¹µ…À ¡¥Ñ•´°¥¹‘•à¤€ôø€ñ‘¥Ø­•äõí¥Ñ•µôøñÍÁ…¸ùí¥¹‘•à€¬€Åôğ½ÍÁ…¸øñÍÑÉ½¹œùí¥Ñ•µôğ½ÍÑÉ½¹œøğ½‘¥Øø¥ôğ½‘¥Øø(€€€€€€€€ñÀù•¹•Í¥Ì€ÇŠLÌ•ÍÑ…‰±¥Í¡•ÌÑ¡”İ½É±…Ì½“ŠeÌ½½É•…Ñ¥½¸°¡Õµ…¹¥Ñä…Ì!¥Ì¥µ…”µ‰•…É¥¹œÉ•ÁÉ•Í•¹Ñ…Ñ¥Ù•Ì°Í¥¸…Ì„ÉÕÁÑÕÉ”½˜ÑÉÕÍĞ…¹½É‘•È°…¹Ñ¡”ÁÉ½µ¥Í•M••…ÌÑ¡”™¥ÉÍĞÍ¥¸Ñ¡…Ğ•Ù¥°İ¥±°¹½Ğ¡…Ù”Ñ¡”™¥¹…°İ½É¸ğ½Àø(€€€€€€ğ½Í•Ñ¥½¸ø(€€€€€€ñÍ•Ñ¥½¸±…ÍÍ9…µ”ô‰½µÁ±•Ñ”µ¹•áĞˆøñÍµ…±°ù9aPƒ
+Ü],€ÀÈğ½Íµ…±°øñ ÈùQ¡”ÍÑ½Éä‘½•Ì¹½ĞÍÑ½À•…ÍĞ½˜‘•¸¸ğ½ ÈøñÀù9•áĞ°İ”™½±±½Üİ¡…ĞÍ¥¸µÕ±Ñ¥Á±¥•Ì°İ¡…Ğ©Õ‘µ•¹ĞÉ•Ù•…±Ì…¹¡½Ü½ÁÉ•Í•ÉÙ•ÌÑ¡”¡Õµ…¸ÍÑ½Éä¸ğ½Àø(€€€€€€€€ñ‘¥Øøñ‰ÕÑÑ½¸±…ÍÍ9…µ”ô‰ÁÉ¥µ…Éäµ…Ñ¥½¸ˆ½¹±¥¬õì ¤€ôø¹…Ù¥…Ñ” ‰É½…‘µ…Àˆ¥ôùI•Ù¥•Ü]••¬€Ä€ñI½Ñ…Ñ•Ü€¼øğ½‰ÕÑÑ½¸ø(€€€€€€€€€€ñ‰ÕÑÑ½¸±…ÍÍ9…µ”ô‰½µÁ±•Ñ”µÍ•½¹‘…Éäˆ½¹±¥¬õì ¤€ôø¹…Ù¥…Ñ” ‰‘••Àˆ¥ôùí‘•Ù½Ñ¥½¹…±½Õ¹Ğ€ôôô€Ü€ü€‰I•Ù¥Í¥ĞÍ…Ù•É•™±•Ñ¥½¹Ìˆ€è½¹Ñ¥¹Õ”‘•Ù½Ñ¥½¹…°ƒ
+Ü€‘í‘•Ù½Ñ¥½¹…±½Õ¹Ñô¼İôñÉÉ½İI¥¡Ğ€¼øğ½‰ÕÑÑ½¸øğ½‘¥Øø(€€€€€€ğ½Í•Ñ¥½¸ø(€€€€ğ½‘¥Øø(€€ğ½Í•Ñ¥½¸øì)ô()™Õ¹Ñ¥½¸¥¹•µ…!•…‘•È¡ì½¹	…¬°½¹!½µ”°±…‰•°ôèì½¹	…¬üè€ ¤€ôøÙ½¥ì½¹!½µ”üè€ ¤€ôøÙ½¥ì±…‰•°üèÍÑÉ¥¹œô¤ì(€É•ÑÕÉ¸€ñ¡•…‘•È±…ÍÍ9…µ”ô‰…ÁÀµ¡•…‘•È¥¹•µ„µ¡•…‘•Èˆùí½¹	…¬€ü€ñ‰ÕÑÑ½¸½¹±¥¬õí½¹	…­ô…É¥„µ±…‰•°ô‰¼‰…¬ˆøñÉÉ½İ1•™Ğ€¼øğ½‰ÕÑÑ½¸ø€è½¹!½µ”€ü€ñ‰ÕÑÑ½¸½¹±¥¬õí½¹!½µ•ô…É¥„µ±…‰•°ô‰I•ÑÕÉ¸Ñ¼½ÕÉÍ”¡½µ”ˆøñ	½½­=Á•¸€¼øğ½‰ÕÑÑ½¸ø€è€ñÍÁ…¸±…ÍÍ9…µ”ô‰¡•…‘•ÈµÍåµ‰½°ˆ…É¥„µ¡¥‘‘•¸ô‰ÑÉÕ”ˆøñ	½½­=Á•¸€¼øğ½ÍÁ…¸ùô(€€€€ñ‘¥Øøñˆùí±…‰•°ñğ€‰Q!I=U Q!	%	1‰ôğ½ˆøñÍÁ…¸ù],€ÀÄğ½ÍÁ…¸øğ½‘¥ØøñÍÁ…¸±…ÍÍ9…µ”ô‰¡•…‘•ÈµÍÁ…•Èˆ…É¥„µ¡¥‘‘•¸ô‰ÑÉÕ”ˆ€¼øğ½¡•…‘•Èøì)ô)™Õ¹Ñ¥½¸Ñ±…Í!•…‘•È¡ì±…‰•°°½¹	…¬°½¹%¹™¼ôèì±…‰•°èÍÑÉ¥¹œì½¹	…¬è€ ¤€ôøÙ½¥ì½¹%¹™¼üè€ ¤€ôøÙ½¥ô¤ì(€É•ÑÕÉ¸€ñ¡•…‘•È±…ÍÍ9…µ”ô‰…ÁÀµ¡•…‘•È…Ñ±…Ìµ¡•…‘•Èˆøñ‰ÕÑÑ½¸½¹±¥¬õí½¹	…­ô…É¥„µ±…‰•°ô‰¼‰…¬ˆøñÉÉ½İ1•™Ğ€¼øğ½‰ÕÑÑ½¸øñˆùí±…‰•±ôğ½ˆø(€€€í½¹%¹™¼€ü€ñ‰ÕÑÑ½¸…É¥„µ±…‰•°ô‰I•Ù¥•ÜÍ•Ñ¥½¸¥¹ÍÑÉÕÑ¥½¹Ìˆ½¹±¥¬õí½¹%¹™½ôøñ%¹™¼€¼øğ½‰ÕÑÑ½¸ø€è€ñÍÁ…¸±…ÍÍ9…µ”ô‰¡•…‘•ÈµÍÁ…•Èˆ…É¥„µ¡¥‘‘•¸ô‰ÑÉÕ”ˆ€¼ùôğ½¡•…‘•Èøì)ô)™Õ¹Ñ¥½¸AÉ½É•ÍÍI¥¹œ¡ìÙ…±Õ”ôèìÙ…±Õ”è¹Õµ‰•Èô¤ì(€É•ÑÕÉ¸€ñ‘¥Ø±…ÍÍ9…µ”ô‰ÁÉ½É•ÍÌµÉ¥¹œˆÍÑå±”õíì€ˆ´µÁÉ½É•ÍÌˆè€‘íÙ…±Õ”€¨€Ì¸Ùõ‘•€ô…ÌMMAÉ½Á•ÉÑ¥•Íô…É¥„µ±…‰•°õí€‘íÙ…±Õ•ô”½µÁ±•Ñ•ôøñÍÁ…¸ùíÙ…±Õ•ô”ğ½ÍÁ…¸øğ½‘¥Øøì)ô)™Õ¹Ñ¥½¸5¥É½1…‰•°¡ì¡¥±‘É•¸°±¥¡Ğ€ô™…±Í”ôèì¡¥±‘É•¸èI•…Ñ9½‘”ì±¥¡Ğüè‰½½±•…¸ô¤ìÉ•ÑÕÉ¸€ñÀ±…ÍÍ9…µ”õíµ¥É¼µ±…‰•°€‘í±¥¡Ğ€ü€‰±¥¡Ğˆ€è€ˆ‰õôùí¡¥±‘É•¹ôğ½Àøìô)™Õ¹Ñ¥½¸]¡å…É¡ì¡¥±‘É•¸ôèì¡¥±‘É•¸èI•…Ñ9½‘”ô¤ìÉ•ÑÕÉ¸€ñ…ÉÑ¥±”±…ÍÍ9…µ”ô‰İ¡äµ…ÉˆøñÍÁ…¸€¼øñ‘¥ØøñÍµ…±°ù]!d%P5QQILğ½Íµ…±°øñÀùí¡¥±‘É•¹ôğ½Àøğ½‘¥Øøğ½…ÉÑ¥±”øìô()™Õ¹Ñ¥½¸½É•½¬¡ì…Ñ¥Ù”°¹…Ù¥…Ñ”ôèì…Ñ¥Ù”è€‰ÍÑ½Éäˆğ€‰ÁÉ½µ¥Í”ˆğ€‰™…µ¥±äˆğ€‰‘••Á•Èˆì¹…Ù¥…Ñ”è€¡ÍÉ••¸èMÉ••¸¤€ôøÙ½¥ô¤ì(€½¹ÍĞ¥Ñ•µÌèì±…‰•°èÍÑÉ¥¹œì¥èÑåÁ•½˜…Ñ¥Ù”ìÍÉ••¸èMÉ••¸ì¥½¸èI•…Ñ9½‘”õmt€ôl(€€€ì±…‰•°è€‰MQ=Idˆ°¥è€‰ÍÑ½Éäˆ°ÍÉ••¸è€‰¡½µ”ˆ°¥½¸è€ñ	½½­=Á•¸€¼øô°ì±…‰•°è€‰AI=5%Mˆ°¥è€‰ÁÉ½µ¥Í”ˆ°ÍÉ••¸è€‰ÁÉ½µ¥Í”ˆ°¥½¸è€ñ]…åÁ½¥¹ÑÌ€¼øô°(€€€ì±…‰•°è€‰5%1dˆ°¥è€‰™…µ¥±äˆ°ÍÉ••¸è€‰™…µ¥±äˆ°¥½¸è€ñUÍ•ÉÌ€¼øô°ì±…‰•°è€‰AHˆ°¥è€‰‘••Á•Èˆ°ÍÉ••¸è€‰‘••Àˆ°¥½¸è€ñMÁ…É­±•Ì€¼øô°(€tì(€É•ÑÕÉ¸€ñ¹…Ø±…ÍÍ9…µ”ô‰½É”µ‘½¬ˆ…É¥„µ±…‰•°ô‰1•ÍÍ½¸¹…Ù¥…Ñ¥½¸ˆùí¥Ñ•µÌ¹µ…À ¡¥Ñ•´¤€ôø€ñ‰ÕÑÑ½¸­•äõí¥Ñ•´¹¥‘ô±…ÍÍ9…µ”õí…Ñ¥Ù”€ôôô¥Ñ•´¹¥€ü€‰…Ñ¥Ù”ˆ€è€ˆ‰ô½¹±¥¬õì ¤€ôø¹…Ù¥…Ñ”¡¥Ñ•´¹ÍÉ••¸¥ôùí¥Ñ•´¹¥½¹ôñÍÁ…¸ùí¥Ñ•´¹±…‰•±ôğ½ÍÁ…¸øğ½‰ÕÑÑ½¸ø¥ôğ½¹…Øøì)ô)™Õ¹Ñ¥½¸Q½½±½¬¡ì…Ñ¥Ù”°¹…Ù¥…Ñ”ôèì…Ñ¥Ù”üèMÑÕ‘å½­9…µ”ì¹…Ù¥…Ñ”è€¡ÍÉ••¸èMÉ••¸¤€ôøÙ½¥ô¤ì(€½¹ÍĞ¥Ñ•µÌèì±…‰•°èÍÑÉ¥¹œì¥èMÑÕ‘å½­9…µ”ìÍÉ••¸èMÉ••¸ì¥½¸èI•…Ñ9½‘”õmt€ôl(€€€ì±…‰•°è€‰A1ˆ°¥è€‰Á±…”ˆ°ÍÉ••¸è€‰Á±…•%¹ÑÉ¼ˆ°¥½¸è€ñ5…ÁA¥¸€¼øô°ì±…‰•°è€‰%10ˆ°¥è€‰™¥±°ˆ°ÍÉ••¸è€‰™¥±±%¹ÑÉ¼ˆ°¥½¸è€ñ5¥¹ÕÌ€¼øô°(€€€ì±…‰•°è€‰=99Pˆ°¥è€‰½¹¹•Ğˆ°ÍÉ••¸è€‰½¹¹•Ñ%¹ÑÉ¼ˆ°¥½¸è€ñ1¥¹¬È€¼øô°ì±…‰•°è€‰U91=,ˆ°¥è€‰Õ¹±½¬ˆ°ÍÉ••¸è€‰Õ¹±½­%¹ÑÉ¼ˆ°¥½¸è€ñ1½­-•å¡½±”€¼øô°(€€€ì±…‰•°è€‰Y=Q%=8ˆ°¥è€‰‘••Àˆ°ÍÉ••¸è€‰‘••Àˆ°¥½¸è€ñMÁ…É­±•Ì€¼øô°(€tì(€É•ÑÕÉ¸€ñ¹…Ø±…ÍÍ9…µ”ô‰Ñ½½°µ‘½¬ˆ…É¥„µ±…‰•°ô‰MÑÕ‘äÑ½½±Ìˆùí¥Ñ•µÌ¹µ…À ¡¥Ñ•´¤€ôø€ñ‰ÕÑÑ½¸­•äõí¥Ñ•´¹¥‘ô±…ÍÍ9…µ”õí…Ñ¥Ù”€ôôô¥Ñ•´¹¥€ü€‰…Ñ¥Ù”ˆ€è€ˆ‰ô½¹±¥¬õì ¤€ôø¹…Ù¥…Ñ”¡¥Ñ•´¹ÍÉ••¸¥ôùí¥Ñ•´¹¥½¹ôñÍÁ…¸ùí¥Ñ•´¹±…‰•±ôğ½ÍÁ…¸øğ½‰ÕÑÑ½¸ø¥ôğ½¹…Øøì)ô()™Õ¹Ñ¥½¸•Í­Ñ½ÁI…¥°¡ìÍÉ••¸°ÁÉ½É•ÍÌ°¹…Ù¥…Ñ”ôèìÍÉ••¸èMÉ••¸ìÁÉ½É•ÍÌè¹Õµ‰•Èì¹…Ù¥…Ñ”è€¡ÍÉ••¸èMÉ••¸¤€ôøÙ½¥ô¤ì(€½¹ÍĞÉ½ÕÑ•Ìèì±…‰•°èÍÑÉ¥¹œìÍÉ••¸èMÉ••¸ìµ•Ñ„èÍÑÉ¥¹œõmt€ôl(€€€ì±…‰•°è€‰Q¡”½Á•¹¥¹œˆ°ÍÉ••¸è€‰¡½µ”ˆ°µ•Ñ„è€‰%95ˆô°ì±…‰•°è€‰Q¡”ÍÑ½Éäˆ°ÍÉ••¸è€‰É½…‘µ…Àˆ°µ•Ñ„è€ˆĞ!AQILˆô°(€€€ì±…‰•°è€‰Q¡”ÁÉ½µ¥Í”ˆ°ÍÉ••¸è€‰ÁÉ½µ¥Í”ˆ°µ•Ñ„è€‰9M%L€ÌèÄÔˆô°ì±…‰•°è€‰1•…É¹¥¹œ±…ˆˆ°ÍÉ••¸è€‰Á±…•%¹ÑÉ¼ˆ°µ•Ñ„è€ˆĞQ==1Lˆô°(€€€ì±…‰•°è€‰••ÀÍÑÕ‘äˆ°ÍÉ••¸è€‰‘••Àˆ°µ•Ñ„è€ˆÜeLˆô°(€tì(€É•ÑÕÉ¸€ñ…Í¥‘”±…ÍÍ9…µ”ô‰‘•Í­Ñ½ÀµÉ…¥°ˆøñ‘¥Ø±…ÍÍ9…µ”ô‰‘•Í­Ñ½Àµ‰É…¹ˆøñ	½½­=Á•¸€¼øñÍÁ…¸øñˆùQ!I=U Q!	%	1ğ½ˆøñÍµ…±°ù],€ÀÄƒ
+Ü9M%L€ÇŠLÌğ½Íµ…±°øğ½ÍÁ…¸øğ½‘¥Øø(€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰‘•Í­Ñ½ÀµÁÉ½É•ÍÌˆøñAÉ½É•ÍÍI¥¹œÙ…±Õ”õíÁÉ½É•ÍÍô€¼øñÍÁ…¸øñÍµ…±°ùe=UHAI=IMLğ½Íµ…±°øñˆùQ¡”‰•¥¹¹¥¹œ¥ÌÑ…­¥¹œÍ¡…Á”¸ğ½ˆøğ½ÍÁ…¸øğ½‘¥Øø(€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰‘•Í­Ñ½ÀµÑ¥Ñ±”ˆøñ5¥É½1…‰•°±¥¡ĞùIQ%=8ƒ
+Ü10ƒ
+Ü%IMPAI=5%Mğ½5¥É½1…‰•°øñ ÄùÉ•…Ñ¥½¸°IÕÁÑÕÉ”€™…µÀìÑ¡”¥ÉÍĞAÉ½µ¥Í”ğ½ Äøğ½‘¥Øø(€€€€ñ¹…ØùíÉ½ÕÑ•Ì¹µ…À ¡É½ÕÑ”¤€ôø€ñ‰ÕÑÑ½¸­•äõíÉ½ÕÑ”¹ÍÉ••¹ô±…ÍÍ9…µ”õíÍÉ••¸€ôôôÉ½ÕÑ”¹ÍÉ••¸ñğ€¡É½ÕÑ”¹ÍÉ••¸€ôôô€‰Á±…•%¹ÑÉ¼ˆ€˜˜l‰Á±…•%¹ÑÉ¼ˆ°€‰™¥±±%¹ÑÉ¼ˆ°€‰½¹¹•Ñ%¹ÑÉ¼ˆ°€‰Õ¹±½­%¹ÑÉ¼ˆ°€‰Á±…”ˆ°€‰™¥±°ˆ°€‰½¹¹•Ğˆ°€‰Õ¹±½¬‰t¹¥¹±Õ‘•Ì¡ÍÉ••¸¤¤€ü€‰…Ñ¥Ù”ˆ€è€ˆ‰ô½¹±¥¬õì ¤€ôø¹…Ù¥…Ñ”¡É½ÕÑ”¹ÍÉ••¸¥ôøñÍÁ…¸øñÍµ…±°ùíÉ½ÕÑ”¹µ•Ñ…ôğ½Íµ…±°øñˆùíÉ½ÕÑ”¹±…‰•±ôğ½ˆøğ½ÍÁ…¸øñÉÉ½İI¥¡Ğ€¼øğ½‰ÕÑÑ½¸ø¥ôğ½¹…Øø(€€€€ñ‰±½­ÅÕ½Ñ”ûŠq!½Á”…ÁÁ•…ÉÌ‰•™½É”‘•¸±½Í•Ì»Štğ½‰±½­ÅÕ½Ñ”øğ½…Í¥‘”øì)ô()™Õ¹Ñ¥½¸MÉ¥ÁÑÕÉ•I•…‘•È¡ìÉ•™•É•¹”°ÍÉ¥ÁÑÕÉ”°µ…É¬°É•…‘¥¹œ°½¹±½Í”°½¹Q½½°°½¹Q•áĞ°½¹M•±•Ñ¥½¸°½¹I•…°½¹9…Ù¥…Ñ”ôèì(€É•™•É•¹”èÍÑÉ¥¹œğ¹Õ±°ìÍÉ¥ÁÑÕÉ”èMÉ¥ÁÑÕÉ”ğ¹Õ±°ìµ…É¬èMÉ¥ÁÑÕÉ•5…É¬ìÉ•…‘¥¹œüèMÉ¥ÁÑÕÉ•I•…‘¥¹œì½¹±½Í”è€ ¤€ôøÙ½¥ì(€½¹Q½½°è€¡­•äè€‰¡¥¡±¥¡Ğˆğ€‰Õ¹‘•É±¥¹”ˆğ€‰‰½½­µ…É¬ˆ¤€ôøÙ½¥ì½¹Q•áĞè€¡­•äè€‰¹½Ñ•Ìˆğ€‰ÅÕ•ÍÑ¥½¸ˆ°Ù…±Õ”èÍÑÉ¥¹œ¤€ôøÙ½¥ì(€½¹M•±•Ñ¥½¸è€¡Í•±•Ñ¥½¸èMÉ¥ÁÑÕÉ•M•±•Ñ¥½¸¤€ôøÙ½¥ì½¹I•…è€¡É•™•É•¹”èÍÑÉ¥¹œ°Ù•ÉÍ•½Õ¹Ğè¹Õµ‰•È¤€ôøÙ½¥ì(€½¹9…Ù¥…Ñ”è€¡É•™•É•¹”èÍÑÉ¥¹œ¤€ôøÙ½¥ì)ô¤ì(€½¹ÍĞ…ÉÑ¥±•I•˜€ôÕÍ•I•˜ñ!Q51±•µ•¹Ğø¡¹Õ±°¤ì(€½¹ÍĞÉ•ÍÁ½¹Í•I•˜€ôÕÍ•I•˜ñ!Q51±•µ•¹Ğø¡¹Õ±°¤ì(€½¹ÍĞmÁ•¹‘¥¹M•±•Ñ¥½¸°Í•ÑA•¹‘¥¹M•±•Ñ¥½¹t€ôÕÍ•MÑ…Ñ”ñìÅÕ½Ñ”èÍÑÉ¥¹œìÍÑ…ÉĞè¹Õµ‰•Èì•¹è¹Õµ‰•Èôğ¹Õ±°ø¡¹Õ±°¤ì(€½¹ÍĞmÑ½½±5•ÍÍ…”°Í•ÑQ½½±5•ÍÍ…•t€ôÕÍ•MÑ…Ñ” ˆˆ¤ì(€½¹ÍĞmÍÑÕ‘å=Á•¸°Í•ÑMÑÕ‘å=Á•¹t€ôÕÍ•MÑ…Ñ”¡™…±Í”¤ì(€½¹ÍĞmÉ•…‘I•™•É•¹”°Í•ÑI•…‘I•™•É•¹•t€ôÕÍ•MÑ…Ñ”ñÍÑÉ¥¹œğ¹Õ±°ø¡¹Õ±°¤ì(€½¹ÍĞÉ•…‘I•Á½ÉÑ•‘½È€ôÕÍ•I•˜ñÍÑÉ¥¹œğ¹Õ±°ø¡É•…‘¥¹œü¹±…ÍÑI•…‘Ğ€˜˜É•™•É•¹”€üÉ•™•É•¹”€è¹Õ±°¤ì(€½¹ÍĞ½¹I•…‘I•˜€ôÕÍ•I•˜¡½¹I•…¤ì(€½¹ÍĞÉ•™•É•¹•Ì€ô=‰©•Ğ¹­•åÌ¡MI%AQUIL¤ì(€½¹ÍĞÉ•™•É•¹•%¹‘•à€ôÉ•™•É•¹”€üÉ•™•É•¹•Ì¹¥¹‘•á=˜¡É•™•É•¹”¤€è€´Äì(€½¹ÍĞÁÉ•Ù¥½ÕÍI•™•É•¹”€ôÉ•™•É•¹•%¹‘•à€ø€À€üÉ•™•É•¹•ÍmÉ•™•É•¹•%¹‘•à€´€Åt€è¹Õ±°ì(€½¹ÍĞ¹•áÑI•™•É•¹”€ôÉ•™•É•¹•%¹‘•à€øô€À€˜˜É•™•É•¹•%¹‘•à€ğÉ•™•É•¹•Ì¹±•¹Ñ €´€Ä€üÉ•™•É•¹•ÍmÉ•™•É•¹•%¹‘•à€¬€Åt€è¹Õ±°ì(€½¹ÍĞÙ•ÉÍ•½Õ¹Ğ€ô5…Ñ ¹µ…à Ä°ÍÉ¥ÁÑÕÉ”ü¹¡Ñµ°¹µ…Ñ  ¼ñÍÕÀø½œ¤ü¹±•¹Ñ ñğ€À¤ì(€½¹ÍĞÍÉ¥ÁÑÕÉ•!Ñµ°€ôÕÍ•5•µ¼  ¤€ôø…¹¹½Ñ…Ñ•MÉ¥ÁÑÕÉ•!Ñµ° (€€€ÍÉ¥ÁÑÕÉ”ü¹¡Ñµ°ñğ€œñÀ±…ÍÌô‰ÍÉ¥ÁÑÕÉ”µÕ¹…Ù…¥±…‰±”ˆùQ¡¥ÌÁ…ÍÍ…”½Õ±¹½Ğ‰”±½…‘•¸±½Í”Ñ¡”É•…‘•È…¹ÑÉä……¥¸¸ğ½Àøœ°(€€€µ…É¬¹Í•±•Ñ¥½¹Ìñğmt°(€€¤°mÍÉ¥ÁÑÕÉ”ü¹¡Ñµ°°µ…É¬¹Í•±•Ñ¥½¹Ít¤ì(€½¹ÍĞÉ•…‘1½•€ô	½½±•…¸¡É•…‘¥¹œü¹±…ÍÑI•…‘ĞñğÉ•…‘I•™•É•¹”€ôôôÉ•™•É•¹”¤ì((€ÕÍ•™™•Ğ  ¤€ôøì½¹I•…‘I•˜¹ÕÉÉ•¹Ğ€ô½¹I•…ìô°m½¹I•…‘t¤ì((€ÕÍ•™™•Ğ  ¤€ôøì(€€€¥˜€ …É•™•É•¹”¤É•ÑÕÉ¸ì(€€€½¹ÍĞÑ¥µ•È€ôİ¥¹‘½Ü¹Í•ÑQ¥µ•½ÕĞ  ¤€ôøì(€€€€€¥˜€¡É•…‘I•Á½ÉÑ•‘½È¹ÕÉÉ•¹Ğ€ôôôÉ•™•É•¹”¤É•ÑÕÉ¸ì(€€€€€É•…‘I•Á½ÉÑ•‘½È¹ÕÉÉ•¹Ğ€ôÉ•™•É•¹”ì(€€€€€Í•ÑI•…‘I•™•É•¹”¡É•™•É•¹”¤ì(€€€€€½¹I•…‘I•˜¹ÕÉÉ•¹Ğ¡É•™•É•¹”°Ù•ÉÍ•½Õ¹Ğ¤ì(€€€ô°€ÄÀÀÀÀ¤ì(€€€É•ÑÕÉ¸€ ¤€ôøİ¥¹‘½Ü¹±•…ÉQ¥µ•½ÕĞ¡Ñ¥µ•È¤ì(€ô°mÉ•™•É•¹”°É•…‘¥¹œü¹±…ÍÑI•…‘Ğ°Ù•ÉÍ•½Õ¹Ñt¤ì((€™Õ¹Ñ¥½¸É•Á½ÉÑI•… ¤ì(€€€¥˜€ …É•™•É•¹”ñğÉ•…‘I•Á½ÉÑ•‘½È¹ÕÉÉ•¹Ğ€ôôôÉ•™•É•¹”¤É•ÑÕÉ¸ì(€€€É•…‘I•Á½ÉÑ•‘½È¹ÕÉÉ•¹Ğ€ôÉ•™•É•¹”ì(€€€Í•ÑI•…‘I•™•É•¹”¡É•™•É•¹”¤ì(€€€½¹I•…‘I•˜¹ÕÉÉ•¹Ğ¡É•™•É•¹”°Ù•ÉÍ•½Õ¹Ğ¤ì(€ô((€™Õ¹Ñ¥½¸¡…¹‘±•I•…‘•ÉMÉ½±°¡•Ù•¹ĞèU%Ù•¹Ğñ!Q51¥Ù±•µ•¹Ğø¤ì(€€€½¹ÍĞ…ÉÑ¥±”€ô…ÉÑ¥±•I•˜¹ÕÉÉ•¹Ğì(€€€¥˜€ ……ÉÑ¥±”¤É•ÑÕÉ¸ì(€€€½¹ÍĞÙ¥•İÁ½ÉĞ€ô•Ù•¹Ğ¹ÕÉÉ•¹ÑQ…É•Ğ¹•Ñ	½Õ¹‘¥¹±¥•¹ÑI•Ğ ¤ì(€€€¥˜€¡…ÉÑ¥±”¹•Ñ	½Õ¹‘¥¹±¥•¹ÑI•Ğ ¤¹‰½ÑÑ½´€ğôÙ¥•İÁ½ÉĞ¹‰½ÑÑ½´€¬€ÜÈ¤É•Á½ÉÑI•… ¤ì(€ô((€™Õ¹Ñ¥½¸…ÁÑÕÉ•M•±•Ñ¥½¸ ¤ì(€€€½¹ÍĞ…ÉÑ¥±”€ô…ÉÑ¥±•I•˜¹ÕÉÉ•¹Ğì(€€€½¹ÍĞÍ•±•Ñ¥½¸€ôİ¥¹‘½Ü¹•ÑM•±•Ñ¥½¸ ¤ì(€€€¥˜€ ……ÉÑ¥±”ñğ€…Í•±•Ñ¥½¸ñğÍ•±•Ñ¥½¸¹É…¹•½Õ¹Ğ€ôôô€ÀñğÍ•±•Ñ¥½¸¹¥Í½±±…ÁÍ•¤É•ÑÕÉ¸¹Õ±°ì(€€€½¹ÍĞÉ…¹”€ôÍ•±•Ñ¥½¸¹•ÑI…¹•Ğ À¤ì(€€€¥˜€ ……ÉÑ¥±”¹½¹Ñ…¥¹Ì¡É…¹”¹½µµ½¹¹•ÍÑ½É½¹Ñ…¥¹•È¤¤É•ÑÕÉ¸¹Õ±°ì(€€€½¹ÍĞÅÕ½Ñ”€ôÍ•±•Ñ¥½¸¹Ñ½MÑÉ¥¹œ ¤¹ÑÉ¥´ ¤ì(€€€¥˜€¡ÅÕ½Ñ”¹±•¹Ñ €ğ€È¤É•ÑÕÉ¸¹Õ±°ì(€€€½¹ÍĞ‰•™½É”€ô‘½Õµ•¹Ğ¹É•…Ñ•I…¹” ¤ì(€€€‰•™½É”¹Í•±•Ñ9½‘•½¹Ñ•¹ÑÌ¡…ÉÑ¥±”¤ì(€€€‰•™½É”¹Í•Ñ¹¡É…¹”¹ÍÑ…ÉÑ½¹Ñ…¥¹•È°É…¹”¹ÍÑ…ÉÑ=™™Í•Ğ¤ì(€€€½¹ÍĞÍÑ…ÉĞ€ô‰•™½É”¹Ñ½MÑÉ¥¹œ ¤¹±•¹Ñ ì(€€€½¹ÍĞ…ÁÑÕÉ•€ôìÅÕ½Ñ”°ÍÑ…ÉĞ°•¹èÍÑ…ÉĞ€¬Í•±•Ñ¥½¸¹Ñ½MÑÉ¥¹œ ¤¹±•¹Ñ ôì(€€€Í•ÑA•¹‘¥¹M•±•Ñ¥½¸¡…ÁÑÕÉ•¤ì(€€€Í•ÑQ½½±5•ÍÍ…” ˆˆ¤ì(€€€É•ÑÕÉ¸…ÁÑÕÉ•ì(€ô((€™Õ¹Ñ¥½¸Í…Ù•M•±•Ñ¥½¸¡ÑåÁ”è€‰¡¥¡±¥¡Ğˆğ€‰Õ¹‘•É±¥¹”ˆ¤ì(€€€½¹ÍĞ…ÁÑÕÉ•€ôÁ•¹‘¥¹M•±•Ñ¥½¸ñğ…ÁÑÕÉ•M•±•Ñ¥½¸ ¤ì(€€€¥˜€ ……ÁÑÕÉ•¤ì(€€€€€Í•ÑQ½½±5•ÍÍ…”¡M•±•Ğ„İ½É½ÈÁ¡É…Í”¥¸Ñ¡”MÉ¥ÁÑÕÉ”°Ñ¡•¸Ñ…À€‘íÑåÁ•ô¹€¤ì(€€€€€…ÉÑ¥±•I•˜¹ÕÉÉ•¹Ğü¹ÍÉ½±±%¹Ñ½Y¥•Ü¡ì‰•¡…Ù¥½Èè€‰Íµ½½Ñ ˆ°‰±½¬è€‰•¹Ñ•Èˆô¤ì(€€€€€É•ÑÕÉ¸ì(€€€ô(€€€½¹M•±•Ñ¥½¸¡ì€¸¸¹…ÁÑÕÉ•°ÑåÁ”°¥è±½‰…±Q¡¥Ì¹ÉåÁÑ¼ü¹É…¹‘½µUU%ü¸ ¤ñğ€‘í…Ñ”¹¹½Ü ¥õ€°É•…Ñ•‘Ğè¹•Ü…Ñ” ¤¹Ñ½%M=MÑÉ¥¹œ ¤ô¤ì(€€€İ¥¹‘½Ü¹•ÑM•±•Ñ¥½¸ ¤ü¹É•µ½Ù•±±I…¹•Ì ¤ì(€€€Í•ÑA•¹‘¥¹M•±•Ñ¥½¸¡¹Õ±°¤ì(€€€Í•ÑQ½½±5•ÍÍ…”¡ÑåÁ”€ôôô€‰¡¥¡±¥¡Ğˆ€ü€‰!¥¡±¥¡ĞÍ…Ù•Ñ¼5äMÑÕ‘ä¸ˆ€è€‰U¹‘•É±¥¹”Í…Ù•Ñ¼5äMÑÕ‘ä¸ˆ¤ì(€ô((€ÕÍ•™™•Ğ  ¤€ôøì(€€€¥˜€ …É•™•É•¹”¤É•ÑÕÉ¸ì(€€€½¹ÍĞ¡…¹‘±•M•±•Ñ¥½¹¡…¹”€ô€ ¤€ôøì(€€€€€½¹ÍĞÍ•±•Ñ¥½¸€ôİ¥¹‘½Ü¹•ÑM•±•Ñ¥½¸ ¤ì(€€€€€½¹ÍĞ…ÉÑ¥±”€ô…ÉÑ¥±•I•˜¹ÕÉÉ•¹Ğì(€€€€€¥˜€ ……ÉÑ¥±”ñğ€…Í•±•Ñ¥½¸ñğÍ•±•Ñ¥½¸¹É…¹•½Õ¹Ğ€ôôô€ÀñğÍ•±•Ñ¥½¸¹¥Í½±±…ÁÍ•¤É•ÑÕÉ¸ì(€€€€€½¹ÍĞÉ…¹”€ôÍ•±•Ñ¥½¸¹•ÑI…¹•Ğ À¤ì(€€€€€¥˜€ ……ÉÑ¥±”¹½¹Ñ…¥¹Ì¡É…¹”¹½µµ½¹¹•ÍÑ½É½¹Ñ…¥¹•È¤¤É•ÑÕÉ¸ì(€€€€€½¹ÍĞÅÕ½Ñ”€ôÍ•±•Ñ¥½¸¹Ñ½MÑÉ¥¹œ ¤¹ÑÉ¥´ ¤ì(€€€€€¥˜€¡ÅÕ½Ñ”¹±•¹Ñ €ğ€È¤É•ÑÕÉ¸ì(€€€€€½¹ÍĞ‰•™½É”€ô‘½Õµ•¹Ğ¹É•…Ñ•I…¹” ¤ì(€€€€€‰•™½É”¹Í•±•Ñ9½‘•½¹Ñ•¹ÑÌ¡…ÉÑ¥±”¤ì(€€€€€‰•™½É”¹Í•Ñ¹¡É…¹”¹ÍÑ…ÉÑ½¹Ñ…¥¹•È°É…¹”¹ÍÑ…ÉÑ=™™Í•Ğ¤ì(€€€€€½¹ÍĞÍÑ…ÉĞ€ô‰•™½É”¹Ñ½MÑÉ¥¹œ ¤¹±•¹Ñ ì(€€€€€Í•ÑA•¹‘¥¹M•±•Ñ¥½¸¡ìÅÕ½Ñ”°ÍÑ…ÉĞ°•¹èÍÑ…ÉĞ€¬Í•±•Ñ¥½¸¹Ñ½MÑÉ¥¹œ ¤¹±•¹Ñ ô¤ì(€€€€€Í•ÑQ½½±5•ÍÍ…” ˆˆ¤ì(€€€ôì(€€€‘½Õµ•¹Ğ¹…‘‘Ù•¹Ñ1¥ÍÑ•¹•È ‰Í•±•Ñ¥½¹¡…¹”ˆ°¡…¹‘±•M•±•Ñ¥½¹¡…¹”¤ì(€€€É•ÑÕÉ¸€ ¤€ôø‘½Õµ•¹Ğ¹É•µ½Ù•Ù•¹Ñ1¥ÍÑ•¹•È ‰Í•±•Ñ¥½¹¡…¹”ˆ°¡…¹‘±•M•±•Ñ¥½¹¡…¹”¤ì(€ô°mÉ•™•É•¹•t¤ì((€É•ÑÕÉ¸€ñM¡••Ğ½Á•¸õí	½½±•…¸¡É•™•É•¹”¥ô½¹=Á•¹¡…¹”õì¡½Á•¸¤€ôø€…½Á•¸€˜˜½¹±½Í” ¥ôøñM¡••Ñ½¹Ñ•¹ĞÍ¥‘”ô‰É¥¡Ğˆ±…ÍÍ9…µ”ô‰ÍÉ¥ÁÑÕÉ”µÍ¡••Ğˆø(€€€€ñM¡••Ñ!•…‘•È±…ÍÍ9…µ”ô‰ÍÉ¥ÁÑÕÉ”µ¡•…‘•Èˆøñ‘¥Ø±…ÍÍ9…µ”ô‰ÍÉ¥ÁÑÕÉ”µ­¥­•Èˆøñ5¥É½1…‰•°ùíÍÉ¥ÁÑÕÉ”ü¹ÑÉ…¹Í±…Ñ¥½¸ñğ€‰-%9)5LYIM%=8€¡-)X¤‰ôğ½5¥É½1…‰•°øñÍÁ…¸±…ÍÍ9…µ”õíÉ•…‘1½•€ü€‰É•…ˆ€è€ˆ‰ôùíÉ•…‘1½•€ü€ğøñ¡•¬€¼ùIğ¼ø€è€‰I%9‰ôğ½ÍÁ…¸øğ½‘¥ØøñM¡••ÑQ¥Ñ±”ùíÉ•™•É•¹”ñğ€‰MÉ¥ÁÑÕÉ”‰ôğ½M¡••ÑQ¥Ñ±”øñM¡••Ñ•ÍÉ¥ÁÑ¥½¸ùQ¡”Ñ•áĞ½µ•Ì™¥ÉÍĞ¸I•…Í±½İ±äì­••À½¹±äİ¡…Ğ…Í­Ìå½ÔÑ¼ÍÑ…ä¸ğ½M¡••Ñ•ÍÉ¥ÁÑ¥½¸øğ½M¡••Ñ!•…‘•Èø(€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰ÍÉ¥ÁÑÕÉ”µÑ½½±‰…ÈµØÌÔˆ…É¥„µ±…‰•°ô‰MÉ¥ÁÑÕÉ”ÍÑÕ‘äÑ½½±Ìˆø(€€€€€€ñ‰ÕÑÑ½¸±…ÍÍ9…µ”õíÁ•¹‘¥¹M•±•Ñ¥½¸€ü€‰É•…‘äˆ€è€ˆ‰ô½¹5½ÕÍ•½İ¸õì¡•Ù•¹Ğ¤€ôø•Ù•¹Ğ¹ÁÉ•Ù•¹Ñ•™…Õ±Ğ ¥ô½¹±¥¬õì ¤€ôøÍ…Ù•M•±•Ñ¥½¸ ‰¡¥¡±¥¡Ğˆ¥ôøñ!¥¡±¥¡Ñ•È€¼øñÍÁ…¸ù!¥¡±¥¡Ğğ½ÍÁ…¸øğ½‰ÕÑÑ½¸ø(€€€€€€ñ‰ÕÑÑ½¸±…ÍÍ9…µ”õíÁ•¹‘¥¹M•±•Ñ¥½¸€ü€‰É•…‘äˆ€è€ˆ‰ô½¹5½ÕÍ•½İ¸õì¡•Ù•¹Ğ¤€ôø•Ù•¹Ğ¹ÁÉ•Ù•¹Ñ•™…Õ±Ğ ¥ô½¹±¥¬õì ¤€ôøÍ…Ù•M•±•Ñ¥½¸ ‰Õ¹‘•É±¥¹”ˆ¥ôøñU¹‘•É±¥¹”€¼øñÍÁ…¸ùU¹‘•É±¥¹”ğ½ÍÁ…¸øğ½‰ÕÑÑ½¸ø(€€€€€€ñ‰ÕÑÑ½¸±…ÍÍ9…µ”õíµ…É¬¹‰½½­µ…É¬€ü€‰…Ñ¥Ù”ˆ€è€ˆ‰ô½¹±¥¬õì ¤€ôø½¹Q½½° ‰‰½½­µ…É¬ˆ¥ôøñ	½½­µ…É¬€¼øñÍÁ…¸ùíµ…É¬¹‰½½­µ…É¬€ü€‰M…Ù•ˆ€è€‰M…Ù”‰ôğ½ÍÁ…¸øğ½‰ÕÑÑ½¸ø(€€€€€€ñ‰ÕÑÑ½¸½¹±¥¬õì ¤€ôøÉ•ÍÁ½¹Í•I•˜¹ÕÉÉ•¹Ğü¹ÍÉ½±±%¹Ñ½Y¥•Ü¡ì‰•¡…Ù¥½Èè€‰Íµ½½Ñ ˆ°‰±½¬è€‰ÍÑ…ÉĞˆô¥ôøñ9½Ñ•‰½½­A•¸€¼øñÍÁ…¸ù9½Ñ•Ìğ½ÍÁ…¸øğ½‰ÕÑÑ½¸ø(€€€€ğ½‘¥Øø(€€€€ñ‘¥Ø±…ÍÍ9…µ”õíÍÉ¥ÁÑÕÉ”µÑ½½°µÍÑ…ÑÕÌ€‘íÁ•¹‘¥¹M•±•Ñ¥½¸€ü€‰¡…ÌµÍ•±•Ñ¥½¸ˆ€è€ˆ‰õô…É¥„µ±¥Ù”ô‰Á½±¥Ñ”ˆø(€€€€€íÁ•¹‘¥¹M•±•Ñ¥½¸€ü€ğøñÍÁ…¸ùM•±•Ñ•ğ½ÍÁ…¸øñÀûŠqíÁ•¹‘¥¹M•±•Ñ¥½¸¹ÅÕ½Ñ”¹±•¹Ñ €ø€ÜÀ€ü€‘íÁ•¹‘¥¹M•±•Ñ¥½¸¹ÅÕ½Ñ”¹Í±¥” À°€ÜÀ¥÷Š™€€èÁ•¹‘¥¹M•±•Ñ¥½¸¹ÅÕ½Ñ•÷Štğ½Àøñ‰ÕÑÑ½¸½¹±¥¬õì ¤€ôøìİ¥¹‘½Ü¹•ÑM•±•Ñ¥½¸ ¤ü¹É•µ½Ù•±±I…¹•Ì ¤ìÍ•ÑA•¹‘¥¹M•±•Ñ¥½¸¡¹Õ±°¤ìõô…É¥„µ±…‰•°ô‰±•…ÈÍ•±•Ñ¥½¸ˆøñ`€¼øğ½‰ÕÑÑ½¸øğ¼ø€è€ğøñÍÁ…¸ùíÑ½½±5•ÍÍ…”ñğ€‰M•±•Ğ…¹äİ½É‘Ì¥¸Ñ¡”Á…ÍÍ…”°Ñ¡•¸¡½½Í”!¥¡±¥¡Ğ½ÈU¹‘•É±¥¹”¸‰ôğ½ÍÁ…¸øğ¼ùô(€€€€ğ½‘¥Øø(€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰ÍÉ¥ÁÑÕÉ”µÍÉ½±°ˆ½¹MÉ½±°õí¡…¹‘±•I•…‘•ÉMÉ½±±ôø(€€€€€€ñ…ÉÑ¥±”É•˜õí…ÉÑ¥±•I•™ô½¹5½ÕÍ•UÀõí…ÁÑÕÉ•M•±•Ñ¥½¹ô½¹Q½Õ¡¹õì ¤€ôøİ¥¹‘½Ü¹Í•ÑQ¥µ•½ÕĞ¡…ÁÑÕÉ•M•±•Ñ¥½¸°€À¥ô(€€€€€€€±…ÍÍ9…µ”õíÍÉ¥ÁÑÕÉ”µÑ•áĞ€‘íµ…É¬¹¡¥¡±¥¡Ğ€ü€‰¡¥¡±¥¡Ñ•ˆ€è€ˆ‰ô€‘íµ…É¬¹Õ¹‘•É±¥¹”€ü€‰Õ¹‘•É±¥¹•ˆ€è€ˆ‰õô(€€€€€€€‘…¹•É½ÕÍ±åM•Ñ%¹¹•É!Q50õíì}}¡Ñµ°èÍÉ¥ÁÑÕÉ•!Ñµ°õô€¼ø(€€€€€€ñÍ•Ñ¥½¸±…ÍÍ9…µ”õíÍÉ¥ÁÑÕÉ”µ½¹Ñ•áĞ€‘íÍÑÕ‘å=Á•¸€ü€‰½Á•¸ˆ€è€ˆ‰õôøñ‰ÕÑÑ½¸½¹±¥¬õì ¤€ôøÍ•ÑMÑÕ‘å=Á•¸ ¡Ù…±Õ”¤€ôø€…Ù…±Õ”¥ôøñÍÁ…¸øñMÁ…É­±•Ì€¼øñÍµ…±°ùU9IMQ9Q!QaPğ½Íµ…±°øñˆù]¡äÑ¡¥ÌÁ…ÍÍ…”µ…ÑÑ•ÉÌğ½ˆøğ½ÍÁ…¸øñ¡•ÙÉ½¹½İ¸€¼øğ½‰ÕÑÑ½¸ùíÍÑÕ‘å=Á•¸€ü€ñ]¡å…ÉùíÍÉ¥ÁÑÕÉ”ü¹ÍÑÕ‘äñğ€‰I•…Ñ¡”Á…ÍÍ…”¥¸Ñ¡”µ½Ù•µ•¹Ğ½˜Ñ¡”±…É•È‰¥‰±¥…°ÍÑ½Éä¸‰ôğ½]¡å…Éø€è¹Õ±±ôğ½Í•Ñ¥½¸ø(€€€€€€ñÍ•Ñ¥½¸É•˜õíÉ•ÍÁ½¹Í•I•™ô±…ÍÍ9…µ”ô‰ÍÉ¥ÁÑÕÉ”µÉ•ÍÁ½¹Í”ˆøñ¡•…‘•ÈøñÍµ…±°ù-@]!Pe=T9=Q%ğ½Íµ…±°øñ ÈùQÕÉ¸…ÑÑ•¹Ñ¥½¸¥¹Ñ¼„É•½É¸ğ½ ÈøñÀùe½ÕÈÅÕ•ÍÑ¥½¸…¹¹½Ñ”É•µ…¥¸…ÑÑ…¡•Ñ¼íÉ•™•É•¹•ô¸ğ½Àøğ½¡•…‘•Èø(€€€€€€€€ñ±…‰•°±…ÍÍ9…µ”ô‰ÍÑÕ‘äµ™¥•±ˆøñÍÁ…¸øñ5•ÍÍ…•¥É±•EÕ•ÍÑ¥½¸€¼ùM,EUMQ%=8ğ½ÍÁ…¸øñÑ•áÑ…É•„Ù…±Õ”õíµ…É¬¹ÅÕ•ÍÑ¥½¸ñğ€ˆ‰ô½¹¡…¹”õì¡•Ù•¹Ğ¤€ôø½¹Q•áĞ ‰ÅÕ•ÍÑ¥½¸ˆ°•Ù•¹Ğ¹Ñ…É•Ğ¹Ù…±Õ”¥ôÁ±…•¡½±‘•Èô‰]¡…Ğ‘¼å½Ôİ…¹ĞÑ¼Õ¹‘•ÉÍÑ…¹…‰½ÕĞÑ¡¥ÌÑ•áĞüˆ€¼øğ½±…‰•°ø(€€€€€€€€ñ±…‰•°±…ÍÍ9…µ”ô‰ÍÑÕ‘äµ™¥•±ˆøñÍÁ…¸øñ9½Ñ•‰½½­A•¸€¼ùAI%YQ9=QLğ½ÍÁ…¸øñÑ•áÑ…É•„Ù…±Õ”õíµ…É¬¹¹½Ñ•Ìñğ€ˆ‰ô½¹¡…¹”õì¡•Ù•¹Ğ¤€ôø½¹Q•áĞ ‰¹½Ñ•Ìˆ°•Ù•¹Ğ¹Ñ…É•Ğ¹Ù…±Õ”¥ôÁ±…•¡½±‘•Èô‰…ÁÑÕÉ”…¸½‰Í•ÉÙ…Ñ¥½¸°½¹¹•Ñ¥½¸½ÈÅÕ•ÍÑ¥½»Š˜ˆ€¼øğ½±…‰•°øñÀ±…ÍÍ9…µ”ô‰Í…Ù•µ¹½Ñ”ˆøñ¡•¬€¼ùM…Ù•…ÕÑ½µ…Ñ¥…±±äÑ¼5äMÑÕ‘äğ½Àø(€€€€€€ğ½Í•Ñ¥½¸ø(€€€€€€ñ¹…Ø±…ÍÍ9…µ”ô‰ÍÉ¥ÁÑÕÉ”µÁ…ÍÍ…”µ¹…Øˆ…É¥„µ±…‰•°ô‰5½Ù”‰•Ñİ••¸MÉ¥ÁÑÕÉ”Á…ÍÍ…•ÌˆùíÁÉ•Ù¥½ÕÍI•™•É•¹”€ü€ñ‰ÕÑÑ½¸½¹±¥¬õì ¤€ôø½¹9…Ù¥…Ñ”¡ÁÉ•Ù¥½ÕÍI•™•É•¹”¥ôøñÉÉ½İ1•™Ğ€¼øñÍÁ…¸øñÍµ…±°ùAIY%=ULğ½Íµ…±°øñˆùíÁÉ•Ù¥½ÕÍI•™•É•¹•ôğ½ˆøğ½ÍÁ…¸øğ½‰ÕÑÑ½¸ø€è€ñÍÁ…¸€¼ùõí¹•áÑI•™•É•¹”€ü€ñ‰ÕÑÑ½¸½¹±¥¬õì ¤€ôø½¹9…Ù¥…Ñ”¡¹•áÑI•™•É•¹”¥ôøñÍÁ…¸øñÍµ…±°ù9aPğ½Íµ…±°øñˆùí¹•áÑI•™•É•¹•ôğ½ˆøğ½ÍÁ…¸øñÉÉ½İI¥¡Ğ€¼øğ½‰ÕÑÑ½¸ø€è€ñÍÁ…¸€¼ùôğ½¹…Øø(€€€€ğ½‘¥Øøğ½M¡••Ñ½¹Ñ•¹Ğøğ½M¡••Ğøì)ô()™Õ¹Ñ¥½¸5åMÑÕ‘åM¡••Ğ¡ì½Á•¸°½¹=Á•¹¡…¹”°ÍÑ…Ñ”°ÕÍ•Éµ…¥°°±½Õ‘½¹™¥ÕÉ•°…½Õ¹Ñ1½…‘¥¹œ°½Á•¹½Õ¹Ğ°½Á•¹MÉ¥ÁÑÕÉ”°½Á•¹…ä°ÍÕ‰µ¥ÑEÕ•ÍÑ¥½¸ôèì(€½Á•¸è‰½½±•…¸ì½¹=Á•¹¡…¹”è€¡½Á•¸è‰½½±•…¸¤€ôøÙ½¥ìÍÑ…Ñ”èÁÁMÑ…Ñ”ìÕÍ•Éµ…¥°èÍÑÉ¥¹œğ¹Õ±°ì±½Õ‘½¹™¥ÕÉ•è‰½½±•…¸ì…½Õ¹Ñ1½…‘¥¹œè‰½½±•…¸ì(€½Á•¹½Õ¹Ğè€ ¤€ôøÙ½¥ì½Á•¹MÉ¥ÁÑÕÉ”è€¡É•™•É•¹”èÍÑÉ¥¹œ¤€ôøÙ½¥ì½Á•¹…äè€¡¥¹‘•àè¹Õµ‰•È¤€ôøÙ½¥ì(€ÍÕ‰µ¥ÑEÕ•ÍÑ¥½¸è€¡É•™•É•¹”èÍÑÉ¥¹œ°ÅÕ•ÍÑ¥½¸èÍÑÉ¥¹œ¤€ôøAÉ½µ¥Í”ñ‰½½±•…¸øì)ô¤ì(€½¹ÍĞmÍÕ‰µ¥ÑÑ•°Í•ÑMÕ‰µ¥ÑÑ•‘t€ôÕÍ•MÑ…Ñ”ñI•½ÉñÍÑÉ¥¹œ°‰½½±•…¸øø¡íô¤ì(€½¹ÍĞ­•ÁÑI•™•É•¹•Ì€ô¹•ÜM•Ğ¡l(€€€€¸¸¹=‰©•Ğ¹­•åÌ¡ÍÑ…Ñ”¹É•…‘¥¹!¥ÍÑ½Éä¤°(€€€€¸¸¹=‰©•Ğ¹•¹ÑÉ¥•Ì¡ÍÑ…Ñ”¹ÍÉ¥ÁÑÕÉ•Q½½±Ì¤¹™¥±Ñ•È ¡l°µ…É­t¤€ôøµ…É¬¹‰½½­µ…É¬ñğµ…É¬¹¹½Ñ•Ìü¹ÑÉ¥´ ¤ñğµ…É¬¹ÅÕ•ÍÑ¥½¸ü¹ÑÉ¥´ ¤ñğµ…É¬¹Í•±•Ñ¥½¹Ìü¹±•¹Ñ ¤¹µ…À ¡mÉ•™•É•¹•t¤€ôøÉ•™•É•¹”¤°(€t¤ì(€½¹ÍĞÍÉ¥ÁÑÕÉ•¹ÑÉ¥•ÌèmÍÑÉ¥¹œ°MÉ¥ÁÑÕÉ•5…É­umt€ôl¸¸¹­•ÁÑI•™•É•¹•Ít¹µ…À ¡É•™•É•¹”¤€ôømÉ•™•É•¹”°ÍÑ…Ñ”¹ÍÉ¥ÁÑÕÉ•Q½½±ÍmÉ•™•É•¹•tñğíõt¤ì(€½¹ÍĞ‘•Ù½Ñ¥½¹…±¹ÑÉ¥•Ì€ôA}eL¹µ…À ¡‘…ä°¥¹‘•à¤€ôø€¡ì‘…ä°¥¹‘•à°¹½Ñ”èÍÑ…Ñ”¹‘••Á9½Ñ•Ím¥¹‘•átñğ€ˆˆ°É•™±•Ñ¥½¸èÍÑ…Ñ”¹‘••ÁI•™±•Ñ¥½¹Ím¥¹‘•átñğ€ˆˆô¤¤(€€€€¹™¥±Ñ•È ¡¥Ñ•´¤€ôø¥Ñ•´¹¹½Ñ”¹ÑÉ¥´ ¤ñğ¥Ñ•´¹É•™±•Ñ¥½¸¹ÑÉ¥´ ¤¤ì(€½¹ÍĞ¡¥¡±¥¡Ñ½Õ¹Ğ€ôÍÉ¥ÁÑÕÉ•¹ÑÉ¥•Ì¹É•‘Õ” ¡Ñ½Ñ…°°l°µ…É­t¤€ôøÑ½Ñ…°€¬€¡µ…É¬¹Í•±•Ñ¥½¹Ìü¹±•¹Ñ ñğ€À¤°€À¤ì(€½¹ÍĞÅÕ•ÍÑ¥½¹½Õ¹Ğ€ôÍÉ¥ÁÑÕÉ•¹ÑÉ¥•Ì¹™¥±Ñ•È ¡l°µ…É­t¤€ôøµ…É¬¹ÅÕ•ÍÑ¥½¸ü¹ÑÉ¥´ ¤¤¹±•¹Ñ ì((€…Íå¹Œ™Õ¹Ñ¥½¸Í•¹‘EÕ•ÍÑ¥½¸¡É•™•É•¹”èÍÑÉ¥¹œ°ÅÕ•ÍÑ¥½¸èÍÑÉ¥¹œ¤ì(€€€¥˜€ …ÕÍ•Éµ…¥°¤ì½¹=Á•¹¡…¹”¡™…±Í”¤ì½Á•¹½Õ¹Ğ ¤ìÉ•ÑÕÉ¸ìô(€€€¥˜€¡…İ…¥ĞÍÕ‰µ¥ÑEÕ•ÍÑ¥½¸¡É•™•É•¹”°ÅÕ•ÍÑ¥½¸¤¤Í•ÑMÕ‰µ¥ÑÑ• ¡ÕÉÉ•¹Ğ¤€ôø€¡ì€¸¸¹ÕÉÉ•¹Ğ°mÉ•™•É•¹•tèÑÉÕ”ô¤¤ì(€ô((€É•ÑÕÉ¸€ñM¡••Ğ½Á•¸õí½Á•¹ô½¹=Á•¹¡…¹”õí½¹=Á•¹¡…¹•ôøñM¡••Ñ½¹Ñ•¹ĞÍ¥‘”ô‰É¥¡Ğˆ±…ÍÍ9…µ”ô‰µäµÍÑÕ‘äµÍ¡••ĞˆÍ¡½İ±½Í•	ÕÑÑ½¸õí™…±Í•ôø(€€€€ñ¡•…‘•È±…ÍÍ9…µ”ô‰µäµÍÑÕ‘äµ¡•…‘•Èˆøñ‰ÕÑÑ½¸½¹±¥¬õì ¤€ôø½¹=Á•¹¡…¹”¡™…±Í”¥ôøñÉÉ½İ1•™Ğ€¼ù	…¬ğ½‰ÕÑÑ½¸øñˆù5dMQUdğ½ˆøñ‰ÕÑÑ½¸½¹±¥¬õí½Á•¹½Õ¹Ñô…É¥„µ±…‰•°ô‰=Á•¸…½Õ¹ĞˆøñUÍ•ÉI½Õ¹€¼øğ½‰ÕÑÑ½¸øğ½¡•…‘•Èø(€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰µäµÍÑÕ‘äµÍÉ½±°ˆøñÍ•Ñ¥½¸±…ÍÍ9…µ”ô‰µäµÍÑÕ‘äµ¡•É¼ˆøñÍµ…±°ùe=UHAI%YQMQUd1%	IIdğ½Íµ…±°øñ ÄùÙ•ÉåÑ¡¥¹œå½Ôñ‰È€¼ù‘¥‘»ŠeĞİ…¹ĞÑ¼±½Í”¸ğ½ ÄøñÀù9½Ñ•Ì°µ…É­•MÉ¥ÁÑÕÉ”°ÅÕ•ÍÑ¥½¹Ì…¹‘•Ù½Ñ¥½¹…°É•™±•Ñ¥½¹ÏŠQ­•ÁĞÑ½•Ñ¡•È…¹±¥¹­•Ñ¼Ñ¡•¥È½É¥¥¹…°½¹Ñ•áĞ¸ğ½Àø(€€€€€€ñ‘¥Ø±…ÍÍ9…µ”õíÍÑÕ‘äµÍå¹ŒµÍÑ…Ñ”€‘íÕÍ•Éµ…¥°€ü€‰Íå¹•ˆ€è€ˆ‰õôøñÍÁ…¸ùíÕÍ•Éµ…¥°€ü€ñ¡•¬€¼ø€è€ñ1½­-•å¡½±”€¼ùôğ½ÍÁ…¸øñ‘¥ØøñÍµ…±°ùíÕÍ•Éµ…¥°€ü€‰1=UMe9Q%Yˆ€è±½Õ‘½¹™¥ÕÉ•€ü€‰MY=8Q!%LY%ˆ€è€‰=U9P=99Q%=8A9%9‰ôğ½Íµ…±°øñˆùí…½Õ¹Ñ1½…‘¥¹œ€ü€‰¡•­¥¹œå½ÕÈ…½Õ¹ÓŠ˜ˆ€èÕÍ•Éµ…¥°ñğ€‰AÉ½Ñ•ĞÑ¡¥ÌÍÑÕ‘ä…É½ÍÌ•Ù•Éä‘•Ù¥”‰ôğ½ˆøğ½‘¥Øùì…ÕÍ•Éµ…¥°€˜˜€ñ‰ÕÑÑ½¸½¹±¥¬õì ¤€ôøì½¹=Á•¹¡…¹”¡™…±Í”¤ì½Á•¹½Õ¹Ğ ¤ìõôùAÉ½Ñ•Ğ¥Ğ€ñÉÉ½İI¥¡Ğ€¼øğ½‰ÕÑÑ½¸ùôğ½‘¥Øø(€€€€ğ½Í•Ñ¥½¸ø(€€€€ñÍ•Ñ¥½¸±…ÍÍ9…µ”ô‰ÍÑÕ‘äµ½Ù•ÉÙ¥•Üˆøñ…ÉÑ¥±”øñˆùíÍÉ¥ÁÑÕÉ•¹ÑÉ¥•Ì¹±•¹Ñ¡ôğ½ˆøñÍÁ…¸ùAMMLğ½ÍÁ…¸øğ½…ÉÑ¥±”øñ…ÉÑ¥±”øñˆùí¡¥¡±¥¡Ñ½Õ¹Ñôğ½ˆøñÍÁ…¸ù5I-Lğ½ÍÁ…¸øğ½…ÉÑ¥±”øñ…ÉÑ¥±”øñˆùíÅÕ•ÍÑ¥½¹½Õ¹Ñôğ½ˆøñÍÁ…¸ùEUMQ%=9Lğ½ÍÁ…¸øğ½…ÉÑ¥±”øñ…ÉÑ¥±”øñˆùí‘•Ù½Ñ¥½¹…±¹ÑÉ¥•Ì¹±•¹Ñ¡ôğ½ˆøñÍÁ…¸ù)=UI90eLğ½ÍÁ…¸øğ½…ÉÑ¥±”øğ½Í•Ñ¥½¸ø((€€€ì…ÍÉ¥ÁÑÕÉ•¹ÑÉ¥•Ì¹±•¹Ñ €˜˜€…‘•Ù½Ñ¥½¹…±¹ÑÉ¥•Ì¹±•¹Ñ €ü€ñÍ•Ñ¥½¸±…ÍÍ9…µ”ô‰µäµÍÑÕ‘äµ•µÁÑäˆøñ9½Ñ•‰½½­A•¸€¼øñ Èùe½ÕÈÍÑÕ‘ä±¥‰É…Éä¥Ìİ…¥Ñ¥¹œ¸ğ½ ÈøñÀù!¥¡±¥¡Ğ„Á¡É…Í”°Í…Ù”„MÉ¥ÁÑÕÉ”½ÈİÉ¥Ñ”¥¹Í¥‘”„‘•Ù½Ñ¥½¹…°¸%Ğİ¥±°…ÁÁ•…È¡•É”…ÕÑ½µ…Ñ¥…±±ä¸ğ½Àøğ½Í•Ñ¥½¸ø€è¹Õ±±ô((€€€íÍÉ¥ÁÑÕÉ•¹ÑÉ¥•Ì¹±•¹Ñ €ø€À€˜˜€ñÍ•Ñ¥½¸±…ÍÍ9…µ”ô‰ÍÑÕ‘äµ±¥‰É…ÉäµÍ•Ñ¥½¸ˆøñ¡•…‘•ÈøñÍµ…±°ùMI%AQUIMQUdğ½Íµ…±°øñ ÈùM…Ù•™É½´Ñ¡”Ñ•áĞğ½ Èøğ½¡•…‘•ÈùíÍÉ¥ÁÑÕÉ•¹ÑÉ¥•Ì¹µ…À ¡mÉ•™•É•¹”°µ…É­t¤€ôø€ñ…ÉÑ¥±”±…ÍÍ9…µ”ô‰ÍÑÕ‘äµ±¥‰É…Éäµ…Éˆ­•äõíÉ•™•É•¹•ôø(€€€€€€ñ‰ÕÑÑ½¸±…ÍÍ9…µ”ô‰ÍÑÕ‘äµ…Éµµ…¥¸ˆ½¹±¥¬õì ¤€ôø½Á•¹MÉ¥ÁÑÕÉ”¡É•™•É•¹”¥ôøñÍÁ…¸ùíÍÑ…Ñ”¹É•…‘¥¹!¥ÍÑ½ÉåmÉ•™•É•¹•tü¹½µÁ±•Ñ•‘Ğ€ü€ñ¡•¬€¼ø€è€ñ	½½­µ…É¬€¼ùôğ½ÍÁ…¸øñ‘¥ØøñÍµ…±°ùíÉ•™•É•¹•ôğ½Íµ…±°øñˆùíµ…É¬¹¹½Ñ•Ìü¹ÑÉ¥´ ¤ñğµ…É¬¹ÅÕ•ÍÑ¥½¸ü¹ÑÉ¥´ ¤ñğµ…É¬¹Í•±•Ñ¥½¹Ìü¹lÁtü¹ÅÕ½Ñ”ñğ€¡ÍÑ…Ñ”¹É•…‘¥¹!¥ÍÑ½ÉåmÉ•™•É•¹•tü¹½µÁ±•Ñ•‘Ğ€ü€‰I•…¥¸™Õ±°ˆ€è€‰=Á•¹•¥¸å½ÕÈÍÑÕ‘äˆ¥ôğ½ˆøñ•´ùíÍÑ…Ñ”¹É•…‘¥¹!¥ÍÑ½ÉåmÉ•™•É•¹•tü¹½Á•¹Ìñğ€ÁôÙ¥Í¥ÑíÍÑ…Ñ”¹É•…‘¥¹!¥ÍÑ½ÉåmÉ•™•É•¹•tü¹½Á•¹Ì€ôôô€Ä€ü€ˆˆ€è€‰Ì‰õíµ…É¬¹Í•±•Ñ¥½¹Ìü¹±•¹Ñ €ü€ƒ
+Ü€‘íµ…É¬¹Í•±•Ñ¥½¹Ì¹±•¹Ñ¡ôÑ•áĞµ…É¬‘íµ…É¬¹Í•±•Ñ¥½¹Ì¹±•¹Ñ €ôôô€Ä€ü€ˆˆ€è€‰Ì‰õ€€è€ˆ‰õíµ…É¬¹¹½Ñ•Ìü¹ÑÉ¥´ ¤€ü€ˆƒ
+Ü¹½Ñ”ˆ€è€ˆ‰õíµ…É¬¹ÅÕ•ÍÑ¥½¸ü¹ÑÉ¥´ ¤€ü€ˆƒ
+ÜÅÕ•ÍÑ¥½¸ˆ€è€ˆ‰ôğ½•´øğ½‘¥Øøñ¡•ÙÉ½¹I¥¡Ğ€¼øğ½‰ÕÑÑ½¸ø(€€€€€íµ…É¬¹Í•±•Ñ¥½¹Ìü¹µ…À ¡Í•±•Ñ¥½¸¤€ôø€ñ‰ÕÑÑ½¸±…ÍÍ9…µ”õíÍÑÕ‘äµÅÕ½Ñ”€‘íÍ•±•Ñ¥½¸¹ÑåÁ•õô½¹±¥¬õì ¤€ôø½Á•¹MÉ¥ÁÑÕÉ”¡É•™•É•¹”¥ô­•äõíÍ•±•Ñ¥½¸¹¥‘ôûŠqíÍ•±•Ñ¥½¸¹ÅÕ½Ñ•÷Štğ½‰ÕÑÑ½¸ø¥ô(€€€€€íµ…É¬¹ÅÕ•ÍÑ¥½¸ü¹ÑÉ¥´ ¤€˜˜€ñ‘¥Ø±…ÍÍ9…µ”ô‰ÍÑÕ‘äµÅÕ•ÍÑ¥½¸ˆøñ5•ÍÍ…•¥É±•EÕ•ÍÑ¥½¸€¼øñÍÁ…¸øñÍµ…±°ùe=UHEUMQ%=8ğ½Íµ…±°øñÀùíµ…É¬¹ÅÕ•ÍÑ¥½¹ôğ½Àøğ½ÍÁ…¸øñ‰ÕÑÑ½¸‘¥Í…‰±•õíÍÕ‰µ¥ÑÑ•‘mÉ•™•É•¹•uô½¹±¥¬õì ¤€ôøÍ•¹‘EÕ•ÍÑ¥½¸¡É•™•É•¹”°µ…É¬¹ÅÕ•ÍÑ¥½¸ñğ€ˆˆ¥ôùíÍÕ‰µ¥ÑÑ•‘mÉ•™•É•¹•t€ü€‰MÕ‰µ¥ÑÑ•ˆ€èÕÍ•Éµ…¥°€ü€‰Í¬¥¹ÍÑÉÕÑ½Èˆ€è€‰M¥¸¥¸Ñ¼…Í¬‰ôğ½‰ÕÑÑ½¸øğ½‘¥Øùô(€€€€ğ½…ÉÑ¥±”ø¥ôğ½Í•Ñ¥½¸ùô((€€€í‘•Ù½Ñ¥½¹…±¹ÑÉ¥•Ì¹±•¹Ñ €ø€À€˜˜€ñÍ•Ñ¥½¸±…ÍÍ9…µ”ô‰ÍÑÕ‘äµ±¥‰É…ÉäµÍ•Ñ¥½¸‘•Ù½Ñ¥½¹…°µ±¥‰É…Éäˆøñ¡•…‘•ÈøñÍµ…±°ùY=Q%=90)=UI90ğ½Íµ…±°øñ ÈùI•™±•Ñ¥½¹Ì™É½´Ñ¡”İ••¬ğ½ Èøğ½¡•…‘•Èùí‘•Ù½Ñ¥½¹…±¹ÑÉ¥•Ì¹µ…À ¡ì‘…ä°¥¹‘•à°¹½Ñ”°É•™±•Ñ¥½¸ô¤€ôø€ñ‰ÕÑÑ½¸±…ÍÍ9…µ”ô‰‘•Ù½Ñ¥½¹…°µ±¥‰É…Éäµ…Éˆ­•äõí‘…ä¹Ñ¥Ñ±•ô½¹±¥¬õì ¤€ôø½Á•¹…ä¡¥¹‘•à¥ôøñ¥µœÍÉŒõíA}IQm¥¹‘•áuô…±Ğôˆˆ€¼øñÍÁ…¸øñÍµ…±°ùdí¥¹‘•à€¬€Åôƒ
+Üí‘…ä¹•å•‰É½İôğ½Íµ…±°øñˆùí‘…ä¹½Ù•Éôğ½ˆøñÀùíÉ•™±•Ñ¥½¸ñğ¹½Ñ•ôğ½Àøğ½ÍÁ…¸øñ¡•ÙÉ½¹I¥¡Ğ€¼øğ½‰ÕÑÑ½¸ø¥ôğ½Í•Ñ¥½¸ùô(€€€€ñ™½½Ñ•È±…ÍÍ9…µ”ô‰µäµÍÑÕ‘äµÁÉ¥Ù…äˆøñ1½­-•å¡½±”€¼øñÍÁ…¸øñˆùe½ÕÈÁÉ¥Ù…Ñ”İÉ¥Ñ¥¹œ‰•±½¹ÌÑ¼å½Ô¸ğ½ˆøñÍµ…±°ù=¹±äÅÕ•ÍÑ¥½¹Ìå½Ô‘•±¥‰•É…Ñ•±äÍÕ‰µ¥Ğ…¸‰”Í••¸‰ä…¸¥¹ÍÑÉÕÑ½È¸ğ½Íµ…±°øğ½ÍÁ…¸øğ½™½½Ñ•Èø(€€€€ğ½‘¥Øø(€€ğ½M¡••Ñ½¹Ñ•¹Ğøğ½M¡••Ğøì)ô()™Õ¹Ñ¥½¸••ÁI•…‘•È¡ì½Á•¸°‘…å%¹‘•à°‘…ä°½µÁ±•Ñ•°É•™±•Ñ¥½¸°¹½Ñ•Ì°½¹±½Í”°½¹MÉ¥ÁÑÕÉ”°½¹%¹Í¥¡Ğ°½¹I•™±•Ñ¥½¸°½¹9½Ñ•Ì°½¹½µÁ±•Ñ”ôèì(€½Á•¸è‰½½±•…¸ì‘…å%¹‘•àè¹Õµ‰•Èì‘…äè••Á…äì½µÁ±•Ñ•è‰½½±•…¸ìÉ•™±•Ñ¥½¸èÍÑÉ¥¹œì¹½Ñ•ÌèÍÑÉ¥¹œì½¹±½Í”è€ ¤€ôøÙ½¥ì(€½¹MÉ¥ÁÑÕÉ”è€¡É•˜èÍÑÉ¥¹œ¤€ôøÙ½¥ì½¹%¹Í¥¡Ğè€¡­•äèÍÑÉ¥¹œ¤€ôøÙ½¥ì½¹I•™±•Ñ¥½¸è€¡Ù…±Õ”èÍÑÉ¥¹œ¤€ôøÙ½¥ì½¹9½Ñ•Ìè€¡Ù…±Õ”èÍÑÉ¥¹œ¤€ôøÙ½¥ì½¹½µÁ±•Ñ”è€ ¤€ôøÙ½¥ì)ô¤ì(€½¹ÍĞ¥µ…”€ôA}IQm‘…å%¹‘•átì(€½¹ÍĞm½µÁ±•Ñ¥½¹ÑÑ•µÁÑ•°Í•Ñ½µÁ±•Ñ¥½¹ÑÑ•µÁÑ•‘t€ôÕÍ•MÑ…Ñ”¡™…±Í”¤ì((€™Õ¹Ñ¥½¸™¥¹¥Í¡…ä ¤ì(€€€¥˜€¡É•™±•Ñ¥½¸¹ÑÉ¥´ ¤¹±•¹Ñ €ğ€ÄÔ¤ì(€€€€€Í•Ñ½µÁ±•Ñ¥½¹ÑÑ•µÁÑ•¡ÑÉÕ”¤ì(€€€€€İ¥¹‘½Ü¹Í•ÑQ¥µ•½ÕĞ  ¤€ôø‘½Õµ•¹Ğ¹ÅÕ•ÉåM•±•Ñ½Èñ!Q51±•µ•¹Ğø ˆ¹É•…‘•ÈµÉ•™±•Ñ¥½¸µµ•ÍÍ…”ˆ¤ü¹ÍÉ½±±%¹Ñ½Y¥•Ü¡ì‰•¡…Ù¥½Èè€‰Íµ½½Ñ ˆ°‰±½¬è€‰¹•…É•ÍĞˆô¤°€ØÀ¤ì(€€€€€É•ÑÕÉ¸ì(€€€ô(€€€Í•Ñ½µÁ±•Ñ¥½¹ÑÑ•µÁÑ•¡™…±Í”¤ì(€€€½¹½µÁ±•Ñ” ¤ì(€ô((€É•ÑÕÉ¸€ñM¡••Ğ½Á•¸õí½Á•¹ô½¹=Á•¹¡…¹”õì¡Ù…±Õ”¤€ôø€…Ù…±Õ”€˜˜½¹±½Í” ¥ôøñM¡••Ñ½¹Ñ•¹ĞÍ¥‘”ô‰É¥¡Ğˆ±…ÍÍ9…µ”ô‰‘••ÀµÉ•…‘•ÈµÍ¡••ĞˆÍ¡½İ±½Í•	ÕÑÑ½¸õí™…±Í•ôø(€€€€ñ¡•…‘•È±…ÍÍ9…µ”ô‰É•…‘•ÈµÑ½Á‰…Èˆøñ‰ÕÑÑ½¸½¹±¥¬õí½¹±½Í•ôøñÉÉ½İ1•™Ğ€¼ù	…¬Ñ¼Á±…¸ğ½‰ÕÑÑ½¸øñÍÁ…¸ùdí‘…å%¹‘•à€¬€Åô=€Üğ½ÍÁ…¸øñ‰ÕÑÑ½¸½¹±¥¬õí½¹±½Í•ô…É¥„µ±…‰•°ô‰±½Í”ˆøñ`€¼øğ½‰ÕÑÑ½¸øğ½¡•…‘•Èø(€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰‘••ÀµÉ•…‘•ÈµÍÉ½±°ˆøñ‘¥Ø±…ÍÍ9…µ”ô‰É•…‘•Èµ¡•É¼ˆÍÑå±”õíì‰…­É½Õ¹‘%µ…”èÕÉ° œ‘í¥µ…•ôœ¥€õôøñ‘¥Ø±…ÍÍ9…µ”ô‰É•…‘•Èµ¡•É¼µÍ¡…‘”ˆ€¼øñ‘¥ØøñÍµ…±°ùí‘…ä¹•å•‰É½İôğ½Íµ…±°øñ Äùí‘…ä¹Ñ¥Ñ±•ôğ½ ÄøñÀùí‘…ä¹ÍÕ‰Ñ¥Ñ±•ôğ½Àøğ½‘¥Øøğ½‘¥Øø(€€€€€€ñ…ÉÑ¥±”±…ÍÍ9…µ”ô‰É•…‘•Èµ‰½‘äˆ½¹±¥¬õì¡•Ù•¹Ğ¤€ôøì½¹ÍĞÑ…É•Ğ€ô€¡•Ù•¹Ğ¹Ñ…É•Ğ…Ì!Q51±•µ•¹Ğ¤¹±½Í•ÍĞñ!Q51±•µ•¹Ğø ‰m‘…Ñ„µ¥¹Í¥¡Ñtˆ¤ì¥˜€¡Ñ…É•Ğü¹‘…Ñ…Í•Ğ¹¥¹Í¥¡Ğ¤½¹%¹Í¥¡Ğ¡Ñ…É•Ğ¹‘…Ñ…Í•Ğ¹¥¹Í¥¡Ğ¤ìõôø(€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰É•…‘•Èµµ•Ñ„ˆøñÍÁ…¸ùí‘…ä¹Ñ¥µ•ôğ½ÍÁ…¸øñÍÁ…¸ùI%9€¬I1Q%=8ğ½ÍÁ…¸øğ½‘¥ØøñÀ±…ÍÍ9…µ”ô‰É•…‘•Èµ±•‘”ˆùí‘…ä¹±•‘•ôğ½Àùí‘…ä¹Á…É…É…Á¡Ì¹µ…À ¡Á…É…É…Á °¥¹‘•à¤€ôø€ñÀ­•äõí¥¹‘•áô‘…¹•É½ÕÍ±åM•Ñ%¹¹•É!Q50õíì}}¡Ñµ°èÁ…É…É…Á õô€¼ø¥ô(€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰É•…‘•ÈµÉ•™•É•¹•ÌˆøñÍµ…±°ùIQ!QaQLğ½Íµ…±°ùí‘…ä¹É•™Ì¹µ…À ¡É•˜¤€ôø€ñ‰ÕÑÑ½¸­•äõíÉ•™ô½¹±¥¬õì ¤€ôø½¹MÉ¥ÁÑÕÉ”¡É•˜¥ôùíÉ•™ôñÉÉ½İI¥¡Ğ€¼øğ½‰ÕÑÑ½¸ø¥ôğ½‘¥Øø(€€€€€€€€ñ‰±½­ÅÕ½Ñ”øñÀûŠqí‘…ä¹ÅÕ½Ñ•÷Štğ½Àøñ‰ÕÑÑ½¸½¹±¥¬õì ¤€ôø½¹MÉ¥ÁÑÕÉ”¡‘…ä¹ÅÕ½Ñ•I•˜¥ôùí‘…ä¹ÅÕ½Ñ•I•™ôñÉÉ½İI¥¡Ğ€¼øğ½‰ÕÑÑ½¸øğ½‰±½­ÅÕ½Ñ”øñÍ•Ñ¥½¸±…ÍÍ9…µ”ô‰¡½±µ…ÉˆøñÍµ…±°ù!=1Q!%Lğ½Íµ…±°øñÀùí‘…ä¹¡½±‘ôğ½Àøğ½Í•Ñ¥½¸ø(€€€€€€€€ñÍ•Ñ¥½¸±…ÍÍ9…µ”ô‰©½ÕÉ¹…°µÍ•Ñ¥½¸ˆøñÍµ…±°ù=	MIY€¬IMA=9ğ½Íµ…±°øñ ÈùMÑ…ä¡½¹•ÍĞ¡•É”¸ğ½ ÈøñÀùí‘…ä¹É•™±•Ñôğ½Àøñ±…‰•°ùe=UHI1Q%=8ñÑ•áÑ…É•„Ù…±Õ”õíÉ•™±•Ñ¥½¹ô½¹¡…¹”õì¡•Ù•¹Ğ¤€ôø½¹I•™±•Ñ¥½¸¡•Ù•¹Ğ¹Ñ…É•Ğ¹Ù…±Õ”¥ôÁ±…•¡½±‘•Èô‰]É¥Ñ”Ñ¡”ÑÉÕ•ÍĞ…¹Íİ•Èå½Ô…»Š˜ˆ€¼øğ½±…‰•°ø(€€€€€€€€€€ñ±…‰•°ùAI%YQ9=QLñÑ•áÑ…É•„Ù…±Õ”õí¹½Ñ•Íô½¹¡…¹”õì¡•Ù•¹Ğ¤€ôø½¹9½Ñ•Ì¡•Ù•¹Ğ¹Ñ…É•Ğ¹Ù…±Õ”¥ôÁ±…•¡½±‘•Èô‰…ÁÑÕÉ”İ¡…Ğå½Ô‘¼¹½Ğİ…¹ĞÑ¼±½Í—Š˜ˆ€¼øğ½±…‰•°øñÍÁ…¸øñ¡•¬€¼ùM…Ù•…ÕÑ½µ…Ñ¥…±±ä‰•Ñİ••¸Ù¥Í¥ÑÌğ½ÍÁ…¸øğ½Í•Ñ¥½¸ø(€€€€€€€€ñÍ•Ñ¥½¸±…ÍÍ9…µ”ô‰ÁÉ…å•ÈµÍ•Ñ¥½¸ˆøñÍµ…±°ùAIeHQ<IIdğ½Íµ…±°øñ ÈùAÉ…ä¥ĞÍ±½İ±ä¸ğ½ ÈøñÀùí‘…ä¹ÁÉ…å•Éôğ½Àøğ½Í•Ñ¥½¸ø(€€€€€€€í½µÁ±•Ñ¥½¹ÑÑ•µÁÑ•€˜˜É•™±•Ñ¥½¸¹ÑÉ¥´ ¤¹±•¹Ñ €ğ€ÄÔ€˜˜€ñÀ±…ÍÍ9…µ”ô‰É•…‘•ÈµÉ•™±•Ñ¥½¸µµ•ÍÍ…”ˆøñ¥É±•!•±À€¼ù]É¥Ñ”½¹”¡½¹•ÍĞÍ•¹Ñ•¹”¥¸å½ÕÈÉ•™±•Ñ¥½¸‰•™½É”½µÁ±•Ñ¥¹œÑ½‘…çŠeÌÍÑÕ‘ä¸ğ½Àùô(€€€€€€€€ñ‰ÕÑÑ½¸±…ÍÍ9…µ”ô‰ÁÉ¥µ…Éäµ…Ñ¥½¸É•…‘•Èµ½µÁ±•Ñ”ˆ½¹±¥¬õí™¥¹¥Í¡…åôùí½µÁ±•Ñ•€ü€‰…ä½µÁ±•Ñ”ˆ€è‘…å%¹‘•à€ôôô€Ø€ü€‰½µÁ±•Ñ”Ñ¡”Á±…¸ˆ€è€‰5…É¬‘…ä½µÁ±•Ñ”‰ôñ¡•¬€¼øğ½‰ÕÑÑ½¸ø(€€€€€€ğ½…ÉÑ¥±”øğ½‘¥Øøğ½M¡••Ñ½¹Ñ•¹Ğøğ½M¡••Ğøì)ô(

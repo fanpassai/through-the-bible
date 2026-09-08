@@ -229,3 +229,11 @@ export function getActivity(activityId: string) {
   }
   return undefined;
 }
+
+export function getActivityByHref(href: string) {
+  for (const week of courseManifest.weeks) {
+    const found = getWeekActivities(week).find((item) => item.href === href);
+    if (found) return found;
+  }
+  return undefined;
+}

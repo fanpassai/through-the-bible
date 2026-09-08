@@ -1,0 +1,19 @@
+.page { min-height: 100svh; padding: 32px; display: grid; place-content: center; justify-items: center; background: #071725; color: #fff; text-align: center; font-family: "Geist", sans-serif; }
+.mark { width: 54px; height: 54px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.22); border-radius: 50%; background: rgba(255,255,255,.08); }
+.mark svg { width: 22px; }
+.page p { margin: 22px 0 8px; color: #a9c8ea; font-family: var(--editorial-narrow); font-size: 12px; font-weight: 700; letter-spacing: .15em; }
+.page h1 { max-width: 340px; margin: 0; font-family: var(--editorial-narrow); font-size: 34px; line-height: 1.02; }
+.lockedPage { min-height: 100svh; padding: max(30px,env(safe-area-inset-top)) 24px 32px; background: #fff; color: #101827; font-family: "Geist", sans-serif; }
+.back { display: inline-flex; align-items: center; gap: 8px; color: #101827; font-size: 14px; font-weight: 650; text-decoration: none; }
+.back svg { width: 17px; }
+.lockedCard { max-width: 390px; margin: 15svh auto 0; text-align: center; }
+.lock { width: 58px; height: 58px; margin: 0 auto 24px; display: grid; place-items: center; border-radius: 18px; background: #edf4fa; color: #234868; }
+.lock svg { width: 23px; }
+.lockedCard > p { margin: 0 0 10px; color: #60758b; font-family: var(--editorial-narrow); font-size: 12px; font-weight: 700; letter-spacing: .14em; }
+.lockedCard h1 { margin: 0; font-family: var(--editorial-narrow); font-size: 38px; line-height: 1; }
+.lockedCard > span { max-width: 330px; margin: 17px auto 0; display: block; color: #66717d; font-size: 15px; line-height: 1.55; }
+.required { min-height: 76px; margin-top: 28px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 14px; border: 1px solid #dce5ec; border-radius: 18px; color: #101827; text-align: left; text-decoration: none; }
+.required span small,.required span strong { display: block; }
+.required small { margin-bottom: 5px; color: #61768a; font-family: var(--editorial-narrow); font-size: 11px; font-weight: 700; letter-spacing: .12em; }
+.required strong { font-size: 15px; line-height: 1.25; }
+.required svg { flex: 0 0 auto; width: 18px; }

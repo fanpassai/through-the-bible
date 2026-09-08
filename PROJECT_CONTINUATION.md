@@ -7,7 +7,7 @@
 - Protected baseline branch: `approved-restoration-2026-09-07`
 - Protected baseline commit: `e4461290f361b760b89645e4b1f3f26c5089dbd4`
 - Working branch: `friday-lesson1-launch-2026-09-07`
-- Status: Journey foundation and the new Journey Home are build-verified and published to the protected preview; awaiting user review and approval.
+- Status: The first Journey visual pass was rejected; a complete image-led Home, Week 1 Plan and durable activity-navigation correction is implemented and build-verified locally, awaiting the replacement preview.
 
 ## Governing execution plan
 
@@ -19,7 +19,23 @@ Milestone 1 — Journey foundation is complete locally. The typed manifest conta
 
 The foundation also contains the five-state progress resolver, legacy Week 1 progress migration, permanent route builder, and automated contract check. Verification passed with 10 weeks, 43 activities, and 56 permanent routes; the Next.js production build and TypeScript passed.
 
-Active milestone: Milestone 2 — Journey Home preview review. The visible Journey Home is built from the new manifest and progress resolver. The existing Week 1 player still uses its compatibility resume route until Milestone 4; do not add new generic resume dependencies.
+Active milestone: Milestone 2 correction plus Milestone 3 preview review. The visible Journey Home and complete Week 1 Plan are built from the manifest and progress resolver. Permanent course URLs now launch exact activities through one temporary compatibility gateway into the preserved Week 1 player.
+
+## September 8 corrective review
+
+The user rejected the first Journey Home preview. Specific reasons: the body typography appeared changed, the page did not feel clean or elite, the compact week grid felt rushed, locked weeks needed imagery, and only the primary Start action appeared to lead somewhere meaningful.
+
+The correction now:
+
+- uses the established Geist body and Nimbus Sans Narrow editorial display system;
+- removes tiny utility text and restores readable mobile sizes;
+- replaces the five-column utility grid with ten cinematic image-led week cards;
+- makes each locked week open a designed image-led preview instead of an empty placeholder;
+- makes `/weeks/1` the complete manifest-driven Week 1 Plan rather than a redirect;
+- shows all 43 Week 1 activities across Visual Story, Core Lesson, Scripture, Place, Fill, Connect, Unlock and Go Deeper;
+- gives every activity its permanent URL and exact legacy launch target;
+- sends locked activity taps to a prerequisite explanation with the required next step; and
+- adds direct image-led entrances to Visual Story, Core Lesson, Scripture and Go Deeper from Home.
 
 ## Approved product state that must be preserved
 
@@ -75,13 +91,15 @@ The new canonical `/journey` Home screen now:
 
 The user should review the Journey Home at mobile height, first-session focus, all ten week destinations, and exact Lesson 1 resume. After approval, begin Milestone 3: the complete manifest-driven Week Plan.
 
-## Current protected preview checkpoint
+## Previous protected preview checkpoint — rejected
 
 - Journey implementation commit: `d71760e0c16027d8d84b62c0c05926f1dc35ae32`
 - Preview branch: `friday-lesson1-launch-2026-09-07`
 - Direct review route: `https://through-the-bible-git-friday-lesson1-118efa-fanpassais-projects.vercel.app/journey`
 - Vercel status: both configured preview deployments passed
 - Production: untouched
+
+The next published commit supersedes this rejected visual checkpoint. Do not treat `d71760e` or `39ba8fb` as an approved design baseline.
 
 ## Approval protocol
 

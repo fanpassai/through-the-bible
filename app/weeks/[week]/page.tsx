@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { ArrowLeft, BookOpen, LockKeyhole } from "lucide-react";
 import { courseManifest, getWeek } from "@/lib/course/manifest";
 import type { WeekNumber } from "@/lib/course/types";
+import { weekArtwork } from "@/lib/course/presentation";
 import styles from "./week.module.css";
+import WeekPlanExperience from "./week-plan-experience";
 
 type WeekPageProps = { params: Promise<{ week: string }> };
 
@@ -32,7 +35,7 @@ export default async function WeekPage({ params }: WeekPageProps) {
   if (!number) notFound();
   const week = getWeek(number);
   if (!week) notFound();
-  if (week.number === 1) redirect("/design-lock/lesson");
+  if (week.number === 1) return <WeekPlanExperience />;
 
   return (
     <main className={styles.page}>
@@ -43,10 +46,13 @@ export default async function WeekPage({ params }: WeekPageProps) {
           <i />
         </header>
         <div className={styles.content}>
-          <div className={styles.lockIcon}><LockKeyhole /></div>
-          <p className={styles.eyebrow}>WEEK {String(week.number).padStart(2, "0")} · UPCOMING</p>
-          <h1>This week has its place in your journey.</h1>
-          <p>{week.placeholderMessage}</p>
+          <section className={styles.lockedHero}>
+            <Image src={weekArtwork[week.number]} alt="A cinematic preview of the journey ahead" fill priority sizes="(max-width: 430px) 100vw, 430px" />
+            <span aria-hidden="true" />
+            <div className={styles.lockIcon}><LockKeyhole /></div>
+            <div><p className={styles.eyebrow}>WEEK {String(week.number).padStart(2, "0")} · UPCOMING</p><h1>Your next chapter is being prepared.</h1></div>
+          </section>
+          <p className={styles.lockedMessage}>{week.placeholderMessage}</p>
           <section className={styles.promise}>
             <BookOpen />
             <span><strong>Nothing will be skipped.</strong><small>The lesson, Scripture, activities and devotionals will appear together here when the approved Week {week.number} plan is added.</small></span>

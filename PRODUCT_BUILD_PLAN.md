@@ -186,27 +186,30 @@ Definition of done: one source of truth can answer where every week and activity
 - [x] Remove competing first-session actions.
 - [ ] Verify new, returning, and Week-complete Home states.
 
+Preview review on September 8 rejected the first visual pass: typography felt changed and rushed, the compact utility grid lacked an elite image-led experience, and most destinations did not provide meaningful continuity. The corrective pass restores the established Geist/Nimbus editorial system, replaces the utility cells with cinematic week cards, and connects Home to the complete Week 1 plan and canonical activity routes.
+
 Definition of done: on every app open, a learner can state their current week, current activity, progress, and next action without navigating elsewhere.
 
 ### Milestone 3 — Reusable Week Plan
 
-- [ ] Build one Week Plan from the course manifest.
-- [ ] Show every lesson subject, Scripture passage, activity, and devotional.
-- [ ] Show exact status and progress for each row.
-- [ ] Make completed, in-progress, and available rows directly actionable.
-- [ ] Give pending and locked rows honest explanatory behavior.
-- [ ] Populate and review the complete Week 1 plan.
-- [ ] Confirm Weeks 2–10 render structurally without invented content.
+- [x] Build one Week Plan from the course manifest.
+- [x] Show every lesson subject, Scripture passage, activity, and devotional.
+- [x] Show exact status and progress for each row.
+- [x] Make completed, in-progress, and available rows directly actionable.
+- [x] Give pending and locked rows honest explanatory behavior.
+- [x] Populate the complete Week 1 plan.
+- [x] Confirm Weeks 2–10 render structurally without invented content.
+- [ ] Complete user visual and interaction review of the Week 1 plan.
 
 Definition of done: the Week 1 plan is a complete, trustworthy table of contents and progress record.
 
 ### Milestone 4 — Durable activity navigation
 
-- [ ] Create permanent routes for all Week 1 activity types.
-- [ ] Deep-link each of the 8 lesson subjects.
-- [ ] Deep-link each of the 8 required passages.
-- [ ] Deep-link Place, 10 Fill questions, 4 Connect discoveries, and Unlock.
-- [ ] Deep-link all 7 devotional days.
+- [x] Create permanent route handlers for all Week 1 activity types.
+- [x] Deep-link each of the 8 lesson subjects.
+- [x] Deep-link each of the 8 required passages.
+- [x] Deep-link Place, 10 Fill questions, 4 Connect discoveries, and Unlock.
+- [x] Deep-link all 7 devotional days.
 - [ ] Preserve exact progress after refresh and app reopening.
 - [ ] Add Back to Week and reliable Continue behavior.
 - [ ] Retire generic resume routing after migration is verified.
@@ -254,7 +257,7 @@ Definition of done: every approved Week 1 path works end to end on the protected
 
 ## Current position
 
-- Active milestone: Milestone 2 — Journey Home preview review
+- Active milestone: Milestone 2 correction and Milestone 3 preview review
 - Last local product checkpoint before Milestone 1: `4f6ec4a`
 - Hosted equivalent before this plan: `881ed0ccd78605c8b658e5996911816b41f90e2a`
 - Protected preview branch: `friday-lesson1-launch-2026-09-07`
@@ -262,4 +265,6 @@ Definition of done: every approved Week 1 path works end to end on the protected
 - Milestone 1 verification: 10 weeks, 43 Week 1 activities, 56 permanent routes; course contract and production build passed.
 - Journey Home implementation: complete locally and production-build verified. It is driven by the manifest and progress resolver, shows the exact legacy-compatible Continue target, exposes the two-row Week 1–10 map, and gives Weeks 2–10 honest locked destinations.
 - Protected Journey implementation commit: `d71760e0c16027d8d84b62c0c05926f1dc35ae32`; both Vercel preview checks passed.
-- Remaining Milestone 2 action: review the protected preview in new, returning, and Week-complete states; then begin Milestone 3, the complete reusable Week Plan.
+- User rejected that first Journey visual pass because the typography, cleanliness, imagery and destinations did not reach the approved standard.
+- Corrective implementation: image-led Home, established Geist/Nimbus typography, cinematic Week 1–10 cards, complete Week 1 Plan, canonical activity launch gateway, and designed prerequisite/locked behavior.
+- Next action: publish the corrective preview and review Home, Week 1 Plan, activity launches and locked-week previews on mobile.
